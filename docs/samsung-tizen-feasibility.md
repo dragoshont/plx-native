@@ -1,4 +1,9 @@
-# Samsung Tizen (2018+) feasibility study
+# Samsung Tizen (2017+) feasibility study
+
+> **Scope update 2026-10-09:** the floor is now **2017 (Tizen 3.0, Chromium M47)**, set by the oldest
+> sets the owner has (a 2017 MU series). 2017 is the hardest tier: M47 predates much of ES2015+, so the
+> JavaScript client must be transpiled and polyfilled, and 2017 video limits (`17TV_PREMIUM` etc.) are
+> per model group. Everything below written about "2018" is the *next* tier up, not the floor.
 
 Status: desk study, 2026-10-09, against upstream `GLinnik21/plx-native` at `38c07fc3` (this fork,
 `dragoshont/plx-native`, is identical at that revision). **Nothing here was run on a Samsung
@@ -105,6 +110,7 @@ All [samsung], fetched 2026-10-09.
 
 | Model year | Tizen | Web engine | WebAssembly |
 | --- | --- | --- | --- |
+| 2017 | 3.0 | Chromium M47 | Not documented as supported |
 | 2018 | 4.0 | Chromium M56 | Not documented as supported |
 | 2019 | 5.0 | Chromium M63 | Not documented as supported |
 | 2020 | 5.5 | M69 | Documented ("from Tizen 5.5 (2020 models) onwards") |
@@ -153,12 +159,13 @@ Every cell starts at *baseline*. A cell may be raised only with a dated observat
 
 | Group | Engine | Playback path | Planned first state |
 | --- | --- | --- | --- |
+| 2017 (UHD `17TV_PREMIUM`; others per group) | M47 | AVPlay; MSE limits not yet verified for 2017 | **Floor**; PoC target after the 2019 pair proves the pipeline |
 | 2018 UHD (`18TV_PREMIUM`, `18TV_STANDARD1`) | M56 | AVPlay (UHD), MSE capped at FHD | PoC target |
 | 2018 FHD | M56 | AVPlay or MSE (FHD) | After the UHD result |
 | 2019 | M63 | AVPlay | Second PoC wave |
 | 2020+ | M69+ | AVPlay; Wasm possible | Only after 2018/2019 gate |
 | The Frame (any year) | by year | As its year, plus Art Mode/standby tests | Separate row, never inferred from the year's other models |
-| Pre-2018 | M47 or older | Out of scope | Not investigated |
+| Pre-2017 | WebKit / Tizen 2.x | Out of scope | Not investigated |
 
 ## 7. What would change this conclusion
 

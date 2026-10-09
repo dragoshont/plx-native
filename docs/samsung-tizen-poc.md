@@ -6,7 +6,7 @@ in [samsung-getting-started.md](samsung-getting-started.md).
 
 ## Purpose
 
-Decide with measurements whether a JavaScript/AVPlay Plex client is viable on a 2018 Samsung set,
+Decide with measurements whether a JavaScript/AVPlay Plex client is viable on a 2017+ Samsung set (2017, Tizen 3.0 / M47, is the floor),
 before any product code exists. It tests Samsung's platform, not PlxNative code, and it must not change
 the LG app.
 
@@ -40,7 +40,7 @@ Each probe is run 3 times on the same TV, cold start each time. Record the model
 
 ## Decision
 
-- **Go (2018 tier):** P0, P1, P5, P6 and P7 pass, and at least one of P2/P3 passes on a UHD model.
+- **Go (2017+ tier; evaluate on the 2017 set, and per tier on 2019/2023/2025):** P0, P1, P5, P6 and P7 pass, and at least one of P2/P3 passes on a UHD model.
   Proceed to a written product design, not to an implementation of the full app.
 - **Re-scope:** P1 and P5 pass, but P6 fails: restrict to 2019+ or to a simpler UI. P5 fails only on
   the PMS certificate: document a workaround and test it before any further investment.
@@ -62,9 +62,9 @@ per-year table. Firmware was **not** observed: record it from Settings > Support
 |---|---|---|---|---|
 | 1 | UE43RU7092 | 2019 | 5.0 / M63 | 43" UHD; no Wasm (documented from Tizen 5.5) |
 | 2 | UE43RU7092 | 2019 | 5.0 / M63 | Same model as #1; use as a control pair |
-| 3 | UE55MU6172 | 2017 | 3.0 | **Below the 2018 floor**; baseline for "does not work" only |
+| 3 | UE55MU6172 | 2017 | 3.0 / M47 | **The support floor**; no Wasm, oldest JS engine |
 | 4 | QE65Q80C | 2023 | 7.0 / M94 | Wasm-capable |
 | 5 | QE55QN70F | 2025 | 9.0 / M120 | Wasm-capable; label partly blurred, confirm model |
 
 None is a The Frame, so Art Mode/lifecycle (P8) stays untested. No 2018, 2020-22 or 2024 set is owned.
-First PoC target: #1 (oldest in-scope, no Wasm, AVPlay-only) then #4.
+First PoC target: #1 (2019, pipeline proof), then #3 (2017, the floor), then #4. The 2017 set decides the floor: if P0/P1/P5/P6 fail there, raise the floor to 2019 and say so.

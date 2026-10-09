@@ -67,6 +67,6 @@ If this does not work, stop and fix it first. Do not start any Plex work.
 
 - **`.wgt`**: Samsung's packaged web app.
 - **DUID**: the TV's unique ID, used in the certificate.
-- **AVPlay**: Samsung's video API; needed for UHD on 2018 TVs.
+- **AVPlay**: Samsung's video API; needed for UHD on 2018 TVs (2017 limits not yet verified).
 - **MSE**: the browser video interface; FHD-only on 2018 TVs.
 - **Distributor certificate**: the certificate that lists which TVs may install your app.
