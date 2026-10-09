@@ -14,6 +14,7 @@
         var position = 0;
         var duration = 0;
         var pending = null;
+        var pendingSeek = null;
         var timer = null;
 
         function notify(type, detail) { emit({ type: type, state: state, position: position, duration: duration, detail: detail }); }
@@ -34,6 +35,7 @@
         function close() {
             generation += 1;
             cancelPending();
+            if (pendingSeek) { pendingSeek(new Error("Seek cancelled.")); }
             if (avplay && state !== "idle") {
                 try {
                     var nativeState = avplay.getState();
@@ -132,19 +134,32 @@
             try { requireState(["playing", "paused", "ready"], "seek"); }
             catch (failure) { return Promise.reject(failure); }
             if (typeof target !== "number" || !isFinite(target)) { return Promise.reject(new Error("Invalid seek position.")); }
+            if (pendingSeek) { return Promise.reject(new Error("A seek is already in progress. Wait before seeking again.")); }
             var ownGeneration = generation;
             target = Math.max(0, Math.min(duration || target, Math.round(target)));
             return new Promise(function (resolve, reject) {
-                var timeout = setTimeout(function () { reject(error("seek-timeout")); }, 10000);
+                var settled = false;
+                var timeout = setTimeout(function () { finish(error("seek-timeout")); }, options.seekTimeout || 10000);
+                function finish(failure, landed) {
+                    if (settled) { return; }
+                    settled = true;
+                    clearTimeout(timeout);
+                    pendingSeek = null;
+                    if (failure) { reject(failure); }
+                    else { resolve(landed); }
+                }
+                pendingSeek = finish;
                 try {
                     avplay.seekTo(target, function () {
-                        clearTimeout(timeout);
-                        if (ownGeneration !== generation) { reject(new Error("Seek cancelled.")); return; }
-                        position = Math.max(0, Math.round(Number(avplay.getCurrentTime()) || 0));
-                        notify("time");
-                        resolve(position);
-                    }, function () { clearTimeout(timeout); reject(error("seek")); });
-                } catch (failure) { clearTimeout(timeout); reject(error("seek")); }
+                        if (settled) { return; }
+                        if (ownGeneration !== generation) { finish(new Error("Seek cancelled.")); return; }
+                        try {
+                            position = Math.max(0, Math.round(Number(avplay.getCurrentTime()) || 0));
+                            finish(null, position);
+                            notify("time");
+                        } catch (failure) { finish(error("seek")); }
+                    }, function () { finish(error("seek")); });
+                } catch (failure) { finish(error("seek")); }
             });
         }
         return {

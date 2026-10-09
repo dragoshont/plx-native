@@ -13,16 +13,14 @@
         if (!part || !part.key || !/^[0-9]+$/.test(String(item.ratingKey))) {
             throw new Error("This item has no playable media version.");
         }
-        if (media.Part.length > 1) {
-            throw new Error("This multi-part version is not supported yet. Choose a single-file version.");
-        }
+        var multipart = media.Part.length > 1;
         var profile = options.profile;
-        var direct = profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
+        var direct = !multipart && profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
             profile.video.indexOf(media.videoCodec) !== -1 && profile.audio.indexOf(media.audioCodec) !== -1 &&
             media.width <= profile.maxWidth && media.height <= profile.maxHeight && !options.subtitleId;
         var session = "tizen-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
         var query = {
-            path: "/library/metadata/" + item.ratingKey, mediaIndex: mediaIndex, partIndex: 0,
+            path: "/library/metadata/" + item.ratingKey, mediaIndex: mediaIndex, partIndex: multipart ? -1 : 0,
             protocol: "hls", hasMDE: 1, directPlay: direct ? 1 : 0, directStream: 0,
             directStreamAudio: 0, offset: 0,
             session: session, "X-Plex-Session-Identifier": session,
@@ -46,6 +44,7 @@
         var emit = options.onEvent || function () {};
         var interval = null;
         var started = false;
+        var starting = false;
         var stopping = false;
         var closed = false;
         var allocated = false;
@@ -92,8 +91,15 @@
         }
         return {
             start: function () {
-                if (started || closed || stopping) { return Promise.reject(new Error("This playback session cannot be started again.")); }
-                return client.request("/video/:/transcode/universal/decision", "GET", selection.query).then(function (decision) {
+                if (started || starting || closed || stopping) { return Promise.reject(new Error("This playback session cannot be started again.")); }
+                starting = true;
+                return Promise.resolve().then(function () {
+                    if (closed || stopping) { throw new Error("Playback was cancelled."); }
+                    return client.selectStreams(selection.part.id, settings.audioId || 0, settings.subtitleId || 0);
+                }).then(function () {
+                    if (closed || stopping) { throw new Error("Playback was cancelled."); }
+                    return client.request("/video/:/transcode/universal/decision", "GET", selection.query);
+                }).then(function (decision) {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
                     if (Number(decision.generalDecisionCode) >= 2000 || Number(decision.transcodeDecisionCode) >= 2000) {
                         throw new Error("Plex refused playback. Change quality, source or subtitle settings and retry.");
@@ -109,6 +115,7 @@
                 }).then(function () {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
                     started = true;
+                    starting = false;
                     emit({ type: "source", mode: selection.direct ? "direct" : "transcode", session: selection.session });
                     report("playing");
                     interval = setInterval(function () {
@@ -117,6 +124,9 @@
                             report(snapshot.state);
                         }
                     }, 10000);
+                }).catch(function (error) {
+                    starting = false;
+                    throw error;
                 });
             },
             stop: stop,

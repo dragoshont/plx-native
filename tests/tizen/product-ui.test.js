@@ -60,6 +60,25 @@ async function run() {
         else if (url.pathname === "/hubs/search") { container = { Hub: [{ title: "Movies", Metadata: [movie] }] }; }
         else if (url.pathname === "/video/:/transcode/universal/decision") { container = { generalDecisionCode: 1001 }; }
         else if (url.pathname === "/:/timeline" || url.pathname === "/video/:/transcode/universal/stop") { container = {}; }
+        else if (url.pathname === "/library/parts/20") {
+            assert.strictEqual(options.method, "PUT");
+            assert.strictEqual(url.searchParams.get("allParts"), "1");
+            assert.strictEqual(url.searchParams.get("subtitleStreamID"), "0");
+            assert(!url.searchParams.has("audioStreamID"), "Preserve default audio when no audio switch is requested");
+            container = {};
+        }
+        else if (url.pathname === "/:/scrobble" || url.pathname === "/:/unscrobble") {
+            assert.strictEqual(options.method, "GET");
+            assert.strictEqual(url.searchParams.get("key"), "10");
+            assert.strictEqual(url.searchParams.get("identifier"), "com.plexapp.plugins.library");
+            container = {};
+        }
+        else if (url.pathname === "/actions/removeFromContinueWatching") {
+            assert.strictEqual(options.method, "PUT");
+            assert.strictEqual(url.searchParams.get("ratingKey"), "10");
+            assert(!url.searchParams.has("time"), "Hiding a tile is not clearing its resume point");
+            container = {};
+        }
         else { return Promise.resolve({ ok: false, status: 404 }); }
         return Promise.resolve({
             ok: true, status: 200,
@@ -103,6 +122,32 @@ async function run() {
         await settle();
         assert(window.document.querySelector(".synopsis").textContent.includes("Synthetic metadata"));
         assert.strictEqual(requests.filter(function (request) { return request.path === "/:/timeline"; }).length, 0);
+        var mutations = function () {
+            return requests.filter(function (request) {
+                return ["/:/scrobble", "/:/unscrobble", "/actions/removeFromContinueWatching"].indexOf(request.path) !== -1;
+            });
+        };
+        click("Mark unwatched");
+        assert(window.document.body.textContent.includes("saved resume position"));
+        assert.strictEqual(mutations().length, 0, "Opening a confirmation must not mutate Plex");
+        click("Cancel");
+        await settle();
+        assert.strictEqual(mutations().length, 0, "Cancellation must not mutate Plex");
+        click("Mark watched");
+        click("Confirm mark watched");
+        Array.from(window.document.querySelectorAll("button")).find(function (node) {
+            return node.textContent === "Confirm mark watched";
+        }).click();
+        await settle();
+        assert.strictEqual(mutations().length, 1, "Repeated confirmation must produce exactly one write");
+        click("Mark unwatched");
+        click("Confirm mark unwatched");
+        await settle();
+        click("Remove from Continue Watching");
+        click("Confirm remove from continue watching");
+        await settle();
+        assert.deepStrictEqual(mutations().map(function (request) { return request.path; }),
+            ["/:/scrobble", "/:/unscrobble", "/actions/removeFromContinueWatching"]);
         click("Play from beginning");
         await settle();
         assert.strictEqual(state, "PLAYING");

@@ -936,6 +936,13 @@
                 });
             });
         }
+        if (["movie", "episode", "show", "season"].indexOf(item.type) !== -1) {
+            button(screen, "Mark watched", function () { confirmWatchAction(item, client, "watched"); });
+            button(screen, "Mark unwatched", function () { confirmWatchAction(item, client, "unwatched"); });
+        }
+        if (["movie", "episode"].indexOf(item.type) !== -1) {
+            button(screen, "Remove from Continue Watching", function () { confirmWatchAction(item, client, "remove"); });
+        }
         (item.Role || []).concat(item.Director || [], item.Writer || []).slice(0, 60).forEach(function (person) {
             button(screen, (person.tag || "Cast") + (person.role ? " / " + person.role : ""), function () {
                 visit(function () {
@@ -964,6 +971,59 @@
         button(screen, "Back", backView);
         setStatus("Choose Play or Resume to start playback. Browsing does not update watch history.");
         focusFirst();
+    }
+
+    function confirmWatchAction(item, client, action) {
+        visit(function () {
+            var generation = ++viewGeneration;
+            clear(screen);
+            var label = action === "remove" ? "Remove from Continue Watching" :
+                action === "watched" ? "Mark watched" : "Mark unwatched";
+            screen.appendChild(element("h2", "", label));
+            screen.appendChild(element("p", "synopsis", item.title || "Selected item"));
+            screen.appendChild(element("p", "help-text", action === "remove" ?
+                "Hide this item from Continue Watching without clearing its resume position." :
+                action === "unwatched" ? "This clears watched status and the saved resume position on Plex." :
+                    "This changes watched status on Plex."));
+            if (item.type === "show" || item.type === "season") {
+                screen.appendChild(element("p", "help-text", "This changes every episode in this show or season."));
+            }
+            var pending = false;
+            var confirm = button(screen, "Confirm " + label.toLowerCase(), function () {
+                if (pending || generation !== viewGeneration) { return; }
+                pending = true;
+                confirm.disabled = true;
+                cancel.textContent = translate("Back to details");
+                setStatus("Saving the explicit change to Plex...");
+                Promise.resolve().then(function () {
+                    return action === "remove" ? client.removeContinueWatching(item.ratingKey) :
+                        client.setWatched(item.ratingKey, action === "watched");
+                }).then(function () {
+                    if (generation !== viewGeneration) { return; }
+                    setStatus("Plex accepted the change. Refreshing details...");
+                    return client.getMetadata(item.ratingKey).then(function (updated) {
+                        if (generation !== viewGeneration) { return; }
+                        navigation.pop();
+                        renderDetail(updated, client);
+                        setStatus("Plex accepted the change; details were refreshed.");
+                    }).catch(function () {
+                        if (generation === viewGeneration) {
+                            setStatus("Plex accepted the change, but details could not be refreshed. Go back and retry loading details.", true);
+                        }
+                    });
+                }, function (error) {
+                    if (generation !== viewGeneration) { return; }
+                    pending = false;
+                    confirm.disabled = false;
+                    cancel.textContent = translate("Cancel");
+                    setStatus("Plex did not confirm the change. Check the server state before retrying. " + error.message, true);
+                });
+            });
+            var cancel = button(screen, "Cancel", backView);
+            restoreView = function () { renderDetail(item, client); };
+            setStatus("Nothing changes until you confirm. This affects the selected Plex profile.");
+            focusFirst();
+        });
     }
 
     function timeLabel(ms) {

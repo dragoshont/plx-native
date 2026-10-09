@@ -69,6 +69,30 @@ async function run() {
     adapter = av.create({ avplay: native, prepareTimeout: 5 });
     await assert.rejects(adapter.open("https://synthetic.invalid"), /prepare-timeout/);
     adapter.close();
+
+    native = fake();
+    adapter = av.create({ avplay: native });
+    await adapter.open("https://synthetic.invalid", 0);
+    var completeSeek;
+    native.seekTo = function (target, success) { completeSeek = success; };
+    var seeking = adapter.seek(50000);
+    var seekFailure = assert.rejects(seeking, /cancelled/);
+    adapter.close();
+    completeSeek();
+    await seekFailure;
+    assert.strictEqual(adapter.snapshot().position, 0, "An old seek callback must not change a closed player");
+
+    native = fake();
+    adapter = av.create({ avplay: native, seekTimeout: 5 });
+    await adapter.open("https://synthetic.invalid", 0);
+    native.seekTo = function (target, success) { completeSeek = success; };
+    seeking = adapter.seek(50000);
+    var timeoutFailure = assert.rejects(seeking, /seek-timeout/);
+    await assert.rejects(adapter.seek(10000), /already/);
+    await timeoutFailure;
+    completeSeek();
+    assert.strictEqual(adapter.snapshot().position, 0, "A timed-out seek must not later mutate the playhead");
+    adapter.close();
     console.log("Tizen AVPlay state/cancellation/seek tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

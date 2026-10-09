@@ -23,7 +23,9 @@ details, an isolated AVPlay adapter, PMS playback negotiation/progress, player c
 markers, track/quality/version menus, text captions, Up Next and settings. These are source
 implementations, not a Samsung support declaration. Tests exercise synthetic account/server
 contracts and the real app DOM with fake networking/AVPlay, including a 250-item library with a
-200-card retained window. ES5 parsing and an unsigned Samsung source build are separate gates.
+200-card retained window, explicit watch-state confirmations and cancellation. Playback requests
+server-side audio/subtitle selection before negotiation and asks PMS to join multipart titles.
+ES5 parsing and an unsigned Samsung source build are separate gates.
 The installed emulator has not launched on this Apple-Silicon host; earlier retail probes did not
 run this application. No current-product emulator, decoder, performance or retail-model pass is
 claimed.
@@ -53,7 +55,7 @@ official-Plex parity.
 | Browse/search/details | Mock PMS and host DOM journeys; collections and local/catalogue people paths | Full remote navigation, search cancellation, large-library/image memory and text-fit evidence; catalogue filmography currently displays at most 200 credits |
 | Playback/progress | Fake AVPlay state/seek and PMS decision/timeline/read-back tests | Named-model native playback, direct/transcode, HDR/audio, native/external/burned subtitle matrix |
 | Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
-| Up Next/quality/versions | Source implementation with opt-in auto-next; multi-part versions explicitly refused, never silently truncated | Long sessions, interrupted transitions and implementation of multi-part playback |
+| Up Next/quality/versions | Source implementation with opt-in auto-next; multipart titles request a joined PMS transcode (`partIndex=-1`), never direct-play just the first file | Long sessions, interrupted transitions and actual server/native multipart joins, resume and completion |
 | Settings/languages | Non-secret preferences and generated English/Spanish/Belarusian catalogs | Complete app-copy translation and physical-TV text fit |
 | Credential persistence | Default memory-only; explicit unchecked remember-me consent stores plaintext account token | TV storage/relaunch/deletion behavior and final threat-model signoff |
 | Lifecycle/input | Background pause and source key/focus handling | Physical remote repeats/holds, suspend/wake, exit recovery and The Frame Art Mode |
@@ -348,10 +350,85 @@ depends on them.
 
 | Question | Initial default |
 |---|---|
-| What does “full Plex app” mean for this product? | Full feature parity with the supported PlxNative scope in §1, not music/photos/live TV/Watchlist/Plex catalogue. |
+| What does “full Plex app” mean for this product? | Owner expanded scope to official-Plex features; §10 tracks music/photos/live TV/Watchlist/catalogue gaps explicitly. Movie/TV implementation alone is not completion. |
 | Intended Samsung floor? | 2017 Tizen 3 as the target floor, with per-model evidence; do not imply that one 2017 model certifies the tier. |
 | First local development server? | Existing mock PMS and fixtures; owner token only for later real-server tests that need it. |
 | Which PMS records may tests change? | None without explicit authorization for a named test profile/item/action. |
 | When does user onboarding happen? | Near release, after app behavior, support range, install/signing and distribution are established. |
 | Initial distribution promise? | Developer-mode sideload for engineering only; public store path unresolved. |
 | Plex branding/name? | Independent, unofficial Plex client; conduct trademark/licensing review before public distribution or naming. |
+
+## 10. Unfinished product backlog
+
+This is the editable task list requested by the owner. Checked entries mean the named **host
+implementation** is committed and exercised, never that a Samsung model passed. All unchecked
+entries remain outstanding. Repository edits, builds and synthetic tests are approved; external
+device, signing, publishing and household-account operations retain their specific safety gates.
+Work directly through the dependency-ready items rather than waiting for a native worker.
+
+### Player and protocol
+
+- [x] Implement joined multipart server transcodes with whole-title resume/progress; host contract tested. Source: `docs/plex-openapi.json`, decision `partIndex=-1`.
+- [x] Reject concurrent playback starts and seeks; cancel closed seeks promptly and ignore late/timed-out callbacks. Host race regressions exercised.
+- [x] Select server audio/subtitle streams before playback negotiation, preserve default audio when not overridden, and stop on refused selection. Source: `rust-modules/plex/src/plex/library.rs`, `select_streams`.
+- [x] Retrieve external captions from `/library/streams/{id}` with UTF-8 encoding and source-backed SRT conversion, rather than inventing filename extensions. Host transport/parser integration tested.
+- [ ] Exercise multipart joins, seeks across file boundaries and final watch state against a test PMS and native AVPlay.
+- [ ] Install evidence-bound model capability profiles in the UI; reject model/firmware mismatches and expose unknown capabilities.
+- [ ] Exercise direct-play, fallback and quality changes for H.264/HEVC/UHD/HDR per named model; preserve aspect ratio and verify panel/audio output.
+- [ ] Complete queue/PlayQueue handling, shuffle, repeat and playback ordering where applicable.
+- [ ] Test progress retries, final stop/read-back, server restart, network loss and long sessions.
+- [ ] Verify audio track defaults, selection and failures on device, including model-specific DTS limitations.
+- [ ] Verify embedded/external SRT/WebVTT and server-rendered ASS/SSA/PGS/VobSub individually.
+- [ ] Test subtitle/audio/version changes while preparing, paused, seeking and completing; prevent stale callbacks.
+- [ ] Complete held-key scrub/repeat handling and player HUD hide/show/focus restoration.
+- [ ] Exercise Up Next/auto-next cancellation and completion across episode/season boundaries.
+
+### Account, browsing and app UX
+
+- [ ] Confirm Home PIN request shape against primary Plex evidence and actual test-account behavior.
+- [ ] Verify pairing QR, shared grants, TLS/CORS and unavailable/denied-server recovery in the packaged TV app.
+- [ ] Abort stale auth/search/artwork requests, not only discard stale results; test repeated Back/search/sign-out.
+- [ ] Test and fix every screen's remote focus, scroll restoration, loading/empty/error and retry paths.
+- [ ] Complete person/crew career paging beyond the 200-credit display cap and catalogue-to-local availability lookup.
+- [ ] Finish collection/library paging and search type/group completeness, including older PMS response variants.
+- [x] Add explicitly user-initiated watched/unwatched and remove-from-Continue-Watching actions with confirmation, duplicate-click prevention and synthetic writes only. Sources: `docs/pms-api.md` §timeline and `rust-modules/plex/src/plex/hubs.rs`.
+- [ ] Verify explicit watch actions against a named authorized test profile/item, including show/season leaf behavior and metadata refresh failures.
+- [ ] Finish artwork cache/resource eviction and establish measured low-memory ceilings.
+- [ ] Translate every app-owned string and format dates/durations/numbers; add missing-key/coverage checks.
+- [ ] Verify English/Spanish/Belarusian text fit, accessibility and couch legibility on actual display sizes.
+- [ ] Implement/test foreground restoration, graceful exit and interrupted-session recovery.
+- [ ] Verify remember-me relaunch/deletion on TV, protected-profile PIN gates and storage-error recovery.
+- [ ] Test The Frame Art Mode, wake/standby and restore separately before claiming support.
+
+### Expanded official-Plex features
+
+Each item starts with endpoint/schema/entitlement evidence and mock contracts, then full UI and
+runtime integration. A feature requiring an unavailable private service remains blocked with its
+evidence; it is not replaced by another media server.
+
+- [ ] Music libraries: artists/albums/tracks, metadata/artwork, queue, shuffle/repeat and audio player.
+- [ ] Photos: albums, full-screen viewer, slideshow, supported formats and resource bounds.
+- [ ] Live TV: tuner/lineup/EPG, channel tuning and entitlement/capability handling.
+- [ ] DVR: schedule/manage recordings and conflicts through approved account-write contracts.
+- [ ] Watchlist: account-backed read/add/remove, persistence and local-server availability resolution.
+- [ ] Plex catalogue: browse/search/details and licensed/ad-supported playback feasibility, DRM and service authorization.
+- [ ] Inventory remaining official-client features/entitlements and map each to implemented, unsupported or blocked evidence.
+
+### Baseline runtime and reusable development process
+
+- [ ] Provide a bounded legacy-engine HTTP transport without weakening token/redirect/TLS policy; current stream requirement can block the intended oldest engine.
+- [ ] Verify fetch/Promise/URL/UTF-8/blob and CSS API support on the oldest supported engine; add required compatibility implementation.
+- [ ] Add automatic manifest/package privilege/identifier and credential-leak checks.
+- [ ] Wire Samsung host/mock/ES5/source gates into CI, keeping LG recipes unchanged.
+- [ ] Automate emulator install/launch/readiness/keys/logs/capture/teardown on a supported host.
+- [ ] Automate authorized lock-aware retail install/test/capture/teardown with explicit target identity.
+- [ ] Prove the reusable workflow on a generated second app, not just Plex.
+- [ ] Establish cold-start/first-Home/first-frame/memory/latency/long-session numeric budgets per tier.
+- [ ] Run current-app acceptance and populate the model/firmware support register; earlier probes do not count.
+- [ ] Validate signing/update/uninstall, separate Store/branding/legal feasibility, and release packaging.
+- [ ] Finish developer/user onboarding and publish only after runtime acceptance and explicit release authorization.
+
+**Immediate order:** multipart source contract (host done) -> playback transition regressions ->
+request cancellation/legacy-engine transport -> browsing/localization -> expanded media/service
+contracts -> packaged-runtime/device acceptance. Hardware-dependent tasks can be prepared but not
+marked done from mocked results.

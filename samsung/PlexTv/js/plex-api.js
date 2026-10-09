@@ -574,7 +574,7 @@
                     return Promise.reject(new Error("This subtitle format needs server rendering."));
                 }
                 return timedFetch(fetchRequest, baseUrl + "/library/streams/" + key(id) +
-                    (codec === "webvtt" ? ".vtt" : ".srt"), {
+                    "?encoding=utf-8" + (codec === "webvtt" ? "" : "&format=srt"), {
                         credentials: "omit", redirect: "error", headers: { "X-Plex-Token": token }
                     }).then(function (response) {
                     if (!response.ok) { throw new Error("Plex refused the subtitle (HTTP " + response.status + ")."); }
@@ -585,9 +585,21 @@
                 });
             },
             selectStreams: function (partId, audioId, subtitleId) {
-                return get("/library/parts/" + key(partId), "PUT", {
-                    audioStreamID: audioId || 0, subtitleStreamID: subtitleId || 0, allParts: 0
+                if (!/^[0-9]+$/.test(String(audioId)) || !/^[0-9]+$/.test(String(subtitleId))) {
+                    return Promise.reject(new Error("Invalid audio or subtitle selection."));
+                }
+                var query = { subtitleStreamID: subtitleId, allParts: 1 };
+                if (Number(audioId) > 0) { query.audioStreamID = audioId; }
+                return get("/library/parts/" + key(partId), "PUT", query, true);
+            },
+            setWatched: function (id, watched) {
+                if (typeof watched !== "boolean") { return Promise.reject(new Error("Select watched or unwatched explicitly.")); }
+                return get(watched ? "/:/scrobble" : "/:/unscrobble", "GET", {
+                    key: key(id), identifier: "com.plexapp.plugins.library"
                 }, true);
+            },
+            removeContinueWatching: function (id) {
+                return get("/actions/removeFromContinueWatching", "PUT", { ratingKey: key(id) }, true);
             },
             timeline: function (item, position, state, session) {
                 if (["playing", "paused", "stopped", "buffering"].indexOf(state) === -1 ||
