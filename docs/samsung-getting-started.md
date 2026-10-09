@@ -2,9 +2,10 @@
 
 Part of the [Samsung feasibility study](samsung-tizen-feasibility.md). This is a plain-language
 checklist for preparing a Samsung TV and a computer for the
-[proof of concept](samsung-tizen-poc.md). **It has not been run**: no Samsung TV, SDK or certificate
-was used to write it, and nothing here is installed or authorised. Steps follow Samsung's published
-pages; where a page changes, Samsung's wins. Ask the owner before installing anything.
+[proof of concept](samsung-tizen-poc.md). **Partly run.** Tizen Studio was installed and Developer
+Mode reached `sdb` on a 2017 set (section 4 records what that took). No certificate has been made
+and no app has been installed yet, so sections 3 and 5 are still Samsung's published steps, not
+observed ones. Where a page changes, Samsung's wins. Ask the owner before installing anything.
 
 ## What you are building
 
@@ -44,7 +45,21 @@ A certificate is tied to named devices; installing on a new TV means a new distr
 
 On the TV, open the Apps panel, enter Developer Mode, enable it and type the computer's IP address.
 Restart the TV. The exact keys differ by year, so follow Samsung's page for your model. Then connect
-from Tizen Studio's Device Manager.
+from Tizen Studio's Device Manager, or with `sdb connect <tv-ip>:26101` then `sdb devices`.
+
+Gotchas observed on a 2017 set from a Mac (2026-10-09):
+
+- **Use the IP the Mac is actually using.** A Mac with both Wi-Fi and Ethernet may route through the
+  one you did not expect. `route get <tv-ip>` names the interface; `ipconfig getifaddr <iface>` gives
+  its address. Type that one into the TV.
+- **macOS Local Network privacy blocks `sdb`.** If `nc -vz <tv-ip> 26101` succeeds but `sdb connect`
+  says "failed to connect to remote target", the app that launched `sdb` has no Local Network
+  permission. Apple's own `nc` is exempt, which is why it looks like a TV problem when it isn't.
+  Run `sdb kill-server` and then `sdb connect` from macOS **Terminal.app** and allow the prompt, or
+  enable the launching app under System Settings > Privacy & Security > Local Network. Terminals
+  embedded in other apps inherit that app's permission. Once Terminal.app has started the sdb server,
+  other local `sdb` clients reuse it over localhost.
+- On that set, `sdb shell 0 getduid` returned the DUID, so you need not copy it off the screen.
 
 ## 5. First app: "hello TV"
 

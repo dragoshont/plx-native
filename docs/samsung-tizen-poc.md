@@ -69,6 +69,12 @@ per-year table. Firmware was **not** observed: record it from Settings > Support
 None is a The Frame, so Art Mode/lifecycle (P8) stays untested. No 2018, 2020-22 or 2024 set is owned.
 First PoC target: #1 (2019, pipeline proof), then #3 (2017, the floor), then #4. The 2017 set decides the floor: if P0/P1/P5/P6 fail there, raise the floor to 2019 and say so.
 
+Observed on #3 (2026-10-09), Developer Mode, via `sdb capability`: platform/product version 3.0, `cpu_arch`
+armv7, `sdbd` 2.2.31 (plugin 3.2.5_TV_REL), `rootonoff_support` disabled, `filesync_support` push only,
+`intershell_support` disabled, `can_launch` tv-samsung. That is only the developer channel: no app has been
+built, signed, installed or run yet, so P0 is still open. It also confirms Developer Mode gives no root or
+general shell, which the native-port option (Option A) would need.
+
 Owner-reported (2026-10-09, not independently observed): the official Plex app works on all five sets, so each
 has a working network path to the owner's PMS. Use it as the comparison baseline for P2-P7 (same titles, same
 server). It does not show what a third-party web client can do, since Plex's app may use platform APIs and
