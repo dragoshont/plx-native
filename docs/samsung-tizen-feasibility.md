@@ -1,110 +1,183 @@
 # Samsung Tizen (2018+) feasibility study
 
-Status: desk study, 2026-10-09, against `38c07fc3` (`main`). Nothing here was run on a Samsung
-television. No code was changed, and the LG app is untouched. Claims are tagged **[repo]** (read in
-this tree), **[samsung]** (Samsung developer documentation) or **[unverified]**.
+Status: desk study, 2026-10-09, against upstream `GLinnik21/plx-native` at `38c07fc3` (this fork,
+`dragoshont/plx-native`, is identical at that revision). **Nothing here was run on a Samsung
+television; no Samsung support exists or is claimed.** The LG app is untouched and no port has been
+started. Companion documents:
+[getting started](samsung-getting-started.md) and
+[proof-of-concept plan](samsung-tizen-poc.md).
 
-## Verdict
+Evidence labels used throughout:
 
-**Conditional no-go for porting this application as it stands; conditional go for a small,
-hardware-backed spike that reuses the Plex *knowledge* rather than the Plex *code*.**
+- **[code]** read in this tree at `38c07fc3`.
+- **[release/issue]** read on the upstream GitHub releases or issues, 2026-10-09.
+- **[author]** a claim by the upstream author that this study could not reproduce.
+- **[telemetry]** the author's reading of opt-in usage reports; not independently reproducible.
+- **[samsung]** Samsung developer documentation (URLs in the last section).
+- **[inference]** reasoning from the above, not stated by any source.
+- **[untested]** needs hardware.
 
-PlxNative's value on LG is a Rust renderer drawing on the GPU and a media pipeline that feeds the
-TV's own decoder through Starfish/ACB. Both are LG-specific by construction. Samsung publicly
-documents web apps (`.wgt`) and, separately, Tizen .NET and Flutter for TV [samsung]; it documents
-no route for loading a native ARM `.so`/staticlib with its own EGL and decoder access. The Rust
-protocol layer is portable in design but not in its transport, so what survives is a specification,
-not a drop-in library.
+## 1. Verdict
 
-The spike is justified only if the owner has (a) a 2018 Samsung set, (b) the appetite to write a
-JavaScript/TypeScript client, and (c) accepts that "2018+" means three different engines.
+1. **Porting the existing native binary to Samsung is not available on the evidence.** It is an
+   ARM GCC/glibc program that draws with GLES2/EGL/SDL and decodes through LG's Starfish/ACB
+   libraries. Samsung's public TV tooling documents web apps (`.wgt`), Tizen .NET and Flutter; no
+   public route to deploy and run this kind of native code with decoder access was found [samsung]. "It is Linux underneath" does not change that:
+   every platform interface the binary uses is an LG library [code].
+2. **The Rust code is largely reusable as a *design and specification*, much less as a library.**
+   The Plex/session/data layers are pure logic over a transport, but they sit on a libcurl/socket
+   transport and threads, and Rust-to-WebAssembly is documented by Samsung only from 2020 models
+   [samsung], so it cannot serve the 2018 and 2019 sets.
+3. **The only approach that can reach 2018 sets is a new web (`.wgt`) client** that implements the Plex
+   protocol in JavaScript for Chromium 56 and plays through Samsung's AVPlay, which is the analogue of the LG video-plane design.
+4. **Recommendation: do not start implementation.** Run the bounded real-TV proof of concept in
+   [samsung-tizen-poc.md](samsung-tizen-poc.md) first. It needs a physical 2018+ set; ask the owner for
+   its model code and firmware before scheduling it.
 
-## Claims checked
+## 2. Claims and evidence audit
 
-| Claim (README / site) | Result |
-| --- | --- |
-| Native Rust, no Chromium/JS/web view, GPU-drawn UI | **[repo] holds.** `ui`, `gfx` (GLES2/EGL/SDL2_ttf), `screens` are Rust; C is `main.c`, `starfish.c`, `svg.c`, `ass.c`, crash helpers (about 2.0k lines). |
-| Video on the TV's own decoder | **[repo] holds**, via `tv::sink::VideoSink` implemented by `player::ffi` (Starfish/ACB). |
-| webOS 4.0+ (site) | **Partly.** README adds one tested 3.4.3 exception, and lists 2018 sets reporting platform 3.9.3 on which "video has never been seen to start" (issue #249). The site's "4.0+" and "sets from 2018" are less hedged than the README. |
-| 60 fps, daily use on a 2019 set | **[unverified].** The repo has on-device frame-rate scenes, but no result was reproduced here. |
-| Plex Media Server retained, no replacement server | **[repo] holds.** Data layers are `plex`, `session`, `data`; no server code. |
-| GPL-3.0-or-later | **[repo] holds** (`LICENSING.md`, `LICENSE`). Copyleft applies to any derivative; the app also ships an LGPL FFmpeg build. |
+Upstream evidence is mostly the README, the site, 6,578 `#[test]` functions [code], a mock Plex
+server and fixtures under `tests/`, and GitHub releases/issues.
 
-## What is reusable
-
-Layer sizes (Rust lines, `src/` only) and Samsung portability. The layer graph is enforced by
-`ci/module-layers.ini` and `ci/check-module-layers.py` **[repo]**.
-
-| Layer | Lines | Reuse on Samsung |
+| Claim | Evidence | Status |
 | --- | --- | --- |
-| `base`, `machine` | 10k, 5k | Pure logic, but Rust. Reusable only if compiled to Wasm. |
-| `plex`, `session`, `data` | 34k, 19k, 40k | The **contract** is reusable: endpoints, auth/PIN flow, hub/library/search behaviour, resume and progress rules (`docs/pms-api.md`, `plex-api*.md`). The **code** depends on `plx_net`, which is libcurl via `dlopen` plus raw sockets, and on threads. A browser needs `fetch`/`XMLHttpRequest` instead. |
-| `net` | 12k | Not reusable. libcurl/socket transport and key pinning have no browser equivalent. |
-| `gfx`, `ui`, `appkit`, `screens` | 15k, 70k, 14k, 84k | Rendering code is not reusable (GLES2/EGL/SDL). Layout, focus and navigation **design** (`docs/ui-restructure-spec-v4.md`, `ux-scenario.md`) is. |
-| `media` | 97k | Not reusable. Own FFmpeg demux (`ff`, n3.3 ABI offsets), buffer-feed pump and ACB bind stages target Starfish. Samsung exposes AVPlay or HTML `<video>`/MSE instead. |
-| `platform`, `port` | 17k | webOS-only identity, key stores, LS2 services. |
+| Native Rust, "no Chromium, no JavaScript, no web view" | 13 layer crates plus the `app` staticlib, about 492k Rust lines; C is about 2.0k lines (`starfish.c` 850, `ass.c` 399, `crashtrace.c` 333, `main.c` 191, `svg.c` 66) [code] | **Verified in source** |
+| GPU UI on the TV | `gfx` declares GLES2/EGL/SDL2_ttf externs; pure-Rust JPEG/PNG decode [code] | Verified in source |
+| Video on the TV's own decoder, DV 5/8, HEVC 10-bit, E-AC-3 Atmos | `tv::sink::VideoSink` is implemented over Starfish/ACB (`src/starfish.c`, `player::ffi`) [code]. Whether a stream looks right is a device fact | Mechanism verified; output **[author]** |
+| Plex server stays; resume, progress, markers | `plex`, `session`, `data` crates and mock-PMS tests; no server code [code] | Verified in source and mock tests; against a real server **[author]** |
+| 60 fps on a 2019 LG | On-device scenes exist (`tests/run.py --fps*`) but results are not committed [code] | **[author]**, not reproduced |
+| "webOS 4.0 or newer", one tested 3.4.3 set | README [author]; 3.x seeks by reload [code/README] | [author] |
+| "Opt-in usage reports show video playing on sets from 2018 through the newest" | README [telemetry] | Not independently reproducible. The same README says 2018 sets on platform 3.9.3 never started video |
+| 2018 / platform 3.9.3 never plays | Issue 249: nine sets, eight play attempts, none ever logged `playback.started` [release/issue]. Closed "not planned" on 2026-10-01 because no owner reported back and the maintainer cannot reproduce it | **Open failure**, no root cause |
+| Some 2019 sets (k5lp/k3lp) cannot play via Developer Mode | README; the app detects the sandbox condition [code/author] | Author-reported |
+| k6hp crash | README, issue 174; "not reproduced" [author] | Unreproduced |
+| Nightlies "not tested on a television" | README [author] | The author states so; so do not equate a nightly with tested |
+| Screenshots | README says they are desktop-simulator output | Simulator, not hardware |
+| GPL-3.0-or-later, name/brand excluded | `LICENSING.md`, `TRADEMARKS.md` [code] | Verified in source |
+| Release cadence | v0.8.0 published 2026-10-07; daily nightlies; RC builds [release/issue] | Verified; shows an active project, not quality |
 
-`docs/module-layers.md` records that the OS-neutral port (L15b) is **open**: `VideoSink` is still a
-Starfish-shaped verb trait and the ACB sequence is not behind it. A second port would need that
-work first. No Samsung-specific reference exists in the tree (searched `.rs`, `.md`, `.toml`,
-`Makefile`).
+Observations that matter for Samsung:
 
-## What Samsung allows
+- The strongest hardware evidence is for **one 2019 LG** [author]. Everything about 2018 LG is
+  telemetry or an open bug, so "2018 and later" is the wrong evidence base to inherit for Samsung.
+- A simulator (`hostsim`, `HostSink`) exists for host tests [code]; it proves logic, not decoder behaviour.
+- `docs/module-layers.md` calls the layers "OS-neutral port (L15b)" **open** work: the video sink verbs are still
+  Starfish-shaped and the ACB bind sequence lives outside the sink. No Samsung reference exists
+  anywhere in the tree (searched `.rs`, `.md`, `.toml`, `Makefile`) [code].
+- The older figure of a single 441k-line crate in the module doc predates the split; this study
+  used live counts.
 
-All from Samsung's developer documentation **[samsung]** unless noted.
+Remaining uncertainties: real-server behaviour at scale, any hardware result other than the author's,
+and the root cause of issue 249. None changes the Samsung conclusion, but they limit how much of
+the LG evidence a Samsung effort may cite.
 
-| Year | Tizen | Chromium | WebAssembly |
+## 3. Reuse boundaries
+
+Lines are Rust, `src/` only [code]. The layer rule (`ci/module-layers.ini`,
+`ci/check-module-layers.py`) fences LG code in `[port webos]`: `webos`, `keymanager`, `system`,
+`player::ffi`, `port`; the `platform::tv::Port` table is filled at boot.
+
+| Layer | Lines | What it is | Samsung reuse |
 | --- | --- | --- | --- |
-| 2018 | 4.0 | 56 | **No** official support |
-| 2019 | 5.0 | 63 | **No** official support |
-| 2020 | 5.5 | 69 | Yes (documented "from Tizen 5.5 (2020 models)") |
-| 2021 and later | 6.0+ | 76+ | Yes |
+| `base`, `machine` | 10k, 5k | Utilities, state machines | Logic only; reusable as Wasm on 2020+ or re-implemented |
+| `platform` | 17k | TV port table, identity, secure storage | webOS-shaped; rewrite |
+| `gfx` | 15k | GLES2/EGL/SDL2_ttf renderer | Not reusable |
+| `net` | 12k | libcurl via `dlopen`, sockets, rustls | Not reusable; browser uses `fetch`/XHR |
+| `plex` | 34k | PMS/plex.tv API, auth, models | **Protocol knowledge reusable**; code needs a new transport |
+| `telemetry` | 16k | Opt-in reporting | Policy reusable, code not |
+| `data`, `session` | 40k, 19k | Library, hubs, resume, sessions | Behaviour reusable as spec and test oracle |
+| `media` | 97k | FFmpeg n3.3 demux (ABI offsets), HLS/ABR, buffer-feed pump to Starfish | Not reusable; capability and ABR **decision logic** is portable in principle |
+| `ui`, `appkit`, `screens` | 70k, 14k, 84k | GPU widget toolkit, screens | Not reusable; layout/focus design (`docs/ui-restructure-spec-v4.md`) is |
+| `app` | 60k | Boot, input, Magic Remote | webOS-specific |
+| C seam | 2.0k | Starfish/ACB, crash tracer | LG-only |
 
-- The Wasm page states support starts at 2020 models, so **2018/2019 sets cannot be assumed to
-  run a Rust-to-Wasm build** at all; that excludes the very sets the study targets.
-- 2018 video limits: MSE supports FHD but not UHD; DTS audio unsupported. A 2018 UHD path needs
-  AVPlay (hardware plane, closest analogue to the LG design).
-- `.wgt` is the documented distribution format; .NET and Flutter exist but are separate stacks and
-  their per-model-year support was **not verified** here.
-- Developer-mode install needs a signing certificate including the TV's DUID
-  (see `samsung-getting-started.md`). Store distribution is a separate review process.
+Concrete blockers [code]: `ff.rs` carries FFmpeg struct offsets proven against LG's own libraries;
+`net` loads `libcurl` at run time; the Makefile builds with the webOS NDK (soft-float ARMv7,
+glibc 2.12) and packages an `.ipk`; the storage helper is an LS2 service. The sink reaches the
+hardware plane through window/plane verbs that have no public Samsung counterpart.
 
-## Options
+Useful by-products regardless of approach: the mock PMS (`tests/mock_pms.py`) and fixtures, the
+API notes (`docs/pms-api.md`), and the playback-decision tables. These can serve as a test oracle for a new client.
 
-| Option | Reuse | 2018 viable | Cost / risk |
+## 4. Samsung platform facts
+
+All [samsung], fetched 2026-10-09.
+
+| Model year | Tizen | Web engine | WebAssembly |
 | --- | --- | --- | --- |
-| **A. Port the Rust app natively** | Maximum | Unknown; no documented native loading route | Needs undocumented access; Samsung's decoder is reached through AVPlay, not an ABI we can bind. Treat as blocked until Samsung documents it. |
-| **B. Rust core to Wasm + JS shell** | Medium (data layers) | **No** for 2018/2019 | Rewrite transport, drop threads, still need a JS UI and AVPlay adapter. |
-| **C. New web client from the Plex spec, AVPlay adapter** | Docs and UX design only | Yes (Chromium 56, transpile, no Wasm) | A new product with its own bundle tiers; the real work is playback adaptation and low-end performance. |
-| **D. Do nothing; recommend streaming boxes** | None | n/a | Cheapest; weakest for owners of those sets. |
+| 2018 | 4.0 | Chromium M56 | Not documented as supported |
+| 2019 | 5.0 | Chromium M63 | Not documented as supported |
+| 2020 | 5.5 | M69 | Documented ("from Tizen 5.5 (2020 models) onwards") |
+| 2021 | 6.0 | M76 | Yes |
+| 2022 / 2023 / 2024 | 6.5 / 7.0 / 8.0 | M85 / M94 / M108 | Yes |
+| 2025 / 2026 | 9.0 / 10.0 | M120 / M130 | Yes |
 
-**Recommendation:** only C is viable on 2018 hardware, and it is not a port of this codebase.
-Do not start it before the spike gate below.
+- 2018 Web engine capabilities differ from newer ones in many listed JavaScript/CSS rows (Samsung's table). Transpile and test; do not assume.
+- MSE on 2018 is FHD-only; **UHD needs AVPlay** [samsung]. DTS is unsupported on 2018 [samsung].
+- AVPlay is a JavaScript API (`webapis.avplay`) driving an `<object type="application/avplayer">`
+  element and supports adaptive streaming, extra subtitle formats and 4K/8K [samsung]. Check
+  `webapis.productinfo.isUdPanelSupported()` before offering 4K [samsung].
+- The 2018 UHD sets (`18TV_PREMIUM`, `18TV_STANDARD1`) list H.264 up to 4096x2160 and HEVC Main 10; other model groups differ, so decisions are per model group, not per year [samsung].
+- The Samsung simulator's engine differs from the TV's; final testing is on a TV [samsung].
+- Retail install needs a signing certificate whose distributor profile contains the TV's DUID
+  (menu: Support > Contact Samsung > Unique Device ID) [samsung].
+- Samsung documents Tizen .NET (TizenFX TV) and Flutter for Tizen TV separately [samsung]; which model years they cover, and
+  whether they need a partner programme, was **not verified**.
+- Store distribution (Seller Office review), enterprise/partner signing, and whether Plex's own
+  policies allow a third-party client in the store are **separate, unresolved** questions.
+- The Frame is a product line of the same year families; Art Mode, standby and wake lifecycle must be tested separately [inference, **untested**].
 
-## Spike gate (before any implementation)
+Samsung page URLs: see section 8.
 
-On an owned 2018 UHD set, with a Developer-Mode sideload of a minimal `.wgt` (no Plex code yet):
-1. Record actual model code, firmware, Tizen and `navigator.userAgent`.
-2. Play H.264/AAC and HEVC Main10 samples through AVPlay; note DTS/subtitle behaviour.
-3. Measure remote-driven UI scroll latency in a plain DOM list with ~200 poster tiles.
-4. Fetch from a Plex Media Server over HTTPS and HTTP on the LAN; note certificate trust failures.
+## 5. Options
 
-**Go** if playback, scrolling and fetch all work acceptably. **Stop** if AVPlay cannot play the
-test files or HTTPS to a personal server fails without a documented workaround.
+| Option | Reuse | Reaches 2018/2019 | Main risk |
+| --- | --- | --- | --- |
+| **A. Native port** of this binary | Highest | Not established | No documented public path; no decoder access. Blocked pending written Samsung confirmation |
+| **B. Rust core to Wasm + thin Tizen shell + AVPlay** | Data layers (medium) | **No** (Wasm from 2020) | Needs a new transport and a JS UI; still excludes the target sets; reasonable only for a later "2020+" tier |
+| **C. New JavaScript client** (ES5-compatible build), AVPlay for playback, optional AVPlay-free `<video>` fallback | Spec, tests, UX design | Yes, in principle | A new product with its own team; the cost is UI performance on M56 and playback adaptation |
+| **D. Document and recommend alternatives** | None | n/a | No engineering, but no better experience |
 
-## Constraints that carry over
+**Incremental native port** is rejected as a first step: its first milestone, a signed binary that
+runs, is unproven on public tooling, so every later milestone is speculation.
 
-- GPL-3.0-or-later: any derived code must be offered under the same terms; a clean-room web client
-  from the public Plex docs is not derived.
-- Never write to a real Plex account during testing; use a guest or mock server
-  (`AGENTS.md`).
-- Do not publish TV addresses, DUIDs, certificates or tokens.
-- "Plex" and the app name are trademarked (`TRADEMARKS.md`).
+**Recommended approach: C, behind a proof-of-concept gate.** Keep Plex Media Server, libraries and
+watch progress as the source of truth (server-side `/:/timeline`, `/:/scrobble` semantics as already
+documented in `docs/pms-api.md`). If the gate passes, a later 2020+ tier can adopt B's Wasm sharing
+as an optimisation, not a prerequisite. Do not introduce a replacement server.
 
-## Open questions
+## 6. Proposed support matrix (targets, not claims)
 
-- Does Samsung document any native-code route for TV (not .NET/Flutter)? Only the absence of one
-  in the consulted pages is established; ask Samsung or the maintainer.
-- Real 2018 AVPlay behaviour, Chromium 56 performance and certificate trust: untested.
-- The two PlxNative-specific reports mentioned in the prior research were not available; this
-  study replaces them with direct reading of the repository.
+Terms: **baseline** = documented by Samsung only; **package** = a `.wgt` was produced; **installed**; **playback tested**.
+Every cell starts at *baseline*. A cell may be raised only with a dated observation by model and firmware.
+
+| Group | Engine | Playback path | Planned first state |
+| --- | --- | --- | --- |
+| 2018 UHD (`18TV_PREMIUM`, `18TV_STANDARD1`) | M56 | AVPlay (UHD), MSE capped at FHD | PoC target |
+| 2018 FHD | M56 | AVPlay or MSE (FHD) | After the UHD result |
+| 2019 | M63 | AVPlay | Second PoC wave |
+| 2020+ | M69+ | AVPlay; Wasm possible | Only after 2018/2019 gate |
+| The Frame (any year) | by year | As its year, plus Art Mode/standby tests | Separate row, never inferred from the year's other models |
+| Pre-2018 | M47 or older | Out of scope | Not investigated |
+
+## 7. What would change this conclusion
+
+- Samsung confirming a public native-code route for retail TVs: reopens Option A.
+- The PoC failing at playback or HTTPS: stops C for 2018 and narrows scope to 2020+.
+- The maintainer completing the OS-neutral port work (L15b): lowers the cost of B.
+
+## 8. Sources
+
+Samsung (all fetched 2026-10-09):
+`developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html`,
+`.../specifications/media-specifications/2018-tv-video-specifications.html`,
+`.../guides/multimedia/media-playback/using-avplay.html`,
+`.../guides/multimedia/4k-8k-uhd-video.html`,
+`.../extension-libraries/webassembly/webassembly.html`,
+`.../getting-started/setting-up-sdk/creating-certificates.html`,
+`.../getting-started/using-sdk/tv-device.html`, `.../develop/tizen-net-tv.html`.
+Not re-fetched this round (carried from the earlier study; **re-verify**): MSE FHD limit and DTS
+limit on 2018, and Plex's smart-TV support page.
+Upstream: `GLinnik21/plx-native` README, `LICENSING.md`, `docs/module-layers.md`, releases, issues 174 and 249.
+
+The previously mentioned "KROMA" project was an unrelated false lead and is not part of this proposal.

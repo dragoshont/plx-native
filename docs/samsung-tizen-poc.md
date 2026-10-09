@@ -1,0 +1,53 @@
+# Samsung Tizen proof of concept: bounded plan and go/no-go criteria
+
+Part of the [Samsung feasibility study](samsung-tizen-feasibility.md). **Not started. It needs the
+owner's explicit authorisation, a physical TV, and its model code and firmware.** Prerequisites are
+in [samsung-getting-started.md](samsung-getting-started.md).
+
+## Purpose
+
+Decide with measurements whether a JavaScript/AVPlay Plex client is viable on a 2018 Samsung set,
+before any product code exists. It tests Samsung's platform, not PlxNative code, and it must not change
+the LG app.
+
+## Inputs to collect first (ask the owner)
+
+Exact model code, year, region, firmware, whether it is The Frame, whether 4K is supported
+(`isUdPanelSupported()`), and a Plex Media Server (test library only) reachable on the LAN over HTTP and HTTPS.
+
+## Scope and limits
+
+- Time box: about 3 working days after the TV is in Developer Mode. Hard stop at 5.
+- Code limit: one throwaway `.wgt`, about 500 lines, in a directory outside the LG app's source. No Plex sign-in beyond a test account or token.
+- No rooting, firmware changes, store submission, or TLS bypasses.
+- No claims of Samsung support in any README or site until a matrix cell is raised by observation.
+
+## Probes and criteria
+
+Each probe is run 3 times on the same TV, cold start each time. Record the model, firmware and date.
+
+| # | Probe | Measure | Go | Stop |
+| --- | --- | --- | --- | --- |
+| P0 | Hello app installs and launches | Install succeeds; `userAgent` and screen size recorded | Works | Cannot install after fixing certificate/DUID issues |
+| P1 | AVPlay H.264 1080p direct stream from the test PMS (HTTP) | Time to first frame; plays 10 minutes without stall | First frame within 5 s, 0 unrecovered stalls | Does not start, or more than 1 stall per 10 min |
+| P2 | AVPlay HEVC Main 10 4K (UHD sets only) | Plays; seek lands within 2 s of target; pause/resume works | Plays and seeks | Fails to decode a stream Samsung lists as supported |
+| P3 | Audio: AAC, AC-3/E-AC-3; DTS control | Which tracks play; what the error is for unsupported ones | AAC and AC-3 work; DTS fails cleanly | Silence or a hang with no error |
+| P4 | Subtitles: embedded text, external SRT, image-based | Which render, with what delay | At least one text format works | None render |
+| P5 | HTTPS to the PMS (plex.direct certificate) and to plex.tv | Request succeeds without disabling verification | Succeeds | Certificate failure with no documented workaround |
+| P6 | DOM UI: 200-poster grid scrolled with the remote | Frames per second by script timing; key-to-motion latency; memory after 5 minutes | Median latency 150 ms or less; no crash | Latency over 400 ms, or the app is killed |
+| P7 | Resume and progress | Position reported to the PMS timeline endpoint on a test item and read back | Server shows updated viewOffset | Cannot report progress |
+| P8 | Lifecycle (The Frame only) | App state after standby, Art Mode, wake, and a TV restart | App resumes or restarts cleanly | Black screen or stuck app after wake |
+
+## Decision
+
+- **Go (2018 tier):** P0, P1, P5, P6 and P7 pass, and at least one of P2/P3 passes on a UHD model.
+  Proceed to a written product design, not to an implementation of the full app.
+- **Re-scope:** P1 and P5 pass, but P6 fails: restrict to 2019+ or to a simpler UI. P5 fails only on
+  the PMS certificate: document a workaround and test it before any further investment.
+- **Stop:** P0, P1 or P5 fails with no workaround; record the reason and recommend Option D.
+
+## Deliverables
+
+A private notes file (device identifiers redacted) and a public results table with model group,
+firmware, date, per-probe numbers, and the matrix state reached. Raise a cell in the feasibility study's support
+matrix only for the model groups actually tested.
