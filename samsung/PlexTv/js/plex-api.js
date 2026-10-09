@@ -31,6 +31,96 @@
         throw new Error("PMS response is missing the " + field + " list.");
     }
 
+    function createAccountClient(options) {
+        options = options || {};
+        var token = String(options.token || "");
+        var fetchRequest = options.fetch || (typeof fetch === "function" ? fetch : null);
+        var identifier = options.clientIdentifier || "com.plxnative.plex-tv";
+        if (!token || !fetchRequest) {
+            throw new Error("A linked Plex session is required.");
+        }
+        function request(path, method, body) {
+            return Promise.resolve().then(function () {
+                return fetchRequest("https://plex.tv" + path, {
+                    method: method || "GET",
+                    credentials: "omit",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-Plex-Token": token,
+                        "X-Plex-Client-Identifier": identifier,
+                        "X-Plex-Product": "Plex Tizen"
+                    },
+                    body: body
+                });
+            }).catch(function () {
+                throw new Error("Plex is unreachable. Check your network and retry.");
+            }).then(function (response) {
+                if (!response.ok) {
+                    var error = new Error(response.status === 401 ?
+                        "Plex refused this session or profile PIN. Sign in again or check the PIN." :
+                        "Plex request failed (HTTP " + response.status + "). Retry.");
+                    error.status = response.status;
+                    throw error;
+                }
+                return response.json();
+            });
+        }
+        return {
+            getProfiles: function () {
+                return request("/api/v2/home/users").then(function (result) {
+                    if (!result || !Array.isArray(result.users)) {
+                        throw new Error("Plex returned an invalid profile list.");
+                    }
+                    return result.users;
+                });
+            },
+            switchProfile: function (uuid, pin) {
+                if (!/^[a-zA-Z0-9-]+$/.test(String(uuid || "")) ||
+                        (pin && !/^[0-9]{4}$/.test(pin))) {
+                    return Promise.reject(new Error("Select a valid profile and enter its four-digit PIN."));
+                }
+                return request("/api/v2/home/users/" + encodeURIComponent(uuid) + "/switch",
+                    "POST", pin ? "pin=" + encodeURIComponent(pin) : "").then(function (result) {
+                    if (!result || typeof result.authToken !== "string" || !result.authToken) {
+                        throw new Error("Plex did not authorize the selected profile.");
+                    }
+                    return result.authToken;
+                });
+            },
+            getServers: function () {
+                return request("/api/v2/resources?includeHttps=1&includeRelay=1&includeIPv6=1").then(function (result) {
+                    if (!Array.isArray(result)) {
+                        throw new Error("Plex returned an invalid server list.");
+                    }
+                    return result.filter(function (resource) {
+                        return typeof resource.provides === "string" &&
+                            resource.provides.split(",").indexOf("server") !== -1;
+                    }).map(function (resource) {
+                        return {
+                            id: resource.clientIdentifier,
+                            name: resource.name || "Plex Media Server",
+                            owned: resource.owned === true,
+                            token: resource.accessToken || "",
+                            connections: (Array.isArray(resource.connections) ? resource.connections : [])
+                                .filter(function (connection) {
+                                    try {
+                                        validateBaseUrl(connection.uri);
+                                        return /^https:\/\//.test(connection.uri);
+                                    } catch (error) {
+                                        return false;
+                                    }
+                                }).sort(function (a, b) {
+                                    return Number(a.relay === true) - Number(b.relay === true) ||
+                                        Number(b.local === true) - Number(a.local === true);
+                                })
+                        };
+                    });
+                });
+            }
+        };
+    }
+
     function createAuthClient(options) {
         options = options || {};
         var fetchRequest = options.fetch || (typeof fetch === "function" ? fetch : null);
@@ -141,34 +231,50 @@
             throw new Error("This runtime does not provide fetch.");
         }
 
-        function get(path) {
+        function get(path, method, query) {
             var headers = {
                 Accept: "application/json"
             };
             if (token) {
                 headers["X-Plex-Token"] = token;
             }
-            return fetchRequest(baseUrl + path, {
-                method: "GET",
+            headers["X-Plex-Client-Identifier"] = options.clientIdentifier || "com.plxnative.plex-tv";
+            var target = baseUrl + path;
+            if (query) {
+                target += (path.indexOf("?") === -1 ? "?" : "&") + Object.keys(query).map(function (key) {
+                    return encodeURIComponent(key) + "=" + encodeURIComponent(query[key]);
+                }).join("&");
+            }
+            return Promise.resolve().then(function () {
+                return fetchRequest(target, {
+                method: method || "GET",
+                credentials: "omit",
                 headers: headers
+                });
+            }).catch(function () {
+                throw new Error("The server is unreachable. Check your network and retry.");
             }).then(function (response) {
                 if (!response || typeof response.status !== "number") {
                     throw new Error("PMS returned an invalid HTTP response.");
                 }
                 if (!response.ok) {
-                    throw new Error("PMS request failed with HTTP " + response.status + " (" + path + ").");
+                    var error = new Error("PMS request failed with HTTP " + response.status + ".");
+                    error.status = response.status;
+                    throw error;
                 }
                 return response.json();
             }).then(function (payload) {
                 if (!payload || !payload.MediaContainer ||
                         typeof payload.MediaContainer !== "object") {
-                    throw new Error("PMS response did not contain a MediaContainer (" + path + ").");
+                    throw new Error("PMS response did not contain a MediaContainer.");
                 }
                 return payload.MediaContainer;
             });
         }
 
         return {
+            request: get,
+            identity: function () { return get("/identity"); },
             getSections: function () {
                 return get("/library/sections").then(function (container) {
                     return listFrom(container, "Directory");
@@ -209,6 +315,8 @@
 
     return {
         createClient: createClient,
-        createAuthClient: createAuthClient
+        createAuthClient: createAuthClient,
+        createAccountClient: createAccountClient,
+        validateBaseUrl: validateBaseUrl
     };
 }));

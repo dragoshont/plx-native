@@ -14,6 +14,8 @@
     var authTimer = null;
     var authGeneration = 0;
     var accountToken = "";
+    var accountClient = null;
+    var servers = [];
 
     function clear(node) {
         while (node.firstChild) {
@@ -75,8 +77,8 @@
             } else if (result.status === "linked") {
                 accountToken = result.token;
                 stopAuthorization();
-                info.textContent = "Plex account linked. The sign-in token is held in memory only.";
-                setStatus("Plex account linked. No credential was saved.");
+                accountClient = window.PlexApi.createAccountClient({ token: accountToken });
+                openProfiles();
             } else {
                 stopAuthorization();
                 info.textContent = result.status === "denied" ?
@@ -92,6 +94,124 @@
             authTimer = setTimeout(function () {
                 pollAuthorization(generation, info);
             }, 5000);
+        });
+    }
+
+    function button(parent, label, action) {
+        var node = element("button", "secondary-button", label);
+        node.type = "button";
+        node.addEventListener("click", action);
+        parent.appendChild(node);
+        return node;
+    }
+
+    function openProfiles() {
+        var generation = ++viewGeneration;
+        clear(screen);
+        screen.appendChild(element("h2", "", "Who is watching?"));
+        setStatus("Loading Plex Home profiles...");
+        accountClient.getProfiles().then(function (profiles) {
+            if (generation !== viewGeneration) { return; }
+            profiles.forEach(function (profile) {
+                button(screen, profile.title || profile.username || "Profile", function () {
+                    clear(screen);
+                    screen.appendChild(element("h2", "", profile.title || "Profile"));
+                    var pin = element("input", "remote-input");
+                    pin.type = "password";
+                    pin.maxLength = 4;
+                    pin.setAttribute("aria-label", "Profile PIN");
+                    if (profile.protected) { screen.appendChild(pin); }
+                    button(screen, "Use this profile", function () {
+                        setStatus("Switching profile...");
+                        accountClient.switchProfile(profile.uuid, profile.protected ? pin.value : "")
+                            .then(function (token) {
+                                accountClient = window.PlexApi.createAccountClient({ token: token });
+                                openServers();
+                            }).catch(function (error) { setStatus(error.message, true); });
+                    });
+                    button(screen, "Back to profiles", openProfiles);
+                    focusFirst();
+                });
+            });
+            button(screen, "Use linked account", openServers);
+            button(screen, "Sign out", signOut);
+            setStatus("Select the Plex identity to use. Credentials stay in memory.");
+            focusFirst();
+        }).catch(function (error) {
+            if (generation !== viewGeneration) { return; }
+            button(screen, "Retry profiles", openProfiles);
+            button(screen, "Use linked account", openServers);
+            button(screen, "Sign out", signOut);
+            setStatus(error.message, true);
+            focusFirst();
+        });
+    }
+
+    function signOut() {
+        stopAuthorization();
+        accountToken = "";
+        accountClient = null;
+        servers = [];
+        currentClient = null;
+        addConnectForm("");
+    }
+
+    function openServers() {
+        var generation = ++viewGeneration;
+        clear(screen);
+        screen.appendChild(element("h2", "", "Choose a server"));
+        setStatus("Discovering your Plex Media Servers...");
+        accountClient.getServers().then(function (result) {
+            if (generation !== viewGeneration) { return; }
+            servers = result;
+            if (!servers.length) {
+                screen.appendChild(element("p", "empty-state", "No Plex servers are shared with this identity."));
+            }
+            servers.forEach(function (server) {
+                button(screen, server.name + (server.owned ? " (owned)" : " (shared)"), function () {
+                    var selection = ++viewGeneration;
+                    var index = 0;
+                    function probe() {
+                        if (selection !== viewGeneration) { return; }
+                        if (index >= server.connections.length || !server.token) {
+                            setStatus("This server has no reachable secure connection. Check PMS and retry.", true);
+                            return;
+                        }
+                        var connection = server.connections[index++];
+                        var candidate = window.PlexApi.createClient({ baseUrl: connection.uri, token: server.token });
+                        setStatus(connection.relay ? "Trying the Plex relay..." : "Connecting securely...");
+                        candidate.identity().then(function (identity) {
+                            if (selection !== viewGeneration) { return; }
+                            if (identity.machineIdentifier !== server.id) {
+                                setStatus("Server identity mismatch. This connection was not authorized.", true);
+                                return;
+                            }
+                            currentClient = candidate;
+                            loadHome(false);
+                        }).catch(function (error) {
+                            if (selection !== viewGeneration) { return; }
+                            if (error.status === 401 || error.status === 403) {
+                                setStatus("Plex refused access to this server. Re-select your profile or sign in again.", true);
+                            } else { probe(); }
+                        });
+                    }
+                    probe();
+                });
+            });
+            button(screen, "Change profile", function () {
+                accountClient = window.PlexApi.createAccountClient({ token: accountToken });
+                openProfiles();
+            });
+            button(screen, "Refresh servers", openServers);
+            button(screen, "Sign out", signOut);
+            setStatus("Owned and shared servers use their own access grants. Only secure advertised origins are tried.");
+            focusFirst();
+        }).catch(function (error) {
+            if (generation !== viewGeneration) { return; }
+            button(screen, "Retry discovery", openServers);
+            button(screen, "Sign out", signOut);
+            setStatus(error.message, true);
+            focusFirst();
         });
     }
 
