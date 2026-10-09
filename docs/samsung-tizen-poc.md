@@ -68,3 +68,8 @@ per-year table. Firmware was **not** observed: record it from Settings > Support
 
 None is a The Frame, so Art Mode/lifecycle (P8) stays untested. No 2018, 2020-22 or 2024 set is owned.
 First PoC target: #1 (2019, pipeline proof), then #3 (2017, the floor), then #4. The 2017 set decides the floor: if P0/P1/P5/P6 fail there, raise the floor to 2019 and say so.
+
+Owner-reported (2026-10-09, not independently observed): the official Plex app works on all five sets, so each
+has a working network path to the owner's PMS. Use it as the comparison baseline for P2-P7 (same titles, same
+server). It does not show what a third-party web client can do, since Plex's app may use platform APIs and
+engine paths a `.wgt` cannot.
