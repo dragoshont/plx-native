@@ -1,37 +1,41 @@
-# Samsung Tizen proof of concept: bounded plan and go/no-go criteria
+# Samsung Tizen platform probes: test register and observed results
 
-Part of the [Samsung feasibility study](samsung-tizen-feasibility.md). **Not started. It needs the
-owner's explicit authorisation, a physical TV, and its model code and firmware.** Prerequisites are
-in [samsung-getting-started.md](samsung-getting-started.md).
+Part of the [Samsung feasibility study](samsung-tizen-feasibility.md). The initial probes have been
+run on one physical 2017 TV; the test register distinguishes measured results from pending
+compatibility and product checks. They are not a full Plex client and do not establish broad
+Samsung support. Product requirements and full-app implementation are tracked in the
+[client specification](samsung-tizen-client-spec.md); reusable development tooling is tracked in
+the [Tizen development process](samsung-tizen-development-process.md).
 
 ## Purpose
 
-Decide with measurements whether a JavaScript/AVPlay Plex client is viable on a 2017+ Samsung set (2017, Tizen 3.0 / M47, is the floor),
-before any product code exists. It tests Samsung's platform, not PlxNative code, and it must not change
-the LG app.
+Record device evidence for the JavaScript/AVPlay approach and keep it available as a compatibility
+test oracle for the full client. These probes test Samsung's platform, not PlxNative code, and they
+must not change the LG app.
 
 ## Inputs to collect first (ask the owner)
 
 Exact model code, year, region, firmware, whether it is The Frame, whether 4K is supported
 (`isUdPanelSupported()`), and a Plex Media Server (test library only) reachable on the LAN over HTTP and HTTPS.
 
-## Scope and limits
+## Initial probe constraints
 
-- Time box: about 3 working days after the TV is in Developer Mode. Hard stop at 5.
-- Code limit: one throwaway `.wgt`, about 500 lines, in a directory outside the LG app's source. No Plex sign-in beyond a test account or token.
+- The initial platform feasibility work used small throwaway `.wgt` probes outside the LG app's
+  source; those are not the product architecture or code-size limit.
 - No rooting, firmware changes, store submission, or TLS bypasses.
 - No claims of Samsung support in any README or site until a matrix cell is raised by observation.
 
 ## Probes and criteria
 
-Each probe is run 3 times on the same TV, cold start each time. Record the model, firmware and date.
+For repeatable validation, run each probe 3 times on the same TV, cold start each time. Historical
+results below state their actual sample counts. Record the model, firmware and date.
 
 | # | Probe | Measure | Go | Stop |
 | --- | --- | --- | --- | --- |
 | P0 | Hello app installs and launches | Install succeeds; `userAgent` and screen size recorded | Works | Cannot install after fixing certificate/DUID issues |
 | P1 | AVPlay H.264 1080p direct stream from the test PMS (HTTP) | Time to first frame; plays 10 minutes without stall | First frame within 5 s, 0 unrecovered stalls | Does not start, or more than 1 stall per 10 min |
 | P2 | AVPlay HEVC Main 10 4K (UHD sets only) | Plays; seek lands within 2 s of target; pause/resume works | Plays and seeks | Fails to decode a stream Samsung lists as supported |
-| P3 | Audio: AAC, AC-3/E-AC-3; DTS control | Which tracks play; what the error is for unsupported ones | AAC and AC-3 work; DTS fails cleanly | Silence or a hang with no error |
+| P3 | Audio: AAC, AC-3/E-AC-3; DTS control | Which tracks play; what the error is for unsupported ones | Supported tracks produce audio and unsupported formats fail cleanly; DTS core decoded on the tested 2017 set, while failure on models where DTS is unsupported remains unverified. | Silence or a hang with no error |
 | P4 | Subtitles: embedded text, external SRT, image-based | Which render, with what delay | At least one text format works | None render |
 | P5 | HTTPS to the PMS (plex.direct certificate) and to plex.tv | Request succeeds without disabling verification | Succeeds | Certificate failure with no documented workaround |
 | P6 | DOM UI: 200-poster grid scrolled with the remote | Frames per second by script timing; key-to-motion latency; memory after 5 minutes | Median latency 150 ms or less; no crash | Latency over 400 ms, or the app is killed |
@@ -40,8 +44,10 @@ Each probe is run 3 times on the same TV, cold start each time. Record the model
 
 ## Decision
 
-- **Go (2017+ tier; evaluate on the 2017 set, and per tier on 2019/2023/2025):** P0, P1, P5, P6 and P7 pass, and at least one of P2/P3 passes on a UHD model.
-  Proceed to a written product design, not to an implementation of the full app.
+- **Implementation direction:** selected web app + AVPlay approach has useful initial evidence on
+  the 2017 set and is the basis of the owner-requested full-client specification. This is not a
+  compatibility release gate. P7, repeated cold-start coverage, a 10-minute UHD stability run, and
+  results on other model/firmware tiers remain open.
 - **Re-scope:** P1 and P5 pass, but P6 fails: restrict to 2019+ or to a simpler UI. P5 fails only on
   the PMS certificate: document a workaround and test it before any further investment.
 - **Stop:** P0, P1 or P5 fails with no workaround; record the reason and recommend Option D.
@@ -67,7 +73,9 @@ per-year table. Firmware was **not** observed: record it from Settings > Support
 | 5 | QE55QN70F | 2025 | 9.0 / M120 | Wasm-capable; label partly blurred, confirm model |
 
 None is a The Frame, so Art Mode/lifecycle (P8) stays untested. No 2018, 2020-22 or 2024 set is owned.
-First PoC target: #1 (2019, pipeline proof), then #3 (2017, the floor), then #4. The 2017 set decides the floor: if P0/P1/P5/P6 fail there, raise the floor to 2019 and say so.
+Next compatibility targets: #1/#2 (2019 control pair), then #4 (2023), then #5 (2025), subject to
+the owner's authorization and TV availability. The 2017 set supplies the current oldest-engine
+evidence but does not by itself decide the support floor for other 2017 model groups.
 
 Observed on #3 (2026-10-09), Developer Mode, via `sdb capability`: platform/product version 3.0, `cpu_arch`
 armv7, `sdbd` 2.2.31 (plugin 3.2.5_TV_REL), `rootonoff_support` disabled, `filesync_support` push only,
@@ -119,8 +127,8 @@ This is one run; the method asks for three.
 | Tracks reported (`getTotalTrackInfo`) | `h264` 1920x1080; `ac3` 6 ch 48 kHz; `dts` 6 ch 48 kHz |
 | Default audio | AC-3 track; owner confirmed picture and sound normal (owner-observed, on the set) |
 
-P3 is still open: the DTS track is listed by the demuxer, but whether it decodes on this set was not tested.
-The MKV container played through AVPlay without remuxing, which favours Option C's direct-play path.
+The later P3 run showed that DTS core decodes on this set. The MKV container played through AVPlay
+without remuxing, which favours Option C's direct-play path.
 
 ### P3 and playback-control results on #3 (2026-10-09)
 

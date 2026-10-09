@@ -1,0 +1,8 @@
+.buildResult/
+.package/
+.sign/
+.tproject
+*.wgt
+.manifest.tmp
+author-signature.xml
+signature1.xml

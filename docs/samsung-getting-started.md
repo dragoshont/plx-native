@@ -97,6 +97,6 @@ If this does not work, stop and fix it first. Do not start any Plex work.
 
 - **`.wgt`**: Samsung's packaged web app.
 - **DUID**: the TV's unique ID, used in the certificate.
-- **AVPlay**: Samsung's video API; needed for UHD on 2018 TVs (2017 limits not yet verified).
+- **AVPlay**: Samsung's video API; Samsung documents it for 2018 UHD where MSE is FHD-only. Selected UHD HEVC playback, including HDR10, was observed on the tested 2017 UE55MU6172; that one-set result does not establish capability for other 2017 models.
 - **MSE**: the browser video interface; FHD-only on 2018 TVs.
 - **Distributor certificate**: the certificate that lists which TVs may install your app.

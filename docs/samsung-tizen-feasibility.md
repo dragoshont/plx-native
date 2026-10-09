@@ -9,15 +9,20 @@
 > (PoC probe P0 passed). It confirmed no WebAssembly, no `async` and no sloppy-mode `class`/`let` on that
 > set, and that AVPlay, MSE, `fetch` and `Promise` exist. A second probe on the same set passed P1 and P5:
 > it direct-played a 1080p H.264 MKV (AC-3 5.1) from the owner's PMS over HTTPS via AVPlay, with first frame
-> in 2.4 s and no stalls in 10 minutes, and reached PMS and plex.tv over HTTPS. Later probes on the same set played 4K HEVC Main 10 (SDR and 57 Mbps HDR10, with HDR seen by the owner), AAC, E-AC-3 and DTS core audio, and embedded text subtitles via AVPlay (see `samsung-tizen-poc.md`). One set and one run, with no UI and
-> no UHD yet. Results: [PoC](samsung-tizen-poc.md).
+> in 2.4 s and no stalls in 10 minutes, and reached PMS and plex.tv over HTTPS. Later probes on the
+> same set played selected 4K HEVC Main 10 (SDR and 57 Mbps HDR10, HDR seen by the owner), AAC,
+> E-AC-3, DTS core and embedded text subtitles via AVPlay; an unoptimized DOM grid loaded 169/170
+> posters and met the scripted focus-latency target. These are probe results from one set, not a
+> completed client or broad support claim. Results: [PoC](samsung-tizen-poc.md).
 
 Status: desk study, 2026-10-09, against upstream `GLinnik21/plx-native` at `38c07fc3` (this fork,
-`dragoshont/plx-native`, is identical at that revision). Apart from the P0/P1/P5 probes above, **nothing here was
-run on a Samsung television; no Samsung support exists or is claimed.** The LG app is untouched and no port has been
-started. Companion documents:
-[getting started](samsung-getting-started.md) and
-[proof-of-concept plan](samsung-tizen-poc.md).
+`dragoshont/plx-native`, is identical at that revision). The P0-P6 probe results recorded in the
+[test register](samsung-tizen-poc.md) were observed on one 2017 Samsung set. They do not establish
+compatibility with any other model or firmware; no Samsung product support is claimed. The LG app
+is untouched. A full Tizen client is being specified and developed separately in
+[samsung-tizen-client-spec.md](samsung-tizen-client-spec.md), with a reusable workflow for future
+Tizen apps in [samsung-tizen-development-process.md](samsung-tizen-development-process.md).
+Developer guidance is in [getting started](samsung-getting-started.md).
 
 Evidence labels used throughout:
 
@@ -42,9 +47,10 @@ Evidence labels used throughout:
    [samsung], so it cannot serve the 2018 and 2019 sets.
 3. **The only approach that can reach 2018 sets is a new web (`.wgt`) client** that implements the Plex
    protocol in JavaScript for Chromium 56 and plays through Samsung's AVPlay, which is the analogue of the LG video-plane design.
-4. **Recommendation: do not start implementation.** Run the bounded real-TV proof of concept in
-   [samsung-tizen-poc.md](samsung-tizen-poc.md) first. It needs a physical 2018+ set; ask the owner for
-   its model code and firmware before scheduling it.
+4. **Recommendation:** the observed 2017 results justify starting the separately specified full
+   Tizen client and reusable app-development workflow. They do not justify a support claim: validate
+   the Samsung emulator and each intended model/firmware tier, including 2018/2019 behavior, before
+   advertising compatibility or release readiness.
 
 ## 2. Claims and evidence audit
 
@@ -154,23 +160,24 @@ Samsung page URLs: see section 8.
 **Incremental native port** is rejected as a first step: its first milestone, a signed binary that
 runs, is unproven on public tooling, so every later milestone is speculation.
 
-**Recommended approach: C, behind a proof-of-concept gate.** Keep Plex Media Server, libraries and
-watch progress as the source of truth (server-side `/:/timeline`, `/:/scrobble` semantics as already
-documented in `docs/pms-api.md`). If the gate passes, a later 2020+ tier can adopt B's Wasm sharing
-as an optimisation, not a prerequisite. Do not introduce a replacement server.
+**Recommended approach: C, informed by the first device probes and subject to a per-model release
+gate.** Keep Plex Media Server, libraries and watch progress as the source of truth (server-side
+`/:/timeline`, `/:/scrobble` semantics as already documented in `docs/pms-api.md`). A later 2020+
+tier may adopt B's Wasm sharing as an optimization, not a prerequisite. Do not introduce a
+replacement server.
 
-## 6. Proposed support matrix (targets, not claims)
+## 6. Proposed support matrix (engineering targets, not claims)
 
 Terms: **baseline** = documented by Samsung only; **package** = a `.wgt` was produced; **installed**; **playback tested**.
 Every cell starts at *baseline*. A cell may be raised only with a dated observation by model and firmware.
 
-| Group | Engine | Playback path | Planned first state |
+| Group | Engine | Playback path | Engineering priority |
 | --- | --- | --- | --- |
-| 2017 (UHD `17TV_PREMIUM`; others per group) | M47 | AVPlay; MSE limits not yet verified for 2017 | **Floor**; PoC target after the 2019 pair proves the pipeline |
-| 2018 UHD (`18TV_PREMIUM`, `18TV_STANDARD1`) | M56 | AVPlay (UHD), MSE capped at FHD | PoC target |
-| 2018 FHD | M56 | AVPlay or MSE (FHD) | After the UHD result |
-| 2019 | M63 | AVPlay | Second PoC wave |
-| 2020+ | M69+ | AVPlay; Wasm possible | Only after 2018/2019 gate |
+| 2017 (UHD `17TV_PREMIUM`; others per group) | M47 | AVPlay; MSE limits not yet verified for 2017 | **Development floor**; one UE55MU6172 has probe evidence, not client compatibility evidence |
+| 2018 UHD (`18TV_PREMIUM`, `18TV_STANDARD1`) | M56 | AVPlay (UHD), MSE capped at FHD | Priority device-validation tier |
+| 2018 FHD | M56 | AVPlay or MSE (FHD) | Validate as a separate capability row |
+| 2019 | M63 | AVPlay | Additional engine/model tier |
+| 2020+ | M69+ | AVPlay; Wasm possible | Compatibility extension after the baseline |
 | The Frame (any year) | by year | As its year, plus Art Mode/standby tests | Separate row, never inferred from the year's other models |
 | Pre-2017 | WebKit / Tizen 2.x | Out of scope | Not investigated |
 
