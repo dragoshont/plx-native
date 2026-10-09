@@ -62,7 +62,7 @@ per-year table. Firmware was **not** observed: record it from Settings > Support
 |---|---|---|---|---|
 | 1 | UE43RU7092 | 2019 | 5.0 / M63 | 43" UHD; no Wasm (documented from Tizen 5.5) |
 | 2 | UE43RU7092 | 2019 | 5.0 / M63 | Same model as #1; use as a control pair |
-| 3 | UE55MU6172 | 2017 | 3.0 / M47 | **The support floor**; no Wasm (observed), oldest JS engine; P0, P1, P5 passed |
+| 3 | UE55MU6172 | 2017 | 3.0 / M47 | **The support floor**; no Wasm (observed), oldest JS engine; P0, P1, P5 passed; DTS decodes |
 | 4 | QE65Q80C | 2023 | 7.0 / M94 | Wasm-capable |
 | 5 | QE55QN70F | 2025 | 9.0 / M120 | Wasm-capable; label partly blurred, confirm model |
 
@@ -121,6 +121,56 @@ This is one run; the method asks for three.
 
 P3 is still open: the DTS track is listed by the demuxer, but whether it decodes on this set was not tested.
 The MKV container played through AVPlay without remuxing, which favours Option C's direct-play path.
+
+### P3 and playback-control results on #3 (2026-10-09)
+
+Same item and HTTPS URL as P1. The probe ran timed phases (shown on screen) and posted each event to the Mac.
+Two complete runs; the second is the one in the table, and the first agreed on every row it measured.
+
+| Observed | Value |
+|---|---|
+| Default audio after `prepareAsync` | AC-3 (`AUDIO#1`) |
+| `setSelectTrack('AUDIO', 2)` **before** `play()` | throws `PLAYER_ERROR_INVALID_OPERATION`; the stream stays on AC-3 |
+| `setSelectTrack('AUDIO', 2)` **during** playback | succeeds; `getCurrentStreamInfo` reports `dts` 6 ch 48 kHz 1536 kbps; state PLAYING; no error |
+| Sound on the DTS track | owner heard normal sound, with a slight level change at the switch (owner-observed) |
+| Switch back to AC-3 during playback | succeeds |
+| Forward seek 0:38 to 5:00 (`seekTo`) | playback position within 0.9 s of the target after 0.35 s; success callback after 1.2 s |
+| Pause for 4 s | state PAUSED, position drift 0 |
+| Resume | state PLAYING, 3.8 s of media advanced in 4 s |
+| Backward seek by 30 s | landed 2.8 s **before** the target after 1.8 s (keyframe snap, presumably) |
+
+Two findings. First, DTS (core, from a DTS-HD MA track) **decodes on this 2017 set**. That is consistent with Samsung's note that DTS was removed from 2018 models, so the P3 "DTS fails cleanly" check must be run on the 2019+ sets. Second, the audio track is chosen after playback starts, not between prepare and play. The backward seek misses P2's 2 s window. A client should treat seek as keyframe-accurate and show the landed position, not the requested one.
+
+## Test register
+
+Each run of each test is recorded here, so later sets (2019, 2023, 2025, a The Frame) are measured the same
+way. Evidence types: **Observed** means measured by the probe and logged; **Owner-observed** means a person
+watching the set reported it. The probes are throwaway `.wgt` apps kept outside the repo, because they embed
+a Plex token. Their behaviour is described here precisely enough to rebuild them.
+
+| ID | Test | Steps | Pass criteria | #3 2017 UE55MU6172 (T-KTMDEUC-1410.1) |
+|---|---|---|---|---|
+| T0.1 | Install and launch | Package with the Samsung certificate (TV's DUID); `install-permit`; install; run | Installs and launches | Pass, 1 run (Observed) |
+| T0.2 | Engine capabilities | Report the user agent, screen size, `webapis`, `MediaSource`, `fetch`, `Promise`, `WebAssembly`, and ES2015 syntax | Recorded | Recorded: no Wasm, no `async`, ES5 target (Observed) |
+| T5.1 | PMS over HTTPS (plex.direct) | `GET /identity` with `X-Plex-Token` | 200 with the engine's normal certificate checks | Pass, 538 ms (Observed) |
+| T5.2 | PMS over LAN HTTP | `GET http://<pms>:32400/identity` | 200 | Pass, 15 ms (Observed) |
+| T5.3 | plex.tv over HTTPS | `GET https://plex.tv/api/v2/user` | 200 | Pass, 558 ms (Observed) |
+| T1.1 | AVPlay direct play, 1080p H.264 MKV, HTTPS | `open` the part URL with the token; `prepareAsync`; `play`; full-screen display rect | First frame within 5 s | Pass, 2.4 s; prepared in 1.4 s (Observed) |
+| T1.2 | 10-minute stability | Keep playing, logging buffering events every 15 s | 0 unrecovered stalls, 0 errors | Pass, 626 s, 0 stalls, 0 errors (Observed) |
+| T1.3 | Picture and sound quality | A person watches T1.2 | No visible or audible defects | Pass: "image is perfect", sound normal (Owner-observed) |
+| T3.1 | Default audio track | `getCurrentStreamInfo` after `play` | A supported track is chosen | AC-3 chosen (Observed) |
+| T3.2 | Select a track before `play` | `setSelectTrack('AUDIO', n)` between prepare and play | Works, or the API constraint is documented | Throws `INVALID_OPERATION` (Observed); documented as a constraint |
+| T3.3 | Switch to DTS during playback | `setSelectTrack` to the DTS track 5 s in; hold for 35 s | 2017: plays. 2018+: fails cleanly, with an error and no hang | 2017: plays, `dts` active, sound heard (Observed and Owner-observed) |
+| T3.4 | Switch back to AC-3 | `setSelectTrack` to the AC-3 track | Plays | Pass (Observed) |
+| T3.5 | AAC, E-AC-3 | As T3.3, with an item that has those tracks | Plays | Not run: needs a test item |
+| T2.1 | Forward seek | `seekTo` 5:00 from about 0:38 | Lands within 2 s; playing within 2 s | Pass: 0.9 s off, after 0.35 s (Observed) |
+| T2.2 | Backward seek | `seekTo` 30 s back | Lands within 2 s | **Miss**: 2.8 s early after 1.8 s (Observed); probably a keyframe snap |
+| T2.3 | Pause and resume | `pause` for 4 s, then `play` | No drift while paused; playback resumes | Pass: drift 0, 3.8 s in 4 s (Observed) |
+| T2.4 | HEVC Main 10 UHD | As T1.1 with a 4K HEVC 10-bit item | First frame within 5 s; 10 min with no stall | Not run: needs a test item |
+| T4.x | Subtitles (embedded text, SRT, image) | | At least one text format renders | Not run: the test item has no subtitles |
+| T6.x | DOM UI grid of 200 posters | | Median key latency 150 ms or less | Not run |
+| T7.x | Progress report and read-back | | Server shows the new `viewOffset` | Not run: waiting for the owner to pick an item it may write to |
+| T8.x | The Frame lifecycle | | App resumes after Art Mode | Not run: no The Frame set |
 
 Owner-reported (2026-10-09, not independently observed): the official Plex app works on all five sets, so each
 has a working network path to the owner's PMS. Use it as the comparison baseline for P2-P7 (same titles, same
