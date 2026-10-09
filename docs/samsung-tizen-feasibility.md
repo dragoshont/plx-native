@@ -176,8 +176,8 @@ Samsung (all fetched 2026-10-09):
 `.../extension-libraries/webassembly/webassembly.html`,
 `.../getting-started/setting-up-sdk/creating-certificates.html`,
 `.../getting-started/using-sdk/tv-device.html`, `.../develop/tizen-net-tv.html`.
-Not re-fetched this round (carried from the earlier study; **re-verify**): MSE FHD limit and DTS
-limit on 2018, and Plex's smart-TV support page.
+The 2018 MSE FHD-only limit and the DTS-unsupported note were re-confirmed on the 2018 video
+specifications page. Not re-fetched (carried from the earlier study; **re-verify**): Plex's smart-TV support page.
 Upstream: `GLinnik21/plx-native` README, `LICENSING.md`, `docs/module-layers.md`, releases, issues 174 and 249.
 
 The previously mentioned "KROMA" project was an unrelated false lead and is not part of this proposal.
