@@ -51,3 +51,20 @@ Each probe is run 3 times on the same TV, cold start each time. Record the model
 A private notes file (device identifiers redacted) and a public results table with model group,
 firmware, date, per-probe numbers, and the matrix state reached. Raise a cell in the feasibility study's support
 matrix only for the model groups actually tested.
+
+## Available test TVs (from rear labels, 2026-10-09)
+
+Model codes were read from photographed rear labels; serial numbers are deliberately omitted. Year comes from the
+model-code letter (M=2017, R=2019, C=2023, F=2025) and the Tizen/Chromium column from Samsung's published
+per-year table. Firmware was **not** observed: record it from Settings > Support > About This TV before any probe.
+
+| # | Model code | Year | Tizen / Chromium (ceiling for that year) | Notes |
+|---|---|---|---|---|
+| 1 | UE43RU7092 | 2019 | 5.0 / M63 | 43" UHD; no Wasm (documented from Tizen 5.5) |
+| 2 | UE43RU7092 | 2019 | 5.0 / M63 | Same model as #1; use as a control pair |
+| 3 | UE55MU6172 | 2017 | 3.0 | **Below the 2018 floor**; baseline for "does not work" only |
+| 4 | QE65Q80C | 2023 | 7.0 / M94 | Wasm-capable |
+| 5 | QE55QN70F | 2025 | 9.0 / M120 | Wasm-capable; label partly blurred, confirm model |
+
+None is a The Frame, so Art Mode/lifecycle (P8) stays untested. No 2018, 2020-22 or 2024 set is owned.
+First PoC target: #1 (oldest in-scope, no Wasm, AVPlay-only) then #4.
