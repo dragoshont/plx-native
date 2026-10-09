@@ -4,10 +4,15 @@
 > sets the owner has (a 2017 MU series). 2017 is the hardest tier: M47 predates much of ES2015+, so the
 > JavaScript client must be transpiled and polyfilled, and 2017 video limits (`17TV_PREMIUM` etc.) are
 > per model group. Everything below written about "2018" is the *next* tier up, not the floor.
+>
+> **First device evidence 2026-10-09:** a signed hello `.wgt` installed and ran on a 2017 UE55MU6172
+> (PoC probe P0 passed). It confirmed no WebAssembly, no `async` and no sloppy-mode `class`/`let` on that
+> set, and that AVPlay, MSE, `fetch` and `Promise` exist. Results: [PoC](samsung-tizen-poc.md). No Plex
+> playback has been attempted, so nothing below about support has changed.
 
 Status: desk study, 2026-10-09, against upstream `GLinnik21/plx-native` at `38c07fc3` (this fork,
-`dragoshont/plx-native`, is identical at that revision). **Nothing here was run on a Samsung
-television; no Samsung support exists or is claimed.** The LG app is untouched and no port has been
+`dragoshont/plx-native`, is identical at that revision). Apart from the P0 probe above, **nothing here was
+run on a Samsung television; no Samsung support exists or is claimed.** The LG app is untouched and no port has been
 started. Companion documents:
 [getting started](samsung-getting-started.md) and
 [proof-of-concept plan](samsung-tizen-poc.md).

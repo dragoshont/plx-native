@@ -2,10 +2,9 @@
 
 Part of the [Samsung feasibility study](samsung-tizen-feasibility.md). This is a plain-language
 checklist for preparing a Samsung TV and a computer for the
-[proof of concept](samsung-tizen-poc.md). **Partly run.** Tizen Studio was installed and Developer
-Mode reached `sdb` on a 2017 set (section 4 records what that took). No certificate has been made
-and no app has been installed yet, so sections 3 and 5 are still Samsung's published steps, not
-observed ones. Where a page changes, Samsung's wins. Ask the owner before installing anything.
+[proof of concept](samsung-tizen-poc.md). **Run end to end once** (2026-10-09, macOS, a 2017 set): Tizen
+Studio 6.1 CLI, a Samsung certificate, Developer Mode, and a hello app installed and launched. The gotchas
+below are the ones actually hit. Where a page changes, Samsung's wins. Ask the owner before installing anything.
 
 ## What you are building
 
@@ -35,11 +34,17 @@ serial number, IP address or account name in a commit, issue or screenshot.
 
 ## 3. Signing certificate
 
-1. In Tizen Studio open Tools > Certificate Manager and add a profile, type Samsung > TV.
+1. In Tizen Studio open Tools > Certificate Manager and add a profile, type **Samsung** (not Tizen) > TV.
+   Retail TVs need the Samsung type; it signs you in with your Samsung account.
 2. Create an **author** certificate, then a **distributor** certificate. Enter the TV's DUID in the distributor step [samsung].
 3. Keep the `.p12` files and passwords outside the repository (treat them like the repo's other private files).
+4. **Give the TV the certificate before the first install:** `tizen install-permit -s <target>` (Device
+   Manager: right-click the TV > "Permit to install applications"). Without it the install ends in
+   `install failed[118]` with no further reason, which looks like a broken certificate but is not.
+   Quit Certificate Manager afterwards: it keeps restarting its own `sdb` server.
 
-A certificate is tied to named devices; installing on a new TV means a new distributor certificate.
+A certificate is tied to named devices; installing on a new TV means adding its DUID to the distributor
+certificate and running `install-permit` on that TV.
 
 ## 4. Turn on Developer Mode on the TV
 
@@ -59,15 +64,25 @@ Gotchas observed on a 2017 set from a Mac (2026-10-09):
   enable the launching app under System Settings > Privacy & Security > Local Network. Terminals
   embedded in other apps inherit that app's permission. Once Terminal.app has started the sdb server,
   other local `sdb` clients reuse it over localhost.
-- On that set, `sdb shell 0 getduid` returned the DUID, so you need not copy it off the screen.
+- **If no app can be granted Local Network access**, relay through Apple's `nc`, which is exempt:
+  `mkfifo /tmp/f; while true; do nc -l 127.0.0.1 26111 < /tmp/f | nc <tv-ip> 26101 > /tmp/f; done`,
+  then `sdb connect 127.0.0.1:26111` and pass `-s 127.0.0.1:26111` to `tizen`. The TV still sees the
+  Mac's own address, so the Developer Mode host IP check passes.
+- On that set, `sdb shell 0 getduid` returned the DUID, so you need not copy it off the screen. Other
+  `sdb shell` commands return "closed": a retail TV gives no general shell.
 
 ## 5. First app: "hello TV"
 
 1. Create a Web application for TV with the blank template (an `index.html` and a `config.xml`).
 2. Show `navigator.userAgent`, `window.innerWidth`/`innerHeight`, and the result of
    `webapis.productinfo.isUdPanelSupported()`.
-3. Build, sign with the certificate profile, install to the TV, run it.
+3. Build, sign with the certificate profile, install to the TV, run it:
+   `tizen package -t wgt -s <profile> -- <dir>`, `tizen install -n <file>.wgt -s <target>`,
+   `tizen run -p <package>.<app> -s <target>`.
+   - The package ID in `config.xml` must be exactly 10 letters or digits.
+   - `tizen package` names the file after the app's `<name>`; rename it if that contains spaces.
 4. Copy the output into the private notes with the date. This is the first real data point for the model.
+   A simple way to get it off the TV is to `POST` it as JSON to a small HTTP listener on the computer.
 
 If this does not work, stop and fix it first. Do not start any Plex work.
 

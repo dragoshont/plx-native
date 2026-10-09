@@ -62,7 +62,7 @@ per-year table. Firmware was **not** observed: record it from Settings > Support
 |---|---|---|---|---|
 | 1 | UE43RU7092 | 2019 | 5.0 / M63 | 43" UHD; no Wasm (documented from Tizen 5.5) |
 | 2 | UE43RU7092 | 2019 | 5.0 / M63 | Same model as #1; use as a control pair |
-| 3 | UE55MU6172 | 2017 | 3.0 / M47 | **The support floor**; no Wasm, oldest JS engine |
+| 3 | UE55MU6172 | 2017 | 3.0 / M47 | **The support floor**; no Wasm (observed), oldest JS engine; P0 passed |
 | 4 | QE65Q80C | 2023 | 7.0 / M94 | Wasm-capable |
 | 5 | QE55QN70F | 2025 | 9.0 / M120 | Wasm-capable; label partly blurred, confirm model |
 
@@ -71,9 +71,34 @@ First PoC target: #1 (2019, pipeline proof), then #3 (2017, the floor), then #4.
 
 Observed on #3 (2026-10-09), Developer Mode, via `sdb capability`: platform/product version 3.0, `cpu_arch`
 armv7, `sdbd` 2.2.31 (plugin 3.2.5_TV_REL), `rootonoff_support` disabled, `filesync_support` push only,
-`intershell_support` disabled, `can_launch` tv-samsung. That is only the developer channel: no app has been
-built, signed, installed or run yet, so P0 is still open. It also confirms Developer Mode gives no root or
+`intershell_support` disabled, `can_launch` tv-samsung. This confirms Developer Mode gives no root or
 general shell, which the native-port option (Option A) would need.
+
+### P0 result on #3 (2026-10-09): pass
+
+A minimal `.wgt` (Samsung-type certificate with this TV's DUID, `internet` and `productinfo` privileges)
+installed and launched, and reported back over HTTP to the Mac. Firmware `T-KTMDEUC-1410.1`, model code
+`17_KANTM_UHD_BASIC`. One run, not yet the three cold starts the method asks for.
+
+| Observed | Value |
+|---|---|
+| `navigator.userAgent` | `Mozilla/5.0 (SMART-TV; LINUX; Tizen 3.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/3.0 TV Safari/538.1` |
+| Viewport / screen | 1920x1080, devicePixelRatio 1 (the UI layer is FHD; UHD is the video plane only) |
+| `productinfo.isUdPanelSupported()` | true |
+| `webapis.avplay`, `tizen` | present |
+| `MediaSource` | present; `isTypeSupported` true for H.264 and HEVC (claims only; nothing played yet) |
+| `fetch`, `Promise` | present |
+| `WebAssembly` | **absent** (confirms Option B cannot cover 2017) |
+| ES2015 | arrow functions work; `class`/`let` outside strict mode is a SyntaxError; `async function` is a SyntaxError |
+
+The `class`/`let` error text is V8's pre-M49 wording, consistent with the documented M47 engine despite the
+WebKit-style user agent. A 2017 client must therefore be transpiled to ES5 (or strict-mode ES2015 without
+`async`), with polyfills checked on the set.
+
+The install failed with `install failed[118]` until the TV was given the certificate with `tizen
+install-permit` (Device Manager's "Permit to install applications"). Before that step was found, a 2025 Samsung
+CA change was suspected; that hypothesis is **refuted** for this set: a certificate issued under the
+2025 "VD DEVELOPER Public CA Class" and "Samsung VD Author CA" installs on 2017 firmware.
 
 Owner-reported (2026-10-09, not independently observed): the official Plex app works on all five sets, so each
 has a working network path to the owner's PMS. Use it as the comparison baseline for P2-P7 (same titles, same
