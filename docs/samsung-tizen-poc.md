@@ -162,6 +162,20 @@ Three 4K items from the owner's library, each direct-played from its HTTPS part 
 
 The 2017 set's hardware decoder played all three UHD HEVC variants, including 57 Mbps HDR10. This is the capability that MSE lacks on 2018 sets (FHD-only), so it confirms AVPlay as the playback path. The client must set a display method explicitly; the default stretches. The runs were 75-90 s, so the 10-minute UHD stability criterion is still open.
 
+### P6 results on #3 (2026-10-09, automatic part only)
+
+A plain DOM page (no framework), with 7 columns of 240x360 posters. Each poster is a server-resized image from `/photo/:/transcode`, the focused one gets an outline and scale, and the grid scrolls with a CSS `transform`. Latency is measured from a focus change until two animation frames later.
+
+| Observed | Value |
+|---|---|
+| Engine | Tizen 3.0, AppleWebKit/538.1, 1920x1080 at DPR 1; JS heap 10 MB used of a 756 MB limit |
+| Films section list (JSON, first 200 items) | 170 items, 405 KB, fetched in 455 ms, parsed in 36 ms |
+| DOM build for 170 tiles | 189 ms |
+| Posters loaded | 169 of 170 in 1.24 s (1 failed) |
+| Automatic focus moves (62, including 25 row scrolls each way) | median 49 ms, p95 108 ms, max 132 ms |
+
+The automatic run meets the 150 ms median criterion. The manual test, a person pressing and holding arrow keys and judging the feel, was not run: TV work stopped here.
+
 ## Test register
 
 Each run of each test is recorded here, so later sets (2019, 2023, 2025, a The Frame) are measured the same
@@ -193,7 +207,9 @@ a Plex token. Their behaviour is described here precisely enough to rebuild them
 | T4.1 | Embedded text subtitles | `setSelectTrack('TEXT', n)` during playback; draw the `onsubtitlechange` text in a page overlay | Cues arrive and are visible | Pass: 17 text cues in about 60 s (Observed); visible (Owner-observed). One stall at the switch and seek |
 | T4.2 | External SRT | Fetch `/library/streams/<id>`, parse it, and draw it against `getCurrentTime` | Renders in sync | Fetch and parse pass: 200, 1618 cues (Observed); rendering not built |
 | T4.3 | Image subtitles (PGS/VobSub) | Select an image subtitle track | Renders, or fails cleanly so the server can burn it in | Not run |
-| T6.x | DOM UI grid of 200 posters | | Median key latency 150 ms or less | Not run |
+| T6.1 | Library grid load | Fetch the section list (JSON); build a DOM grid; load server-resized posters | List and grid within 2 s | Pass: list 0.46 s, DOM 0.19 s, 169/170 posters in 1.24 s (Observed) |
+| T6.2 | Focus latency, scripted | 62 scripted moves; time from focus change to the second animation frame | Median 150 ms or less | Pass: median 49 ms, p95 108 ms, max 132 ms (Observed) |
+| T6.3 | Focus latency and feel, by hand | Press and hold the arrow keys for 30 s, then OK | Median 150 ms or less; feels smooth | Not run |
 | T7.x | Progress report and read-back | | Server shows the new `viewOffset` | Not run: waiting for the owner to pick an item it may write to |
 | T8.x | The Frame lifecycle | | App resumes after Art Mode | Not run: no The Frame set |
 
