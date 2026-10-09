@@ -62,7 +62,7 @@ per-year table. Firmware was **not** observed: record it from Settings > Support
 |---|---|---|---|---|
 | 1 | UE43RU7092 | 2019 | 5.0 / M63 | 43" UHD; no Wasm (documented from Tizen 5.5) |
 | 2 | UE43RU7092 | 2019 | 5.0 / M63 | Same model as #1; use as a control pair |
-| 3 | UE55MU6172 | 2017 | 3.0 / M47 | **The support floor**; no Wasm (observed), oldest JS engine; P0 passed |
+| 3 | UE55MU6172 | 2017 | 3.0 / M47 | **The support floor**; no Wasm (observed), oldest JS engine; P0, P1, P5 passed |
 | 4 | QE65Q80C | 2023 | 7.0 / M94 | Wasm-capable |
 | 5 | QE55QN70F | 2025 | 9.0 / M120 | Wasm-capable; label partly blurred, confirm model |
 
@@ -99,6 +99,28 @@ The install failed with `install failed[118]` until the TV was given the certifi
 install-permit` (Device Manager's "Permit to install applications"). Before that step was found, a 2025 Samsung
 CA change was suspected; that hypothesis is **refuted** for this set: a certificate issued under the
 2025 "VD DEVELOPER Public CA Class" and "Samsung VD Author CA" installs on 2017 firmware.
+
+### P1 and P5 results on #3 (2026-10-09): pass
+
+A second `.wgt` (ES5, `internet` privilege only) ran the P5 requests and then direct-played one episode from
+the owner's PMS on the LAN through `webapis.avplay` into a full-screen `<object type="application/avplayer">`.
+It did not report a Plex timeline, so it wrote no watch state. The probe sent its results to the Mac by HTTP.
+This is one run; the method asks for three.
+
+| Probe | Observed |
+|---|---|
+| P5 PMS over HTTPS (`*.plex.direct`, certificate verified by the engine) | `/identity` 200 in 538 ms; the TV resolved the plex.direct name |
+| P5 PMS over HTTP (LAN IP) | `/identity` 200 in 15 ms |
+| P5 plex.tv over HTTPS | `/api/v2/user` 200 in 558 ms |
+| P1 source | MKV, H.264 High 1920x1080, about 16 Mbps, AC-3 5.1 plus DTS-HD MA 5.1; direct play over **HTTPS**, no transcode, `X-Plex-Token` in the query |
+| P1 `prepareAsync` to prepared | 1367 ms |
+| P1 time to first frame (`oncurrentplaytime` > 0 after `play`) | 2379 ms (pass: under 5 s) |
+| P1 playback | 626 s of media time over a 630 s window; **0 stalls**, 0 errors (pass) |
+| Tracks reported (`getTotalTrackInfo`) | `h264` 1920x1080; `ac3` 6 ch 48 kHz; `dts` 6 ch 48 kHz |
+| Default audio | AC-3 track; owner confirmed picture and sound normal (owner-observed, on the set) |
+
+P3 is still open: the DTS track is listed by the demuxer, but whether it decodes on this set was not tested.
+The MKV container played through AVPlay without remuxing, which favours Option C's direct-play path.
 
 Owner-reported (2026-10-09, not independently observed): the official Plex app works on all five sets, so each
 has a working network path to the owner's PMS. Use it as the comparison baseline for P2-P7 (same titles, same

@@ -7,11 +7,13 @@
 >
 > **First device evidence 2026-10-09:** a signed hello `.wgt` installed and ran on a 2017 UE55MU6172
 > (PoC probe P0 passed). It confirmed no WebAssembly, no `async` and no sloppy-mode `class`/`let` on that
-> set, and that AVPlay, MSE, `fetch` and `Promise` exist. Results: [PoC](samsung-tizen-poc.md). No Plex
-> playback has been attempted, so nothing below about support has changed.
+> set, and that AVPlay, MSE, `fetch` and `Promise` exist. A second probe on the same set passed P1 and P5:
+> it direct-played a 1080p H.264 MKV (AC-3 5.1) from the owner's PMS over HTTPS via AVPlay, with first frame
+> in 2.4 s and no stalls in 10 minutes, and reached PMS and plex.tv over HTTPS. One set and one run, with no UI and
+> no UHD yet. Results: [PoC](samsung-tizen-poc.md).
 
 Status: desk study, 2026-10-09, against upstream `GLinnik21/plx-native` at `38c07fc3` (this fork,
-`dragoshont/plx-native`, is identical at that revision). Apart from the P0 probe above, **nothing here was
+`dragoshont/plx-native`, is identical at that revision). Apart from the P0/P1/P5 probes above, **nothing here was
 run on a Samsung television; no Samsung support exists or is claimed.** The LG app is untouched and no port has been
 started. Companion documents:
 [getting started](samsung-getting-started.md) and
