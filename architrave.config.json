@@ -14,7 +14,7 @@
     "docs/samsung-getting-started.md"
   ],
   "build": "tools/tizen/build-source.sh samsung/PlexTv",
-  "test": "node tests/tizen/plex-api.test.js && node --check samsung/PlexTv/main.js && node --check samsung/PlexTv/js/plex-api.js && tools/tizen/check-es5.sh samsung/PlexTv",
+  "test": "tools/tizen/test.sh",
   "autonomy": {
     "scope": "approved-program",
     "mutationPolicy": {

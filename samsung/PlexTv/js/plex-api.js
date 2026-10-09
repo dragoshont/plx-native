@@ -31,6 +31,107 @@
         throw new Error("PMS response is missing the " + field + " list.");
     }
 
+    function createAuthClient(options) {
+        options = options || {};
+        var fetchRequest = options.fetch || (typeof fetch === "function" ? fetch : null);
+        var now = options.now || Date.now;
+        var clientIdentifier = String(options.clientIdentifier || "com.plxnative.plex-tv");
+        var rootUrl = "https://plex.tv";
+        if (!fetchRequest) {
+            throw new Error("This runtime does not provide fetch.");
+        }
+        if (!/^[A-Za-z0-9._-]{8,128}$/.test(clientIdentifier)) {
+            throw new Error("The Plex client identifier is invalid.");
+        }
+
+        function request(url, method) {
+            return Promise.resolve().then(function () {
+                return fetchRequest(url, {
+                    method: method,
+                    credentials: "omit",
+                    headers: {
+                        Accept: "application/json",
+                        "X-Plex-Client-Identifier": clientIdentifier,
+                        "X-Plex-Product": "Plex TV Client",
+                        "X-Plex-Version": "0.1.0",
+                        "X-Plex-Platform": "Tizen"
+                    }
+                });
+            }).catch(function () {
+                throw new Error("Could not reach Plex. Check the network and try again.");
+            }).then(function (response) {
+                if (!response || typeof response.status !== "number") {
+                    throw new Error("Plex returned an invalid authorization response.");
+                }
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return { status: "expired" };
+                    }
+                    throw new Error("Plex authorization request failed (HTTP " + response.status + ").");
+                }
+                return Promise.resolve().then(function () {
+                    return response.json();
+                }).catch(function () {
+                    throw new Error("Plex returned an invalid authorization response.");
+                }).then(function (payload) {
+                    if (!payload || typeof payload !== "object") {
+                        throw new Error("Plex returned an invalid authorization response.");
+                    }
+                    return payload;
+                });
+            });
+        }
+
+        return {
+            startAuthorization: function () {
+                return request(rootUrl + "/api/v2/pins?strong=false", "POST").then(function (pin) {
+                    var id = pin.id;
+                    var code = typeof pin.code === "string" ? pin.code : "";
+                    var expiry = pin.expiresAt ? Date.parse(pin.expiresAt) : NaN;
+                    if (!(typeof expiry === "number" && isFinite(expiry)) && typeof pin.expiresIn === "number" && pin.expiresIn > 0) {
+                        expiry = now() + pin.expiresIn * 1000;
+                    }
+                    if (!/^[0-9]+$/.test(String(id)) || !/^[A-Z0-9]{4,12}$/.test(code) ||
+                            !(typeof expiry === "number" && isFinite(expiry)) || expiry <= now()) {
+                        throw new Error("Plex returned an invalid sign-in code.");
+                    }
+                    return {
+                        id: String(id),
+                        code: code,
+                        qr: typeof pin.qr === "string" && /^https:\/\/plex\.tv\//.test(pin.qr) ? pin.qr : "",
+                        linkUrl: "https://plex.tv/link",
+                        expiresAt: expiry
+                    };
+                });
+            },
+            pollAuthorization: function (pin) {
+                if (!pin || !/^[0-9]+$/.test(String(pin.id || "")) ||
+                        !/^[A-Z0-9]{4,12}$/.test(String(pin.code || "")) ||
+                        !(typeof pin.expiresAt === "number" && isFinite(pin.expiresAt))) {
+                    return Promise.reject(new Error("The Plex sign-in request is invalid."));
+                }
+                if (now() >= pin.expiresAt) {
+                    return Promise.resolve({ status: "expired" });
+                }
+                var url = rootUrl + "/api/v2/pins/" + encodeURIComponent(pin.id) +
+                    "?code=" + encodeURIComponent(pin.code);
+                return request(url, "GET").then(function (result) {
+                    var state = String(result.status || result.state || "").toLowerCase();
+                    if (state === "denied" || state === "rejected") {
+                        return { status: "denied" };
+                    }
+                    if (state === "expired" || result.expired === true) {
+                        return { status: "expired" };
+                    }
+                    if (typeof result.authToken === "string" && result.authToken.length > 0) {
+                        return { status: "linked", token: result.authToken };
+                    }
+                    return { status: "pending" };
+                });
+            }
+        };
+    }
+
     function createClient(options) {
         options = options || {};
         var baseUrl = validateBaseUrl(options.baseUrl);
@@ -107,6 +208,7 @@
     }
 
     return {
-        createClient: createClient
+        createClient: createClient,
+        createAuthClient: createAuthClient
     };
 }));

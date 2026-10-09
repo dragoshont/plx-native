@@ -9,6 +9,11 @@
     var currentOffset = 0;
     var viewGeneration = 0;
     var itemsLoading = false;
+    var authClient = null;
+    var authPin = null;
+    var authTimer = null;
+    var authGeneration = 0;
+    var accountToken = "";
 
     function clear(node) {
         while (node.firstChild) {
@@ -46,7 +51,98 @@
         parent.appendChild(element("h2", "section-heading", title));
     }
 
+    function stopAuthorization() {
+        authGeneration += 1;
+        if (authTimer !== null) {
+            clearTimeout(authTimer);
+            authTimer = null;
+        }
+        authPin = null;
+    }
+
+    function pollAuthorization(generation, info) {
+        if (generation !== authGeneration || !authPin) {
+            return;
+        }
+        authClient.pollAuthorization(authPin).then(function (result) {
+            if (generation !== authGeneration) {
+                return;
+            }
+            if (result.status === "pending") {
+                authTimer = setTimeout(function () {
+                    pollAuthorization(generation, info);
+                }, 3000);
+            } else if (result.status === "linked") {
+                accountToken = result.token;
+                stopAuthorization();
+                info.textContent = "Plex account linked. The sign-in token is held in memory only.";
+                setStatus("Plex account linked. No credential was saved.");
+            } else {
+                stopAuthorization();
+                info.textContent = result.status === "denied" ?
+                    "Sign-in was denied. Start again to request a new code." :
+                    "This sign-in code expired. Start again to request a new code.";
+                setStatus(info.textContent, result.status === "denied");
+            }
+        }).catch(function () {
+            if (generation !== authGeneration) {
+                return;
+            }
+            info.textContent = "Network issue while checking sign-in. Retrying…";
+            authTimer = setTimeout(function () {
+                pollAuthorization(generation, info);
+            }, 5000);
+        });
+    }
+
+    function beginAuthorization(info) {
+        stopAuthorization();
+        accountToken = "";
+        var generation = authGeneration;
+        info.textContent = "Requesting a secure sign-in code…";
+        setStatus("Contacting Plex…");
+        try {
+            authClient = window.PlexApi.createAuthClient();
+        } catch (error) {
+            info.textContent = error.message;
+            setStatus(error.message, true);
+            return;
+        }
+        authClient.startAuthorization().then(function (pin) {
+            if (generation !== authGeneration) {
+                return;
+            }
+            authPin = pin;
+            clear(info);
+            if (pin.qr) {
+                var qr = element("img", "auth-qr");
+                qr.src = pin.qr;
+                qr.alt = "Scan to authorize this Plex client";
+                qr.width = 280;
+                qr.height = 280;
+                info.appendChild(qr);
+            }
+            info.appendChild(element("p", "help-text", "On a phone or computer, open Plex and enter this code:"));
+            info.appendChild(element("strong", "auth-code", pin.code));
+            var link = element("a", "plex-link", "Open plex.tv/link");
+            link.href = pin.linkUrl;
+            link.target = "_blank";
+            link.rel = "noopener";
+            info.appendChild(link);
+            info.appendChild(element("p", "help-text", "This code expires in about five minutes."));
+            setStatus("Waiting for Plex sign-in. The code is temporary and is not saved.");
+            pollAuthorization(generation, info);
+        }).catch(function () {
+            if (generation !== authGeneration) {
+                return;
+            }
+            info.textContent = "Could not start Plex sign-in. Check the network and try again.";
+            setStatus(info.textContent, true);
+        });
+    }
+
     function addConnectForm(message) {
+        stopAuthorization();
         viewGeneration += 1;
         itemsLoading = false;
         clear(screen);
@@ -55,7 +151,19 @@
         var section = element("section", "connect-panel");
         section.appendChild(element("h2", "", "Connect to a Plex Media Server"));
         section.appendChild(element("p", "help-text",
-            "Development foundation: connect to a test server. Plex QR sign-in is not implemented yet."));
+            "Sign in to Plex with a temporary device code, or connect directly to a test server."));
+
+        var authPanel = element("div", "auth-panel");
+        authPanel.appendChild(element("h3", "", "Plex device sign-in"));
+        var authInfo = element("div", "auth-info", "No Plex account is linked.");
+        authPanel.appendChild(authInfo);
+        var signIn = element("button", "secondary-button", "Sign in to Plex");
+        signIn.type = "button";
+        signIn.addEventListener("click", function () {
+            beginAuthorization(authInfo);
+        });
+        authPanel.appendChild(signIn);
+        section.appendChild(authPanel);
 
         var form = element("form", "connect-form");
         var serverLabel = element("label", "", "Server URL");
@@ -87,11 +195,12 @@
             section.appendChild(element("p", "inline-error", message));
         }
         screen.appendChild(section);
-        setStatus("The token is kept in memory for this app session and sent in an HTTP header.");
+        setStatus("Server tokens are kept in memory for this app session and sent in an HTTP header.");
         focusFirst();
     }
 
     function connect(serverUrl, token) {
+        stopAuthorization();
         setStatus("Connecting…");
         try {
             currentClient = window.PlexApi.createClient({
@@ -166,6 +275,7 @@
         disconnect.type = "button";
         disconnect.addEventListener("click", function () {
             currentClient = null;
+            accountToken = "";
             addConnectForm("");
         });
         screen.appendChild(disconnect);
