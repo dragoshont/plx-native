@@ -1,0 +1,14 @@
+"use strict";
+var assert = require("assert");
+var subtitles = require("../../samsung/PlexTv/js/subtitles.js");
+var cues = subtitles.parse("1\r\n00:00:01,000 --> 00:00:02,500\r\n<b>First</b>\r\n\r\n2\r\n00:00:03,000 --> 00:00:04,000\r\nSecond");
+assert.strictEqual(subtitles.at(cues, 1500), "First");
+assert.strictEqual(subtitles.at(cues, 2600), "");
+assert.strictEqual(subtitles.at(cues, 3500), "Second");
+cues = subtitles.parse("WEBVTT\n\n00:01.000 --> 00:02.000 align:middle\nCaption");
+assert.strictEqual(subtitles.at(cues, 1000), "Caption");
+assert.strictEqual(subtitles.at(cues, 2000), "");
+assert.throws(function () { subtitles.parse("1\n00:00:02,000 --> 00:00:01,000\nInvalid"); }, /invalid cue range/);
+assert.throws(function () { subtitles.parse("[Script Info]\nASS"); }, /No SRT or WebVTT/);
+assert.throws(function () { subtitles.parse("x".repeat(2 * 1024 * 1024 + 1)); }, /size limit/);
+console.log("Tizen SRT/WebVTT parsing/seek/cue-boundary tests: passed");

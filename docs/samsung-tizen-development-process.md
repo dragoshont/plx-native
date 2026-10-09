@@ -110,8 +110,11 @@ Initial local command family:
 
 ```sh
 tools/tizen/doctor.sh
+npm ci --prefix tests/tizen --ignore-scripts
 tools/tizen/new-web-app.sh SampleApp /tmp/tizen-apps tv-samsung-3.0
 tools/tizen/check-es5.sh /path/to/app
+tools/tizen/test.sh
+tools/tizen/build-source.sh samsung/PlexTv
 tools/tizen/build-web.sh /path/to/app <security-profile>
 ```
 
@@ -120,6 +123,14 @@ The generator wraps Samsung's installed `BasicEmptyProject`; the app owner must 
 explicitly and writes generated packages beneath `samsung/dist/` (ignored by Git). These helpers
 cover project creation and local packaging only; install, emulator launch, key injection and log
 collection are not automated yet.
+
+`test.sh` runs synthetic account/PMS/native-adapter contracts, the host DOM product journey,
+generated-locale freshness and strict Acorn ES5 parsing. Dependencies are declared and locked under
+`tests/tizen/`; they are host tools, not production assets. Use
+`node tools/tizen/build-locales.js --write` after editing Samsung strings or upstream locale sources.
+`build-source.sh` runs Samsung's unsigned source build into a unique temporary output directory
+and removes only its own output on exit; it does not mutate the candidate source directory or
+install/sign a package. None of these commands launch a Samsung runtime.
 
 ## 6. Emulator and device policy
 
@@ -140,7 +151,7 @@ collection are not automated yet.
 - The initial shared helpers now live at `tools/tizen/doctor.sh` and
   `tools/tizen/new-web-app.sh`, `tools/tizen/check-es5.sh`, and `tools/tizen/build-web.sh`.
   On this host, the generator produced a clean `tv-samsung-3.0` `BasicEmptyProject`; the build
-  wrapper ran a heuristic scan for common post-ES5 syntax, Samsung's `tizen build-web`, and
+  wrapper originally ran a heuristic scan for common post-ES5 syntax, Samsung's `tizen build-web`, and
   `tizen package -t wgt` with an explicitly selected local signing profile. The signed package
   passed ZIP integrity checking and
   the build output/checksum landed under ignored `samsung/dist/`, outside the app source directory.
@@ -185,7 +196,7 @@ Build these once through the first app, but keep each deliverable independently 
 3. **Environment checker:** `doctor.sh` currently reports host architecture, Tizen CLI/version,
    available TV web templates and emulator inventory. TV Extension version checks and actionable
    prerequisite remediation remain future work.
-4. **Build/package wrapper:** `build-web.sh` runs the ES5 candidate scan, `tizen build-web` and
+4. **Build/package wrapper:** `build-web.sh` runs the strict Acorn ES5 syntax gate, `tizen build-web` and
    `tizen package` with an explicit profile, then hashes the package. Manifest/privilege/identifier
    validation, secret scanning and output redaction remain future work.
 5. **Emulator harness:** image boot/readiness, install/launch, remote key schedule, logs, screenshot

@@ -84,9 +84,31 @@ Gotchas observed on a 2017 set from a Mac (2026-10-09):
 4. Copy the output into the private notes with the date. This is the first real data point for the model.
    A simple way to get it off the TV is to `POST` it as JSON to a small HTTP listener on the computer.
 
-If this does not work, stop and fix it first. Do not start any Plex work.
+If this does not work, stop device testing and fix it first. Host/mock Plex development can
+continue independently; it does not establish TV compatibility.
 
-## 6. Rules for the proof of concept
+## 6. Build the current Plex application without touching a TV
+
+From this repository, with Node/npm and Samsung's Tizen CLI already installed:
+
+```sh
+npm ci --prefix tests/tizen --ignore-scripts
+tools/tizen/test.sh
+tools/tizen/build-source.sh samsung/PlexTv
+```
+
+The tests use synthetic data and a fake AVPlay adapter; no personal token or server is needed.
+The source build is unsigned and temporary: it is not an installation or working-TV demonstration.
+See the [product specification](samsung-tizen-client-spec.md) for current features and outstanding
+acceptance gaps, and the [development process](samsung-tizen-development-process.md) for the reusable
+workflow. The installed x86_64 Tizen 10 emulator did not launch on this Apple-Silicon host.
+
+Credentials stay in memory unless a user explicitly selects **remember-me**. That option stores
+the account token **unencrypted** in Web Storage; leave it off on shared or untrusted TVs.
+Sign-out deletes the saved token; if deletion fails the app warns that its data must be cleared.
+Never include a saved token in a developer package, test fixture or screenshot.
+
+## 7. Rules for device and account tests
 
 - Use a throwaway test server with lawful sample media. Use a guest or test account, never a household's real profile or watch history.
 - Do not disable TLS verification as a shortcut. Record what happens instead.

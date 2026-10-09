@@ -14,6 +14,7 @@ body {
 
 body {
     overflow: hidden;
+    font-size: 26px;
 }
 
 button,
@@ -52,7 +53,6 @@ button:disabled {
 .app-header {
     display: flex;
     align-items: baseline;
-    gap: 24px;
     min-height: 74px;
 }
 
@@ -66,7 +66,172 @@ button:disabled {
 .help-text,
 .status {
     color: #b7bac4;
-    font-size: 20px;
+    font-size: 24px;
+}
+
+.app-header p {
+    margin-left: 24px;
+}
+
+.shelf {
+    width: 100%;
+    margin-bottom: 40px;
+}
+
+.shelf h3 {
+    margin: 28px 0 20px;
+    font-size: 32px;
+}
+
+.media-card {
+    display: inline-block;
+    width: 240px;
+    margin: 0 20px 28px 0;
+    padding: 8px;
+    vertical-align: top;
+    background: #1b1d24;
+    border-color: #555863;
+}
+
+.poster {
+    display: block;
+    width: 220px;
+    height: 330px;
+    object-fit: cover;
+    color: #b7bac4;
+    background: #252832;
+}
+
+.card-title,
+.card-meta {
+    display: block;
+    margin-top: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 24px;
+}
+
+.card-meta {
+    color: #b7bac4;
+}
+
+.synopsis {
+    max-width: 1120px;
+    font-size: 28px;
+    line-height: 1.45;
+}
+
+.detail-meta {
+    color: #b7bac4;
+    font-size: 24px;
+}
+
+.auth-qr {
+    display: block;
+    width: 280px;
+    height: 280px;
+    margin: 24px 0;
+    background: #ffffff;
+}
+
+.remember-option {
+    display: block;
+    margin: 28px 0;
+    font-size: 24px;
+    line-height: 1.5;
+}
+
+.remember-checkbox {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    margin: 0 0 0 16px;
+    vertical-align: middle;
+}
+
+.video-plane {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body.playing {
+    background: transparent;
+}
+
+.playing .video-plane {
+    display: block;
+}
+
+.playing .app-shell {
+    position: relative;
+}
+
+.playing .app-header {
+    visibility: hidden;
+}
+
+.player-hud {
+    position: absolute;
+    bottom: 72px;
+    left: 72px;
+    right: 72px;
+    padding: 24px 32px;
+    background: rgba(16, 17, 22, 0.94);
+}
+
+.player-hud h2 {
+    margin: 0 0 16px;
+    font-size: 32px;
+}
+
+.subtitle-text {
+    position: absolute;
+    bottom: 450px;
+    left: 15%;
+    right: 15%;
+    margin: 0;
+    padding: 12px;
+    text-align: center;
+    white-space: pre-line;
+    font-size: 38px;
+    color: #ffffff;
+    background: rgba(16, 17, 22, 0.78);
+}
+
+.subtitle-text:empty {
+    display: none;
+}
+
+.player-menu {
+    position: fixed;
+    top: 60px;
+    right: 72px;
+    bottom: 60px;
+    width: 780px;
+    overflow-y: auto;
+    padding: 28px;
+    background: #101116;
+    border: 2px solid #555863;
+}
+
+.player-menu button {
+    display: block;
+    width: 100%;
+    margin: 12px 0;
+}
+
+.playing .status {
+    position: absolute;
+    bottom: 22px;
+    left: 72px;
+    right: 72px;
+    padding: 8px;
+    background: rgba(16, 17, 22, 0.94);
 }
 
 .screen {
@@ -98,15 +263,14 @@ button:disabled {
 .connect-form {
     display: flex;
     flex-direction: column;
-    gap: 20px;
     margin-top: 28px;
 }
 
 .connect-form label {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    font-size: 20px;
+    margin-bottom: 20px;
+    font-size: 24px;
 }
 
 .remote-input {

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.."
+node tools/tizen/build-locales.js
 for test in tests/tizen/*.test.js; do
     node "$test"
 done

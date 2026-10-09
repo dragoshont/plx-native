@@ -1,0 +1,74 @@
+"use strict";
+var assert = require("assert");
+var av = require("../../samsung/PlexTv/js/avplay.js");
+
+function fake() {
+    var state = "NONE";
+    var listener;
+    var time = 0;
+    var calls = [];
+    return {
+        calls: calls,
+        getState: function () { return state; },
+        open: function () { calls.push("open"); state = "IDLE"; },
+        close: function () { calls.push("close"); state = "NONE"; },
+        stop: function () { calls.push("stop"); state = "IDLE"; },
+        setDisplayRect: function (x, y, width, height) { assert.strictEqual(width, 1920); assert.strictEqual(height, 1080); },
+        setDisplayMethod: function (method) { assert.strictEqual(method, "PLAYER_DISPLAY_MODE_LETTER_BOX"); },
+        setListener: function (value) { listener = value; },
+        prepareAsync: function (success) { state = "READY"; success(); },
+        getDuration: function () { return 100000; },
+        getCurrentTime: function () { return time; },
+        seekTo: function (target, success) { time = Math.floor(target / 1000) * 1000; success(); },
+        play: function () { calls.push("play"); state = "PLAYING"; },
+        pause: function () { calls.push("pause"); state = "PAUSED"; },
+        getTotalTrackInfo: function () { return [{ type: "AUDIO", index: 0 }]; },
+        setSelectTrack: function (type, index) { calls.push(type + index); },
+        setSilentSubtitle: function () {},
+        send: function (type, value) { listener[type](value); }
+    };
+}
+
+async function run() {
+    var native = fake();
+    var events = [];
+    var adapter = av.create({ avplay: native, onEvent: function (event) { events.push(event); } });
+    assert.strictEqual(native.calls.length, 0, "Constructing the adapter must not play");
+    await adapter.open("https://synthetic.invalid/stream", 5000);
+    assert.strictEqual(adapter.snapshot().state, "playing");
+    assert.strictEqual(adapter.snapshot().position, 5000, "The first timeline must use the native resume position");
+    adapter.pause();
+    assert.strictEqual(adapter.snapshot().state, "paused");
+    assert.strictEqual(await adapter.seek(12555), 12000, "Seek must report native landed time, not requested time");
+    adapter.play();
+    adapter.selectTrack("AUDIO", 0);
+    native.send("onsubtitlechange", 1500);
+    assert.strictEqual(adapter.tracks().length, 1);
+    native.send("oncurrentplaytime", 30000);
+    assert.strictEqual(adapter.snapshot().position, 30000);
+    native.send("onstreamcompleted");
+    assert.strictEqual(adapter.snapshot().state, "ended");
+    assert.strictEqual(adapter.snapshot().position, 100000, "Native completion must report the full clip, not the last cached callback");
+    adapter.close();
+    assert.strictEqual(adapter.snapshot().state, "idle");
+    await assert.rejects(adapter.seek(10), /Cannot seek/);
+    await assert.rejects(av.create({}).open("https://synthetic.invalid"), /unavailable/);
+
+    native = fake();
+    var prepare;
+    native.prepareAsync = function (success) { prepare = success; };
+    adapter = av.create({ avplay: native });
+    var pending = adapter.open("https://synthetic.invalid");
+    adapter.close();
+    await assert.rejects(pending, /cancelled/);
+    prepare();
+    assert(!native.calls.includes("play"), "Stale prepare callback must not start playback");
+
+    native = fake();
+    native.prepareAsync = function () {};
+    adapter = av.create({ avplay: native, prepareTimeout: 5 });
+    await assert.rejects(adapter.open("https://synthetic.invalid"), /prepare-timeout/);
+    adapter.close();
+    console.log("Tizen AVPlay state/cancellation/seek tests: passed");
+}
+run().catch(function (error) { console.error(error); process.exitCode = 1; });

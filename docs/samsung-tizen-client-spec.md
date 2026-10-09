@@ -1,6 +1,6 @@
 # Samsung Tizen Plex client: product specification
 
-**Status:** implementation spec draft, 2026-10-09
+**Status:** implementation in progress; Samsung runtime acceptance outstanding
 **Product target:** a full Samsung Smart TV Plex client with feature parity to the supported
 PlxNative feature set, not a proof-of-concept app. Implementation may land in vertical slices; the
 completed product is not reduced to the first slice.
@@ -16,12 +16,17 @@ A requirement marked **TBD** is not a permission to invent a platform capability
 Samsung documentation, an emulator probe, or a test on the named retail model before depending on
 it.
 
-**Implementation status:** `samsung/PlexTv/` is a separate Tizen 3.0 Web app generated from
-Samsung's `BasicEmptyProject`. Its initial development slice accepts a PMS origin and an optional
-server token in memory, then reads Home hubs, library sections and paged section items. It does
-not yet implement Plex QR sign-in, persistent credentials, media details or playback. The
-JavaScript/API tests and Samsung package build pass locally; the installed Samsung emulator has not
-launched on this Apple-Silicon host, so no emulator UI/runtime claim is made.
+**Implementation status:** `samsung/PlexTv/` remains a separate Tizen 3.0 Web app. It now contains
+short-code/QR authorization, Home profiles/PIN entry, owned/shared server discovery, Home shelves,
+paged libraries, sort/filter/alphabet menus, collections, multi-server search, metadata/person
+details, an isolated AVPlay adapter, PMS playback negotiation/progress, player controls, chapters,
+markers, track/quality/version menus, text captions, Up Next and settings. These are source
+implementations, not a Samsung support declaration. Tests exercise synthetic account/server
+contracts and the real app DOM with fake networking/AVPlay, including a 250-item library with a
+200-card retained window. ES5 parsing and an unsigned Samsung source build are separate gates.
+The installed emulator has not launched on this Apple-Silicon host; earlier retail probes did not
+run this application. No current-product emulator, decoder, performance or retail-model pass is
+claimed.
 
 ## 1. Product outcome
 
@@ -31,11 +36,32 @@ as the authority for libraries, watch state, and playback progress. The app must
 PMS nor silently write viewing state outside normal, user-initiated playback and explicitly
 approved tests.
 
-The baseline is the feature set PlxNative actually ships, not all products in Plex's ecosystem.
-Its current scope is movies and television shows, including their seasons and episodes. Music,
-photo libraries, live TV/DVR, Plex's catalogue and Watchlist are explicitly out of scope for this
-initial product. Any proposed change to that boundary requires a product decision, not an
-implementation convenience.
+The original baseline was PlxNative's movie/television feature set. The owner's subsequent
+instruction requests **all features of the actual Plex app**; the original exclusions cannot be
+used to call this work complete. Music, photos, live TV/DVR, catalogue playback and Watchlist are
+requested scope gaps, not implemented capabilities. Official-client features that depend on Plex
+entitlements, licensed services or private distribution contracts also need source-backed
+availability evidence; do not invent an API or silently substitute a different media server.
+The requirements below describe the movie/TV implementation contract, not an assertion of complete
+official-Plex parity.
+
+### Current acceptance gaps
+
+| Surface | Existing implementation/evidence | Required before completion |
+|---|---|---|
+| Account/profiles/servers | Synthetic short-code, PIN, scoped grants and recovery tests | Actual Plex and Samsung TLS/CORS, profile PIN acceptance, QR and relaunch checks |
+| Browse/search/details | Mock PMS and host DOM journeys; collections and local/catalogue people paths | Full remote navigation, search cancellation, large-library/image memory and text-fit evidence; catalogue filmography currently displays at most 200 credits |
+| Playback/progress | Fake AVPlay state/seek and PMS decision/timeline/read-back tests | Named-model native playback, direct/transcode, HDR/audio, native/external/burned subtitle matrix |
+| Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
+| Up Next/quality/versions | Source implementation with opt-in auto-next; multi-part versions explicitly refused, never silently truncated | Long sessions, interrupted transitions and implementation of multi-part playback |
+| Settings/languages | Non-secret preferences and generated English/Spanish/Belarusian catalogs | Complete app-copy translation and physical-TV text fit |
+| Credential persistence | Default memory-only; explicit unchecked remember-me consent stores plaintext account token | TV storage/relaunch/deletion behavior and final threat-model signoff |
+| Lifecycle/input | Background pause and source key/focus handling | Physical remote repeats/holds, suspend/wake, exit recovery and The Frame Art Mode |
+| Official Plex ecosystem | Requested by owner; no movie/TV-only completion claim | Source-backed music/photo/live TV/DVR/catalogue/Watchlist contracts and implementation |
+| Distribution/support | Unsigned source build; earlier independent probe packages | Authorized signing/install, current-app model register and separate Store/legal decision |
+| Bounded HTTP bodies | Incremental 4 MiB byte ceiling and full-request deadline; stalled/oversized synthetic streams tested | Real browser streaming/UTF-8/blob APIs; older engines without bounded streaming currently fail explicitly rather than buffering an unbounded body |
+
+No row becomes complete solely because the source builds or a fake adapter returns success.
 
 ## 2. Intended compatibility and evidence policy
 
@@ -229,6 +255,22 @@ adapter through short, measured architecture spikes before locking the productio
 | Image strategy | PMS transcoder behavior, cache ceilings, low-memory testing | Server-resized images, progressive loading, bounded cache |
 | User telemetry | Privacy/legal review and Tizen-compatible transport | Off, absent unless explicit separate consent and verified implementation |
 | Store distribution | Samsung Seller Office and Plex policy review | Treat as unresolved; local developer sideloading is not Store approval |
+
+The initial runtime uses plain ES5 modules under `js/` (Plex transport, AVPlay, playback protocol,
+subtitles, preferences, sessions and generated translations), composed by `main.js`. This is
+not a Rust/Wasm port. Acorn parses every shipped JavaScript file with `ecmaVersion: 5`; this proves
+syntax only, not availability of fetch/Promise/URL or other APIs on an old TV. Host-only npm
+dependencies live under `tests/tizen/` and are not packaged in the application.
+The HTTP path also requires response streaming (`body.getReader()`), UTF-8 decoding and blobs.
+That is a separate runtime gate, especially for the intended 2017 engine; the ES5 check alone
+does not establish this target. A bounded legacy-engine transport remains an implementation gap.
+
+Samsung documents [Web Storage](https://developer.samsung.com/smarttv/develop/guides/data-handling/using-web-storage.html),
+not encryption at rest. Remember-me is disabled by default and explicitly explains unencrypted
+token storage and shared-TV risk. Only the original account credential is saved; protected Home
+profiles must still be selected and PIN-authorized. Sign-out and expiry recovery attempt deletion,
+and a deletion failure requires the user to clear app data rather than claiming a secure sign-out.
+No telemetry/crash upload transport is installed.
 
 ## 7. Verification contract and test register
 

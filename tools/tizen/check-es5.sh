@@ -6,19 +6,6 @@ if [[ $# -ne 1 ]]; then
     exit 2
 fi
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 app_dir="$(cd -- "$1" && pwd -P)"
-pattern='(^|[^[:alnum:]_$])(let|const|class|async|await)([^[:alnum:]_$]|$)|=>|`'
-failed=0
-
-while IFS= read -r file; do
-    if grep -nE "$pattern" "$file"; then
-        echo "Unsupported syntax candidate in $file" >&2
-        failed=1
-    fi
-done < <(find "$app_dir" -maxdepth 2 -type f -name '*.js' -print | sort)
-
-if [[ "$failed" -ne 0 ]]; then
-    exit 1
-fi
-
-echo "Tizen app sources contain no flagged post-ES5 syntax."
+node "$SCRIPT_DIR/check-es5.js" "$app_dir"

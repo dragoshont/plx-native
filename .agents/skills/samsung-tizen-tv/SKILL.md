@@ -20,6 +20,14 @@ official `BasicEmptyProject` generator. These are local development helpers, not
 Samsung's current target-specific documentation; emulator launchability must be observed, not
 inferred from an installed image.
 
+For the current Plex client, restore declared host dependencies with
+`npm ci --prefix tests/tizen --ignore-scripts`, then run `tools/tizen/test.sh`.
+`tools/tizen/check-es5.sh` parses shipped JavaScript with Acorn in ES5 mode; it does not prove
+old-engine API availability. `tools/tizen/build-source.sh samsung/PlexTv` runs an unsigned Samsung
+source build with temporary output outside the app directory. Both commands are host evidence,
+not emulator/device evidence. Product status and credential-storage limitations are maintained in
+`docs/samsung-tizen-client-spec.md`.
+
 ## Establish scope before setup
 
 1. Identify the target app type: web app (`.wgt`), Tizen .NET, Flutter for Tizen, or another

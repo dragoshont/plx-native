@@ -10,7 +10,9 @@ var responses = [
             { uri: "http://127.0.0.1:32400", local: true },
             { uri: "https://relay.invalid", relay: true },
             { uri: "https://server.invalid:32400", local: true }
-        ] }, { provides: "player", connections: [] }]
+        ] }, { provides: "server", name: "Offline owned server", clientIdentifier: "machine-2",
+            owned: true, connections: [null, { uri: "https://bad.invalid/path" }] },
+        { provides: "player", connections: [] }, null]
 ];
 var client = api.createAccountClient({
     token: "synthetic-account-token",
@@ -29,13 +31,17 @@ client.getProfiles().then(function (profiles) {
     assert.strictEqual(calls[1].url.indexOf("1234"), -1);
     return client.getServers();
 }).then(function (servers) {
-    assert.strictEqual(servers.length, 1);
+    assert.strictEqual(servers.length, 2);
+    assert.strictEqual(servers[1].owned, true);
+    assert.strictEqual(servers[1].token, "");
+    assert.strictEqual(servers[1].connections.length, 0);
     assert.strictEqual(servers[0].connections.length, 2);
     assert.strictEqual(servers[0].connections[0].uri, "https://server.invalid:32400");
     assert.strictEqual(servers[0].token, "synthetic-server-token");
     calls.forEach(function (call) {
         assert.strictEqual(call.url.indexOf("token"), -1);
         assert.strictEqual(call.options.headers["X-Plex-Token"], "synthetic-account-token");
+        assert.strictEqual(call.options.redirect, "error");
     });
     var refused = api.createAccountClient({
         token: "synthetic-token", fetch: function () { return Promise.resolve({ ok: false, status: 401 }); }
