@@ -9,7 +9,7 @@
 > (PoC probe P0 passed). It confirmed no WebAssembly, no `async` and no sloppy-mode `class`/`let` on that
 > set, and that AVPlay, MSE, `fetch` and `Promise` exist. A second probe on the same set passed P1 and P5:
 > it direct-played a 1080p H.264 MKV (AC-3 5.1) from the owner's PMS over HTTPS via AVPlay, with first frame
-> in 2.4 s and no stalls in 10 minutes, and reached PMS and plex.tv over HTTPS. One set and one run, with no UI and
+> in 2.4 s and no stalls in 10 minutes, and reached PMS and plex.tv over HTTPS. Later probes on the same set played 4K HEVC Main 10 (SDR and 57 Mbps HDR10, with HDR seen by the owner), AAC, E-AC-3 and DTS core audio, and embedded text subtitles via AVPlay (see `samsung-tizen-poc.md`). One set and one run, with no UI and
 > no UHD yet. Results: [PoC](samsung-tizen-poc.md).
 
 Status: desk study, 2026-10-09, against upstream `GLinnik21/plx-native` at `38c07fc3` (this fork,
