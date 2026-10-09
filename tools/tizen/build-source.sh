@@ -21,4 +21,6 @@ else
 fi
 
 "$SCRIPT_DIR/check-es5.sh" "$app_dir"
-"$TIZEN" build-web -- "$app_dir"
+build_dir="$(mktemp -d "${TMPDIR:-/tmp}/plx-tizen-build.XXXXXXXX")"
+trap 'rm -rf -- "$build_dir"' EXIT
+"$TIZEN" build-web --output "$build_dir" -- "$app_dir"
