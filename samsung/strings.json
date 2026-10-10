@@ -1,4 +1,7 @@
 {
+  "More": { "es": "Más", "be": "Яшчэ" },
+  "Playback options": { "es": "Opciones de reproducción", "be": "Параметры прайгравання" },
+  "Plex server transcode: HLS / H.264 + AAC.": { "es": "Transcodificación del servidor Plex: HLS / H.264 + AAC.", "be": "Транскадаванне серверам Plex: HLS / H.264 + AAC." },
   "Search your servers": { "es": "Buscar en tus servidores", "be": "Пошук на вашых серверах" },
   "Who is watching?": { "es": "¿Quién está viendo?", "be": "Хто глядзіць?" },
   "Choose a server": { "es": "Elegir un servidor", "be": "Выбраць сервер" },

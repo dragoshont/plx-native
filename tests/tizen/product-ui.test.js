@@ -21,6 +21,23 @@ async function run() {
     var state = "NONE";
     var position = 0;
     var listener;
+    var hudTimers = new Map();
+    var hudTimerId = 100000;
+    var realSetTimeout = window.setTimeout.bind(window);
+    var realClearTimeout = window.clearTimeout.bind(window);
+    window.setTimeout = function (callback, delay) {
+        if (delay === 5000) { hudTimers.set(++hudTimerId, callback); return hudTimerId; }
+        return realSetTimeout(callback, delay);
+    };
+    window.clearTimeout = function (id) {
+        if (hudTimers.has(id)) { hudTimers.delete(id); } else { realClearTimeout(id); }
+    };
+    function hideHud() {
+        assert.strictEqual(hudTimers.size, 1, "Playback must arm exactly one five-second HUD timer");
+        var callbacks = Array.from(hudTimers.values());
+        hudTimers.clear();
+        callbacks[0]();
+    }
     window.webapis = { avplay: {
         getState: function () { return state; },
         open: function () { nativeCalls.push("open"); state = "IDLE"; },
@@ -178,23 +195,67 @@ async function run() {
         await settle();
         assert.strictEqual(state, "PLAYING");
         assert.strictEqual(window.document.body.className, "playing");
+        assert.strictEqual(window.document.querySelector(".playback-controls").querySelectorAll("button").length, 4,
+            "Playback should expose only transport and More on the main overlay");
+        var pauseControl = Array.from(window.document.querySelectorAll("button")).find(function (node) {
+            return node.textContent === "Pause / Play";
+        });
+        pauseControl.focus();
+        hideHud();
+        assert.strictEqual(window.document.querySelector(".player-hud").hidden, true,
+            "Controls must disappear during uninterrupted playback");
+        assert(window.document.querySelector(".app-shell").classList.contains("hud-hidden"),
+            "The non-error status must disappear with the playback controls");
+        var plays = nativeCalls.filter(function (call) { return call === "pause"; }).length;
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 13, bubbles: true }));
+        assert.strictEqual(window.document.querySelector(".player-hud").hidden, false, "OK reveals hidden controls");
+        assert.strictEqual(window.document.activeElement, pauseControl, "Revealing the HUD restores its focused control");
+        assert.strictEqual(nativeCalls.filter(function (call) { return call === "pause"; }).length, plays,
+            "Revealing controls must not also activate the focused button");
+        hideHud();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 19, bubbles: true }));
+        await settle();
+        assert.strictEqual(state, "PAUSED", "Media Pause must still work while the HUD is hidden");
+        assert.strictEqual(hudTimers.size, 0);
+        click("Pause / Play");
+        await settle();
+        assert.strictEqual(state, "PLAYING");
+        click("More");
+        assert.strictEqual(hudTimers.size, 0);
+        click("Close menu");
+        hideHud();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
+        assert.strictEqual(window.document.querySelector(".player-hud").hidden, false);
         listener.oncurrentplaytime(12000);
         assert(window.document.getElementById("playback-time").textContent.startsWith("0:12"));
+        assert.strictEqual(window.document.querySelector(".playback-progress").getAttribute("aria-valuenow"), "12");
+        listener.onbufferingstart();
+        assert.strictEqual(hudTimers.size, 0, "Buffering must keep controls visible");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
+        assert.strictEqual(hudTimers.size, 0, "Remote activity during buffering must not arm hiding");
+        listener.onbufferingcomplete();
+        assert.strictEqual(hudTimers.size, 1, "Buffering completion must restart hiding");
         click("Pause / Play");
         await settle();
         assert.strictEqual(state, "PAUSED");
+        assert.strictEqual(hudTimers.size, 0, "Paused playback must not hide its controls");
         click("Forward 30 seconds");
         await settle();
         assert.strictEqual(position, 42000);
+        click("More");
         click("Chapters and markers");
+        assert.strictEqual(hudTimers.size, 0, "An open menu must suspend HUD hiding");
         click("Chapter one");
         await settle();
         assert.strictEqual(position, 20000);
         click("Close menu");
+        click("More");
         click("Stop and return to details");
         await settle();
         assert.strictEqual(state, "NONE");
         assert.strictEqual(window.document.body.className, "");
+        assert.strictEqual(hudTimers.size, 0, "Teardown must cancel the HUD timer");
+        assert(!window.document.querySelector(".app-shell").classList.contains("hud-hidden"));
         var writes = requests.filter(function (request) { return request.path === "/:/timeline"; });
         assert(writes.every(function (request) { return request.method === "POST"; }));
         assert(writes.some(function (request) { return request.query.get("state") === "stopped" && request.query.get("time") === "20000"; }));

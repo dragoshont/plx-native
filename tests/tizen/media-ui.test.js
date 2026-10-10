@@ -161,11 +161,14 @@ async function run() {
         click("Play album"); await settle();
         assert.strictEqual(state, "PLAYING");
         assert(window.document.body.textContent.includes("Track 1"));
+        click("More");
         click("Shuffle / On or off"); click("Repeat / Off, one, all");
         listener.onstreamcompleted(); await settle();
         assert(window.document.body.textContent.includes("Track 1"), "Repeat-one must replay the same track");
+        click("More");
         click("Next track"); await settle();
         assert(window.document.body.textContent.includes("Track 2"), "Manual next must bypass repeat-one");
+        click("More");
         click("Stop and return to details"); await settle();
         click("Back"); await settle();
         click("Back to Home"); await settle();

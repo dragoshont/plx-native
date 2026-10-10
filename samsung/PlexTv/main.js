@@ -33,6 +33,9 @@
     var playerClient = null;
     var playerSettings = null;
     var subtitleTimer = null;
+    var hudTimer = null;
+    var hudBuffering = false;
+    var hudFocus = null;
     var nextTimer = null;
     var playerClosing = false;
     var lastAction = 0;
@@ -217,6 +220,7 @@
     function setStatus(message, isError) {
         status.textContent = translate(message || "");
         status.className = isError ? "status status-error" : "status";
+        if (isError && player) { showHud(); cancelHudTimer(); }
     }
 
     function focusFirst() {
@@ -1671,6 +1675,81 @@
         }).then(function () { if (player) { musicLoading = false; } });
     }
 
+    function cancelHudTimer() {
+        if (hudTimer !== null) { clearTimeout(hudTimer); hudTimer = null; }
+    }
+
+    function showHud() {
+        cancelHudTimer();
+        var hud = screen.querySelector(".player-hud");
+        var shell = document.querySelector(".app-shell");
+        if (hud) { hud.hidden = false; }
+        if (shell) { shell.classList.remove("hud-hidden"); }
+        if (!player || playerClosing || hudBuffering || player.snapshot().state !== "playing" ||
+                document.getElementById("player-menu") || status.className.indexOf("status-error") !== -1) { return; }
+        var owner = player;
+        hudTimer = setTimeout(function () {
+            hudTimer = null;
+            if (player !== owner || playerClosing || hudBuffering || owner.snapshot().state !== "playing" ||
+                    document.getElementById("player-menu")) { return; }
+            if (hud) {
+                if (hud.contains(document.activeElement)) {
+                    hudFocus = document.activeElement;
+                    hudFocus.blur();
+                }
+                hud.hidden = true;
+            }
+            if (shell) { shell.classList.add("hud-hidden"); }
+        }, 5000);
+    }
+
+    function closePlayerMenu() {
+        var menu = document.getElementById("player-menu");
+        if (menu) { menu.parentNode.removeChild(menu); }
+        showHud();
+        focusFirst();
+    }
+
+    function openPlaybackOptions() {
+        if (!player) { return; }
+        cancelHudTimer();
+        var old = document.getElementById("player-menu");
+        if (old) { old.parentNode.removeChild(old); }
+        var menu = element("section", "player-menu");
+        menu.id = "player-menu";
+        menu.appendChild(element("h2", "", translate("Playback options")));
+        button(menu, "Chapters and markers", openChapters);
+        button(menu, "Audio and subtitles", openTracks);
+        button(menu, "Quality and version", openQuality);
+        var information = element("p", "help-text");
+        information.hidden = true;
+        button(menu, "Playback information", function () {
+            information.hidden = false;
+            information.textContent = translate(player.mode() === "direct" ?
+                "Direct play with an explicitly evidenced capability profile." :
+                "Plex server transcode: HLS / H.264 + AAC.") +
+                (player.mode() === "direct" ? "" : " " + preferences.quality + "p.");
+        });
+        menu.appendChild(information);
+        if (playerItem.type === "track") {
+            button(menu, "Previous track", function () { skipMusic(-1, false); });
+            button(menu, "Next track", function () { skipMusic(1, false); });
+            button(menu, "Shuffle / On or off", function () {
+                queueShuffle = musicQueue.shuffle(!queueShuffle);
+                setStatus(translate(queueShuffle ? "Shuffle on." : "Shuffle off."));
+            });
+            button(menu, "Repeat / Off, one, all", function () {
+                queueRepeat = queueRepeat === "off" ? "one" : queueRepeat === "one" ? "all" : "off";
+                musicQueue.repeat(queueRepeat);
+                setStatus(translate("Repeat") + ": " + translate(queueRepeat));
+            });
+        }
+        button(menu, "Stop and return to details", stopPlayer);
+        button(menu, "Close menu", closePlayerMenu);
+        screen.appendChild(menu);
+        menu.querySelectorAll("button")[0].focus();
+    }
+
     function startPlayer(item, client, offset, mediaIndex, trackOptions) {
         if (player || playerClosing) { return; }
         if (item.type === "track" && (!musicQueue || musicQueue.current().ratingKey !== item.ratingKey)) {
@@ -1680,6 +1759,8 @@
         viewGeneration += 1;
         resetImages();
         clear(screen);
+        hudBuffering = false;
+        hudFocus = null;
         playerItem = item;
         playerClient = client;
         playerSettings = {
@@ -1694,34 +1775,23 @@
         var time = element("p", "playback-time", translate("Preparing playback..."));
         time.id = "playback-time";
         hud.appendChild(time);
+        var progress = element("div", "playback-progress");
+        progress.setAttribute("role", "progressbar");
+        progress.setAttribute("aria-label", item.title || translate("Playing"));
+        progress.setAttribute("aria-valuemin", "0");
+        progress.setAttribute("aria-valuemax", "100");
+        var progressFill = element("div", "playback-progress-fill");
+        progress.appendChild(progressFill);
+        hud.appendChild(progress);
         var subtitle = element("p", "subtitle-text");
         subtitle.id = "subtitle-text";
         screen.appendChild(subtitle);
-        button(hud, "Pause / Play", togglePlayer);
-        if (item.type === "track") {
-            button(hud, "Previous track", function () { skipMusic(-1, false); });
-            button(hud, "Next track", function () { skipMusic(1, false); });
-            button(hud, "Shuffle / On or off", function () {
-                queueShuffle = musicQueue.shuffle(!queueShuffle);
-                setStatus(translate(queueShuffle ? "Shuffle on." : "Shuffle off."));
-            });
-            button(hud, "Repeat / Off, one, all", function () {
-                queueRepeat = queueRepeat === "off" ? "one" : queueRepeat === "one" ? "all" : "off";
-                musicQueue.repeat(queueRepeat);
-                setStatus(translate("Repeat") + ": " + translate(queueRepeat));
-            });
-        }
-        button(hud, "Back 10 seconds", function () { seekPlayer(-10000); });
-        button(hud, "Forward 30 seconds", function () { seekPlayer(30000); });
-        button(hud, "Chapters and markers", openChapters);
-        button(hud, "Audio and subtitles", openTracks);
-        button(hud, "Quality and version", openQuality);
-        button(hud, "Playback information", function () {
-            setStatus(player.mode() === "direct" ? "Direct play with an explicitly evidenced capability profile." :
-                "Plex server transcode / HLS / H.264 + AAC / " + preferences.quality +
-                "p. Native formats and HDR remain model-specific and unverified.");
-        });
-        button(hud, "Stop and return to details", stopPlayer);
+        var controls = element("div", "playback-controls");
+        button(controls, "Back 10 seconds", function () { seekPlayer(-10000); }, false, "back");
+        button(controls, "Pause / Play", togglePlayer, false, "play");
+        button(controls, "Forward 30 seconds", function () { seekPlayer(30000); }, false, "play");
+        button(controls, "More", openPlaybackOptions, false, "settings");
+        hud.appendChild(controls);
         screen.appendChild(hud);
         var ownPlayer;
         try {
@@ -1732,6 +1802,9 @@
                     if (event.type === "time") {
                         var label = document.getElementById("playback-time");
                         if (label) { label.textContent = timeLabel(event.position) + " / " + timeLabel(event.duration || item.duration); }
+                        var percent = Math.min(100, Math.max(0, event.position * 100 / (event.duration || item.duration || 1)));
+                        progress.setAttribute("aria-valuenow", String(Math.round(percent)));
+                        if (progressFill.style) { progressFill.style.width = percent + "%"; }
                         if (externalCues) {
                             document.getElementById("subtitle-text").textContent = window.PlexSubtitles.at(externalCues, event.position);
                         }
@@ -1744,7 +1817,11 @@
                             subtitleTimer = setTimeout(function () { text.textContent = ""; }, event.detail.duration || 3000);
                         }
                     } else if (event.type === "buffering") {
+                        hudBuffering = !!event.detail;
                         setStatus(event.detail ? "Buffering..." : "Playback ready.");
+                        showHud();
+                    } else if (event.type === "state") {
+                        showHud();
                     } else if (event.type === "error") {
                         showPlayerError({ message: event.detail });
                     } else if (event.type === "ended") {
@@ -1771,7 +1848,8 @@
             setStatus("Asking Plex for a compatible stream...");
             player.start().then(function () {
                 if (player === ownPlayer) {
-                    setStatus("Playing. Use the remote media keys or the on-screen controls.");
+                    setStatus("");
+                    showHud();
                 }
             }).catch(function (error) {
                 if (player === ownPlayer) { showPlayerError(error); }
@@ -1779,6 +1857,7 @@
         } catch (error) {
             document.body.className = "";
             player = null;
+            showHud();
             externalCues = null;
             renderDetail(item, client);
             showPlayerError(error);
@@ -1790,7 +1869,7 @@
         if (!player) { return; }
         try {
             var action = player.snapshot().state === "playing" ? player.pause() : player.play();
-            action.catch(showPlayerError);
+            action.then(showHud).catch(showPlayerError);
         } catch (error) { showPlayerError(error); }
     }
 
@@ -1798,12 +1877,14 @@
         if (!player) { return; }
         player.seek(player.snapshot().position + delta).then(function (position) {
             setStatus("Seek landed at " + timeLabel(position) + ".");
+            showHud();
         }).catch(showPlayerError);
     }
 
     function stopPlayer(after) {
         if (!player || playerClosing) { return Promise.resolve(); }
         playerClosing = true;
+        cancelHudTimer();
         if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
         if (subtitleTimer !== null) { clearTimeout(subtitleTimer); subtitleTimer = null; }
         var closing = player;
@@ -1814,8 +1895,9 @@
             showPlayerError(error);
             safeToLeave = closing.snapshot().state === "idle";
         }).then(function () {
-            if (!safeToLeave) { playerClosing = false; return; }
+            if (!safeToLeave) { playerClosing = false; showHud(); return; }
             player = null;
+            showHud();
             playerClosing = false;
             document.body.className = "";
             if (typeof after === "function") { after(); }
@@ -1826,6 +1908,7 @@
 
     function openChapters() {
         if (!player) { return; }
+        cancelHudTimer();
         var menu = document.getElementById("player-menu");
         if (menu) { menu.parentNode.removeChild(menu); }
         menu = element("section", "player-menu");
@@ -1843,7 +1926,7 @@
                 });
             }
         });
-        button(menu, "Close menu", function () { menu.parentNode.removeChild(menu); focusFirst(); });
+        button(menu, "Close menu", closePlayerMenu);
         screen.appendChild(menu);
         var control = menu.querySelectorAll("button")[0];
         if (control) { control.focus(); }
@@ -1851,6 +1934,7 @@
 
     function openTracks() {
         if (!player) { return; }
+        cancelHudTimer();
         var old = document.getElementById("player-menu");
         if (old) { old.parentNode.removeChild(old); }
         var menu = element("section", "player-menu");
@@ -1906,7 +1990,7 @@
                 });
             });
         } catch (error) { menu.appendChild(element("p", "inline-error", error.message)); }
-        button(menu, "Close menu", function () { menu.parentNode.removeChild(menu); focusFirst(); });
+        button(menu, "Close menu", closePlayerMenu);
         screen.appendChild(menu);
         var control = menu.querySelectorAll("button")[0];
         if (control) { control.focus(); }
@@ -1914,6 +1998,7 @@
 
     function openQuality() {
         if (!player) { return; }
+        cancelHudTimer();
         var old = document.getElementById("player-menu");
         if (old) { old.parentNode.removeChild(old); }
         var menu = element("section", "player-menu");
@@ -1935,7 +2020,7 @@
                 " " + (media.videoCodec || ""), function () { change(preferences.quality, version); });
         });
         menu.appendChild(element("p", "help-text", translate("Original quality needs an evidenced model capability profile. Unknown formats are not advertised as supported.")));
-        button(menu, "Close menu", function () { menu.parentNode.removeChild(menu); focusFirst(); });
+        button(menu, "Close menu", closePlayerMenu);
         screen.appendChild(menu);
         menu.querySelectorAll("button")[0].focus();
     }
@@ -2094,6 +2179,17 @@
     function onKeyDown(event) {
         var key = event.keyCode;
         var active = document.activeElement;
+        if (player && [13, 37, 38, 39, 40, 415, 19, 10252, 413, 417, 412].indexOf(key) !== -1) {
+            var hud = screen.querySelector(".player-hud");
+            var wasHidden = hud && hud.hidden;
+            showHud();
+            if (wasHidden && [13, 37, 38, 39, 40].indexOf(key) !== -1) {
+                event.preventDefault();
+                if (hudFocus && hud.contains(hudFocus)) { hudFocus.focus(); }
+                else { focusFirst(); }
+                return;
+            }
+        }
         var editing = active && ((active.tagName === "INPUT" && active.type !== "checkbox") || active.tagName === "TEXTAREA");
         if (key === 13 && event.repeat) { event.preventDefault(); return; }
         if ((key === 10135 || key === 457) && !player && active && active.plexCard) {
@@ -2111,7 +2207,7 @@
             event.preventDefault();
             if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; setStatus("Auto-play cancelled."); return; }
             var menu = document.getElementById("player-menu");
-            if (menu) { menu.parentNode.removeChild(menu); focusFirst(); return; }
+            if (menu) { closePlayerMenu(); return; }
             backView();
             return;
         }
@@ -2173,6 +2269,8 @@
 
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
+    screen.addEventListener("mousemove", function () { if (player) { showHud(); } });
+    screen.addEventListener("click", function () { if (player) { showHud(); } });
     document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
             cancelHold();

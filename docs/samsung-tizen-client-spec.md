@@ -35,6 +35,10 @@ rows (`rust-modules/ui/src/widgets.rs`'s `TabStrip` and `rust-modules/ui/src/the
 roles), rather than reusing its renderer. Home destinations appear above the shelves; settings
 show selected values independently of focus and retain the focused row after preference changes.
 These behaviors have synthetic UI coverage; browser previews are not Samsung-panel evidence.
+The playback overlay uses a compact transport row and progress bar. Chapters, tracks, quality,
+playback information, music-queue controls and Stop live under More rather than covering the
+video in two rows of always-visible buttons. It hides after five seconds of uninterrupted play,
+while subtitles remain independent and errors remain visible.
 The installed emulator has not launched on this Apple-Silicon host; earlier retail probes did not
 run this application. No current-product emulator, decoder, performance or retail-model pass is
 claimed.
@@ -503,7 +507,11 @@ Work directly through the dependency-ready items rather than waiting for a nativ
 - [ ] Verify audio track defaults, selection and failures on device, including model-specific DTS limitations.
 - [ ] Verify embedded/external SRT/WebVTT and server-rendered ASS/SSA/PGS/VobSub individually.
 - [ ] Test subtitle/audio/version changes while preparing, paused, seeking and completing; prevent stale callbacks.
-- [ ] Complete held-key scrub/repeat handling and player HUD hide/show/focus restoration.
+- [ ] Complete held-key scrub/repeat handling. The player HUD now hides after five seconds of
+  uninterrupted playing; navigation/OK first reveals controls without activating them. Media
+  keys still act while hidden. Pausing, buffering, errors and open menus retain visible controls;
+  menu closure and resume restart the timer, and teardown cancels it. Synthetic host journeys
+  cover these transitions; Samsung-panel acceptance remains outstanding.
 - [ ] Exercise Up Next/auto-next cancellation and completion across episode/season boundaries.
 
 ### Account, browsing and app UX

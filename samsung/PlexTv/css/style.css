@@ -176,12 +176,63 @@ body.playing {
 }
 
 .player-hud {
-    position: absolute;
-    bottom: 72px;
-    left: 72px;
-    right: 72px;
-    padding: 24px 32px;
-    background: rgba(8, 8, 10, 0.94);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 64px 80px 48px;
+    background: linear-gradient(transparent, rgba(8, 8, 10, 0.94) 48%);
+}
+
+.player-hud[hidden] {
+    display: none;
+}
+
+.playing .hud-hidden .status:not(.status-error) {
+    display: none;
+}
+
+.playback-time {
+    margin: 0 0 16px;
+    color: #d2d2d7;
+    font-size: 24px;
+}
+
+.playback-progress {
+    height: 4px;
+    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.playback-progress-fill {
+    width: 0;
+    height: 100%;
+    background: #ffffff;
+}
+
+.playback-controls {
+    display: flex;
+    align-items: center;
+}
+
+.playback-controls .menu-control {
+    min-height: 60px;
+    margin: 0 16px 0 0;
+    padding: 12px 24px 12px 60px;
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 24px;
+}
+
+.playback-controls .menu-control:last-child {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+.playback-controls .menu-control:focus {
+    border-color: #ffffff;
+    background: #ffffff;
+    color: #101012;
 }
 
 .player-hud h2 {
@@ -191,7 +242,7 @@ body.playing {
 
 .subtitle-text {
     position: absolute;
-    bottom: 450px;
+    bottom: 330px;
     left: 15%;
     right: 15%;
     margin: 0;
@@ -201,6 +252,10 @@ body.playing {
     font-size: 38px;
     color: #ffffff;
     background: rgba(8, 8, 10, 0.78);
+}
+
+.hud-hidden .subtitle-text {
+    bottom: 72px;
 }
 
 .subtitle-text:empty {
@@ -236,11 +291,16 @@ body.playing {
 
 .playing .status {
     position: absolute;
-    bottom: 22px;
+    top: 28px;
+    bottom: auto;
     left: 72px;
     right: 72px;
     padding: 8px;
     background: rgba(8, 8, 10, 0.94);
+}
+
+.playing .status:empty {
+    display: none;
 }
 
 .screen {
