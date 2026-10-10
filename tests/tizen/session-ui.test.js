@@ -12,6 +12,7 @@ function harness(saved, failure) {
     });
     var data = {};
     var tokens = [];
+    var approved = false;
     var switches = 0;
     var expired = false;
     var storage = {
@@ -31,7 +32,10 @@ function harness(saved, failure) {
     dom.window.PlexApi = {
         createAuthClient: function () { return {
             startAuthorization: function () { return Promise.resolve({ code: "TEST", id: 1 }); },
-            pollAuthorization: function () { return Promise.resolve({ status: "linked", token: "synthetic-account-token" }); }
+            pollAuthorization: function () {
+                // The code shown automatically stays pending until the test approves it.
+                return Promise.resolve(approved ? { status: "linked", token: "synthetic-account-token" } : { status: "pending" });
+            }
         }; },
         createAccountClient: function (options) {
             tokens.push(options.token);
@@ -68,6 +72,7 @@ function harness(saved, failure) {
         dom: dom, storage: storage, tokens: tokens,
         switches: function () { return switches; },
         expire: function () { expired = true; },
+        approve: function () { approved = true; },
         text: function () { return dom.window.document.body.textContent; },
         click: function (label) {
             var node = Array.from(dom.window.document.querySelectorAll("button")).find(function (button) {
@@ -93,14 +98,16 @@ async function run() {
     denied.dom.window.close();
     var app = harness("");
     assert.strictEqual(app.dom.window.document.querySelector(".remember-checkbox").checked, false);
-    app.click("Sign in to Plex");
+    app.approve();
+    app.click("Get a new code");
     await settle();
     assert.strictEqual(session.load(app.storage), "");
     app.dom.window.close();
 
     app = harness("");
     app.dom.window.document.querySelector(".remember-checkbox").checked = true;
-    app.click("Sign in to Plex");
+    app.approve();
+    app.click("Get a new code");
     await settle();
     assert.strictEqual(session.load(app.storage), "synthetic-account-token");
     app.click("Sign out");
@@ -122,7 +129,8 @@ async function run() {
 
     app = harness("", "save");
     app.dom.window.document.querySelector(".remember-checkbox").checked = true;
-    app.click("Sign in to Plex");
+    app.approve();
+    app.click("Get a new code");
     await settle();
     assert(app.text().includes("session could not be saved"), "A next-screen status must not erase the storage warning");
     app.dom.window.close();

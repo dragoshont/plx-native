@@ -156,7 +156,7 @@ function boot(storage) {
     }
     async function settle() { for (var i = 0; i < 60; i += 1) { await Promise.resolve(); } }
     async function signIn(serverLabel) {
-        click("Sign in to Plex");
+        click("Get a new code");
         await settle();
         click("Synthetic Guest");
         click("Use this profile");

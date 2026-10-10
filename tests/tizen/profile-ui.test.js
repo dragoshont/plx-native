@@ -32,6 +32,7 @@ async function run() {
     var tokens = [];
     var switches = 0;
     var expire = false;
+    var linkPin = true;
     var document = {
         getElementById: function (id) { return id === "screen" ? screen : status; },
         createElement: function (tag) { return new Node(tag); },
@@ -60,6 +61,7 @@ async function run() {
         createAuthClient: function () { return {
             startAuthorization: function () { return Promise.resolve({ code: "TEST", id: 1 }); },
             pollAuthorization: function () {
+                if (!linkPin) { return Promise.resolve({ status: "denied" }); }
                 return Promise.resolve({ status: "linked", token: "synthetic-account-token" });
             }
         }; },
@@ -89,7 +91,7 @@ async function run() {
         control.events.click();
     }
     async function settle() { for (var i = 0; i < 20; i += 1) { await Promise.resolve(); } }
-    click("Sign in to Plex");
+    click("Get a new code");
     await settle();
     click("Synthetic Guest");
     click("Use this profile");
@@ -115,7 +117,7 @@ async function run() {
     assert(screen.querySelectorAll().some(function (node) { return node.textContent === "Shared (shared) — relay"; }),
         "A stale server grant must return to discovery without erasing the linked account");
     click("Sign out");
-    click("Sign in to Plex");
+    click("Get a new code");
     await settle();
     var resolveSwitch;
     accountApi.switchProfile = function () {
@@ -126,11 +128,13 @@ async function run() {
     click("Use this profile");
     click("Back to profiles");
     await settle();
+    linkPin = false;
     click("Sign out");
     resolveSwitch("synthetic-stale-token");
     await settle();
     assert.strictEqual(tokens.indexOf("synthetic-stale-token"), -1);
-    assert(screen.querySelectorAll().some(function (node) { return node.textContent === "Sign in to Plex"; }));
+    assert(screen.querySelectorAll().some(function (node) { return node.textContent === "Get a new code"; }),
+        "Signing out while a profile switch is pending must land on the sign-in screen");
     console.log("Tizen synthetic profile UI/recovery tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

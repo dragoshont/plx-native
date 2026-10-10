@@ -525,7 +525,8 @@
                     return {
                         id: String(id),
                         code: code,
-                        qr: typeof pin.qr === "string" && /^https:\/\/plex\.tv\//.test(pin.qr) ? pin.qr : "",
+                        qr: typeof pin.qr === "string" && /^https:\/\/plex\.tv\//.test(pin.qr) ? pin.qr :
+                            "https://plex.tv/api/v2/pins/qr/" + code,
                         linkUrl: "https://plex.tv/link",
                         expiresAt: expiry
                     };

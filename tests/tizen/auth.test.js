@@ -46,6 +46,17 @@ function run() {
             assert.strictEqual(calls[1].options.headers["X-Plex-Client-Identifier"], "test-client-identifier");
         });
     }).then(function () {
+        var noQr = createAuthClient({
+            now: function () { return now; },
+            fetch: function () {
+                return Promise.resolve(response(201, { id: 44, code: "WXYZ", expiresIn: 900 }));
+            }
+        });
+        return noQr.startAuthorization().then(function (pin) {
+            assert.strictEqual(pin.qr, "https://plex.tv/api/v2/pins/qr/WXYZ",
+                "A pin without a qr field must still show the public plex.tv QR, as LG does");
+        });
+    }).then(function () {
         var pin = { id: "43", code: "PEND1234", expiresAt: now + 30000 };
         var answers = [{}, { status: "denied" }, { status: "expired" }];
         var index = 0;

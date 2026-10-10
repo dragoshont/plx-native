@@ -17,7 +17,7 @@
     var authTimer = null;
     var authGeneration = 0;
     var accountToken = "";
-    var rememberAccount = false;
+    var rememberControl = null;
     var accountClient = null;
     var servers = [];
     var libraryFilters = {};
@@ -216,7 +216,7 @@
             }
         }
         for (var i = 0; i < controls.length; i += 1) {
-            if (!controls[i].disabled) {
+            if (!controls[i].disabled && !insideHidden(controls[i])) {
                 controls[i].focus();
                 return;
             }
@@ -253,7 +253,7 @@
                 accountToken = result.token;
                 stopAuthorization();
                 var warning = "";
-                if (rememberAccount && window.PlexSession) {
+                if (rememberControl && rememberControl.checked && window.PlexSession) {
                     try { window.PlexSession.remember(window.localStorage, accountToken, true); }
                     catch (error) { warning = "Plex linked, but the session could not be saved. It remains memory-only."; }
                 }
@@ -261,16 +261,16 @@
                 openProfiles(warning);
             } else {
                 stopAuthorization();
-                info.textContent = result.status === "denied" ?
-                    "Sign-in was denied. Start again to request a new code." :
-                    "This sign-in code expired. Start again to request a new code.";
+                info.textContent = translate(result.status === "denied" ?
+                    "Sign-in was denied. Get a new code to try again." :
+                    "This code expired. Get a new code to try again.");
                 setStatus(info.textContent, result.status === "denied");
             }
         }).catch(function () {
             if (generation !== authGeneration) {
                 return;
             }
-            info.textContent = "Network issue while checking sign-in. Retrying…";
+            info.textContent = translate("Network issue while checking sign-in. Retrying…");
             authTimer = setTimeout(function () {
                 pollAuthorization(generation, info);
             }, 5000);
@@ -286,6 +286,7 @@
     }
 
     function openProfiles(warning) {
+        stopAuthorization();
         var generation = ++viewGeneration;
         clear(screen);
         screen.appendChild(element("h2", "", translate("Who is watching?")));
@@ -433,12 +434,13 @@
         });
     }
 
-    function beginAuthorization(info) {
+    function beginAuthorization(info, keepStatus) {
         stopAuthorization();
         accountToken = "";
         var generation = authGeneration;
-        info.textContent = "Requesting a secure sign-in code…";
-        setStatus("Contacting Plex…");
+        clear(info);
+        info.appendChild(element("p", "auth-wait", translate("Getting a sign-in code…")));
+        if (!keepStatus) { setStatus(""); }
         try {
             authClient = window.PlexApi.createAuthClient();
         } catch (error) {
@@ -452,29 +454,31 @@
             }
             authPin = pin;
             clear(info);
+            info.appendChild(element("p", "auth-step", translate("On your phone or computer, go to")));
+            info.appendChild(element("p", "auth-url", "plex.tv/link"));
+            var plate = element("div", "auth-plate");
             if (pin.qr) {
                 var qr = element("img", "auth-qr");
+                qr.alt = translate("Scan to sign in");
+                qr.width = 360;
+                qr.height = 360;
+                qr.onerror = function () {
+                    if (plate.parentNode) { plate.parentNode.removeChild(plate); }
+                };
                 qr.src = pin.qr;
-                qr.alt = "Scan to authorize this Plex client";
-                qr.width = 280;
-                qr.height = 280;
-                info.appendChild(qr);
+                plate.appendChild(qr);
+                info.appendChild(plate);
             }
-            info.appendChild(element("p", "help-text", translate("On a phone or computer, open Plex and enter this code:")));
+            info.appendChild(element("p", "auth-step", translate("and enter this code")));
             info.appendChild(element("strong", "auth-code", pin.code));
-            var link = element("a", "plex-link", translate("Open plex.tv/link"));
-            link.href = pin.linkUrl;
-            link.target = "_blank";
-            link.rel = "noopener";
-            info.appendChild(link);
-            info.appendChild(element("p", "help-text", translate("This code expires in about five minutes.")));
-            setStatus("Waiting for Plex sign-in. The code is temporary and is not saved.");
-            pollAuthorization(generation, info);
+            var waiting = element("p", "auth-wait", translate("Waiting for you to sign in…"));
+            info.appendChild(waiting);
+            pollAuthorization(generation, waiting);
         }).catch(function () {
             if (generation !== authGeneration) {
                 return;
             }
-            info.textContent = "Could not start Plex sign-in. Check the network and try again.";
+            info.textContent = translate("Could not reach Plex. Check the TV's internet connection, then get a new code.");
             setStatus(info.textContent, true);
         });
     }
@@ -487,34 +491,35 @@
         currentClient = null;
         currentSection = null;
         var section = element("section", "connect-panel");
-        section.appendChild(element("h2", "", translate("Sign in to Plex")));
-        section.appendChild(element("p", "help-text",
-            translate("Sign in to Plex with a temporary device code, or connect directly to a test server.")));
+        section.appendChild(element("h2", "auth-title", translate("Sign in to Plex")));
 
-        var authPanel = element("div", "auth-panel");
-        authPanel.appendChild(element("h3", "", translate("Plex device sign-in")));
-        var authInfo = element("div", "auth-info", translate("No Plex account is linked."));
-        authPanel.appendChild(authInfo);
-        var signIn = element("button", "secondary-button", translate("Sign in to Plex"));
-        signIn.type = "button";
-        signIn.addEventListener("click", function () {
-            rememberAccount = remember && remember.checked;
-            beginAuthorization(authInfo);
-        });
-        authPanel.appendChild(signIn);
+        var authInfo = element("div", "auth-info");
+        section.appendChild(authInfo);
+
+        var actions = element("div", "auth-actions");
         var remember = null;
+        var signIn = element("button", "secondary-button", translate("Get a new code"));
+        signIn.type = "button";
+        signIn.addEventListener("click", function () { beginAuthorization(authInfo); });
+        actions.appendChild(signIn);
+        var advancedToggle = element("button", "secondary-button", translate("Connect to a server directly"));
+        advancedToggle.type = "button";
+        actions.appendChild(advancedToggle);
+        section.appendChild(actions);
+
         if (window.PlexSession) {
-            var rememberLabel = element("label", "remember-option",
-                translate("Remember this account on this TV (optional). The token is stored unencrypted in this app's local storage. Do not enable on a shared or untrusted TV."));
+            var rememberLabel = element("label", "remember-option", translate("Stay signed in on this TV"));
             remember = element("input", "remember-checkbox");
             remember.type = "checkbox";
             remember.checked = false;
             rememberLabel.appendChild(remember);
-            authPanel.appendChild(rememberLabel);
-            button(authPanel, "Delete saved sign-in", signOut);
+            section.appendChild(rememberLabel);
+            section.appendChild(element("p", "remember-note",
+                translate("Your sign-in is stored unencrypted on this TV. Leave this off on a shared TV.")));
         }
-        section.appendChild(authPanel);
 
+        var advanced = element("div", "advanced-panel");
+        advanced.hidden = true;
         var form = element("form", "connect-form");
         var serverLabel = element("label", "", translate("Server URL"));
         var serverInput = element("input", "remote-input");
@@ -540,12 +545,19 @@
             event.preventDefault();
             connect(serverInput.value, tokenInput.value);
         });
-        section.appendChild(form);
+        advanced.appendChild(form);
+        if (window.PlexSession) { button(advanced, "Delete saved sign-in", signOut); }
+        section.appendChild(advanced);
+        advancedToggle.addEventListener("click", function () {
+            advanced.hidden = !advanced.hidden;
+            if (!advanced.hidden) { serverInput.focus(); }
+        });
         if (message) {
             section.appendChild(element("p", "inline-error", message));
         }
         screen.appendChild(section);
-        setStatus("Server tokens are kept in memory for this app session and sent in an HTTP header.");
+        rememberControl = remember;
+        beginAuthorization(authInfo, true);
         focusFirst();
     }
 
@@ -1884,10 +1896,17 @@
         focusFirst();
     }
 
+    function insideHidden(node) {
+        for (var current = node; current; current = current.parentNode) {
+            if (current.hidden === true) { return true; }
+        }
+        return false;
+    }
+
     function moveFocus(direction, key) {
         var menu = document.getElementById("player-menu");
         var controls = Array.prototype.slice.call((menu || screen).querySelectorAll("button, input, select")).filter(function (node) {
-            return !node.disabled;
+            return !node.disabled && !insideHidden(node);
         });
         var active = document.activeElement;
         var index = controls.indexOf(active);

@@ -7,9 +7,9 @@ body {
     width: 100%;
     min-height: 100%;
     margin: 0;
-    background: #101116;
-    color: #f5f5f7;
-    font-family: sans-serif;
+    background: #2c2c2e;
+    color: #f7fafc;
+    font-family: "SamsungOneUI", "Samsung Sans", "Helvetica Neue", Arial, sans-serif;
 }
 
 body {
@@ -25,16 +25,16 @@ input {
 button {
     min-height: 64px;
     padding: 14px 24px;
-    border: 2px solid #555863;
+    border: 2px solid transparent;
     border-radius: 8px;
-    background: #252832;
-    color: #f5f5f7;
+    background: #222224;
+    color: #f7fafc;
     text-align: left;
 }
 
 button:focus,
 input:focus {
-    outline: 4px solid #e5a00d;
+    outline: 4px solid #f7fafc;
     outline-offset: 2px;
 }
 
@@ -58,14 +58,14 @@ button:disabled {
 
 .app-header h1 {
     margin: 0;
-    color: #e5a00d;
+    color: #f7fafc;
     font-size: 38px;
 }
 
 .app-header p,
 .help-text,
 .status {
-    color: #b7bac4;
+    color: #b8bfcc;
     font-size: 24px;
 }
 
@@ -89,8 +89,8 @@ button:disabled {
     margin: 0 20px 28px 0;
     padding: 8px;
     vertical-align: top;
-    background: #1b1d24;
-    border-color: #555863;
+    background: #1b1b1d;
+    border-color: transparent;
 }
 
 .poster {
@@ -98,8 +98,8 @@ button:disabled {
     width: 220px;
     height: 330px;
     object-fit: cover;
-    color: #b7bac4;
-    background: #252832;
+    color: #b8bfcc;
+    background: #222224;
 }
 
 .card-title,
@@ -113,7 +113,7 @@ button:disabled {
 }
 
 .card-meta {
-    color: #b7bac4;
+    color: #b8bfcc;
 }
 
 .synopsis {
@@ -123,7 +123,7 @@ button:disabled {
 }
 
 .detail-meta {
-    color: #b7bac4;
+    color: #b8bfcc;
     font-size: 24px;
 }
 
@@ -181,7 +181,7 @@ body.playing {
     left: 72px;
     right: 72px;
     padding: 24px 32px;
-    background: rgba(16, 17, 22, 0.94);
+    background: rgba(8, 8, 10, 0.94);
 }
 
 .player-hud h2 {
@@ -200,7 +200,7 @@ body.playing {
     white-space: pre-line;
     font-size: 38px;
     color: #ffffff;
-    background: rgba(16, 17, 22, 0.78);
+    background: rgba(8, 8, 10, 0.78);
 }
 
 .subtitle-text:empty {
@@ -213,7 +213,7 @@ body.playing {
     height: 62vh;
     object-fit: contain;
     margin-bottom: 24px;
-    background: #101116;
+    background: #2c2c2e;
 }
 
 .player-menu {
@@ -224,8 +224,8 @@ body.playing {
     width: 780px;
     overflow-y: auto;
     padding: 28px;
-    background: #101116;
-    border: 2px solid #555863;
+    background: #2c2c2e;
+    border: 2px solid transparent;
 }
 
 .player-menu button {
@@ -240,7 +240,7 @@ body.playing {
     left: 72px;
     right: 72px;
     padding: 8px;
-    background: rgba(16, 17, 22, 0.94);
+    background: rgba(8, 8, 10, 0.94);
 }
 
 .screen {
@@ -285,18 +285,18 @@ body.playing {
 .remote-input {
     min-height: 64px;
     padding: 12px 16px;
-    border: 2px solid #555863;
+    border: 2px solid transparent;
     border-radius: 8px;
-    background: #1b1d24;
+    background: #1b1b1d;
     color: #ffffff;
 }
 
 .primary-button {
     align-self: flex-start;
     min-width: 220px;
-    border-color: #e5a00d;
-    background: #e5a00d;
-    color: #111111;
+    border-color: #f7fafc;
+    background: #f7fafc;
+    color: #08080a;
     font-weight: bold;
     text-align: center;
 }
@@ -361,4 +361,148 @@ body.playing {
 .status {
     min-height: 32px;
     margin-top: 8px;
+}
+
+/* LG-parity look: neutral ground, white accent, no orange, soft rounded controls. */
+button {
+    border-radius: 12px;
+    transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+button:focus {
+    outline: none;
+    background: #f7fafc;
+    color: #08080a;
+    transform: scale(1.03);
+}
+
+input:focus {
+    outline: 3px solid #f7fafc;
+    outline-offset: 3px;
+}
+
+.media-card:focus {
+    background: #1b1b1d;
+    color: #f7fafc;
+    outline: 4px solid #f7fafc;
+    outline-offset: 0;
+}
+
+.app-header h1 {
+    color: #f7fafc;
+    font-size: 40px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: lowercase;
+}
+
+.connect-panel {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.auth-title {
+    margin: 8px 0 24px;
+    color: #ebf0f7;
+    font-size: 40px;
+    font-weight: normal;
+}
+
+.auth-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.auth-step {
+    margin: 8px 0;
+    color: #b8bfcc;
+    font-size: 28px;
+}
+
+.auth-url {
+    margin: 0 0 24px;
+    color: #f7fafc;
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.auth-plate {
+    width: 312px;
+    height: 312px;
+    padding: 16px;
+    border-radius: 16px;
+    background: #f7fafc;
+}
+
+.auth-qr {
+    width: 280px;
+    height: 280px;
+    margin: 0;
+    background: #f7fafc;
+}
+
+.auth-code {
+    display: block;
+    margin: 8px 0 24px;
+    color: #f7fafc;
+    font-size: 64px;
+    font-weight: bold;
+    letter-spacing: 12px;
+}
+
+.auth-wait {
+    margin: 0 0 24px;
+    color: #b8bfcc;
+    font-size: 26px;
+}
+
+.auth-wait::before {
+    content: "";
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    margin-right: 16px;
+    vertical-align: -3px;
+    border: 3px solid rgba(247, 250, 252, 0.25);
+    border-top-color: #f7fafc;
+    border-radius: 50%;
+    -webkit-animation: plx-spin 900ms linear infinite;
+    animation: plx-spin 900ms linear infinite;
+}
+
+@-webkit-keyframes plx-spin {
+    to { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes plx-spin {
+    to { transform: rotate(360deg); }
+}
+
+.auth-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.auth-actions button {
+    margin: 0 8px;
+    text-align: center;
+}
+
+.remember-option {
+    margin: 24px 0 8px;
+    color: #cdd3dd;
+}
+
+.remember-note {
+    margin: 0 0 16px;
+    color: #9499a3;
+    font-size: 22px;
+}
+
+.advanced-panel {
+    margin: 24px auto 0;
+    max-width: 760px;
+    text-align: left;
 }
