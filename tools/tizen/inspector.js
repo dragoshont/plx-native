@@ -14,8 +14,11 @@ const HELP = `Samsung Web Inspector (Node >=22)
   node tools/tizen/inspector.js screenshot --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/image.png
   node tools/tizen/inspector.js screencast --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/frames --duration-ms 10000 --max-frames 120
   node tools/tizen/inspector.js layers --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/layers
-  node tools/tizen/inspector.js live --endpoint http://127.0.0.1:PORT --allow-private-pixels --duration-ms 300000 --interval-ms 1000
-    (serves fresh separate layers from memory on a tokenised 127.0.0.1 URL printed to stderr; Ctrl-C stops)
+  node tools/tizen/inspector.js live --endpoint http://127.0.0.1:PORT --allow-private-pixels [--duration-ms 300000] [--interval-ms 10000]
+      [--interactive] [--tv-model M] [--tv-year Y] [--tv-os V] [--tv-firmware F]
+    (serves fresh separate layers from memory on a tokenised 127.0.0.1 URL printed to stderr; Ctrl-C stops;
+     --interactive adds guarded on-page remote keys through the same checks as the key command;
+     --tv-* values are shown as operator-supplied, never as observed)
   node tools/tizen/inspector.js state --endpoint http://127.0.0.1:PORT
   node tools/tizen/inspector.js key --endpoint http://127.0.0.1:PORT --key up|down|left|right|back|ok [--rating-key N]
     (ok is refused unless the focused control is browse-only; a card needs its observed --rating-key)
@@ -25,6 +28,8 @@ Options: --target-index N (required for multiple pages), --timeout-ms 15000 (100
 Fixed probes only; no arbitrary evaluation or app launch. Keys only through the guarded key command.
 Capture output is PRIVATE and is never a DOM reconstruction. See docs/samsung-web-inspector.md.
 `;
+
+const TV_FIELDS = ['model', 'year', 'os', 'firmware'];
 
 function integer(value, min, max) {
     if (typeof value !== 'string' || !/^\d+$/.test(value)) throw new InspectorError('invalid_option');
@@ -42,8 +47,9 @@ function options(args) {
     for (let i = 1; i < args.length; i++) {
         const name = args[i];
         if (Object.hasOwn(values, name)) throw new InspectorError('duplicate_option');
-        if (['--allow-private-pixels', '--save-sign-in'].includes(name)) { values[name] = true; continue; }
-        if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms', '--key', '--rating-key'].includes(name) ||
+        if (['--allow-private-pixels', '--save-sign-in', '--interactive'].includes(name)) { values[name] = true; continue; }
+        if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms', '--key', '--rating-key',
+            '--tv-model', '--tv-year', '--tv-os', '--tv-firmware'].includes(name) ||
             i + 1 >= args.length || args[i + 1].startsWith('--')) throw new InspectorError('invalid_option');
         values[name] = args[++i];
     }
@@ -55,12 +61,15 @@ function options(args) {
     if ((!pixel && values['--allow-private-pixels']) || (!saves && values['--output']) ||
         (!['screencast', 'live'].includes(command) && values['--duration-ms']) ||
         (command !== 'screencast' && values['--max-frames']) ||
-        (command !== 'live' && values['--interval-ms']) ||
+        (command !== 'live' && (values['--interval-ms'] || values['--interactive'] ||
+            TV_FIELDS.some(field => values[`--tv-${field}`] !== undefined))) ||
         (command !== 'key' && (values['--key'] || values['--rating-key'] || values['--save-sign-in'])) ||
         (values['--save-sign-in'] && (values['--key'] !== 'ok' || values['--rating-key']))) {
         throw new InspectorError('inapplicable_option');
     }
     if (command === 'key' && !Object.hasOwn(KEYS, values['--key'] || '')) throw new InspectorError('invalid_key');
+    if (TV_FIELDS.some(field => values[`--tv-${field}`] !== undefined &&
+        !/^[A-Za-z0-9 ._-]{1,40}$/.test(values[`--tv-${field}`]))) throw new InspectorError('invalid_option');
     if (values['--rating-key'] !== undefined && !/^\d{1,12}$/.test(values['--rating-key'])) throw new InspectorError('invalid_option');
     const live = command === 'live';
     return {
@@ -71,7 +80,10 @@ function options(args) {
         output: saves ? outputPath(values['--output'], command !== 'screenshot') : undefined,
         durationMs: live ? integer(values['--duration-ms'] || '300000', 1000, 1800000) :
             integer(values['--duration-ms'] || '10000', 100, 30000),
-        intervalMs: integer(values['--interval-ms'] || '1000', 500, 10000),
+        intervalMs: integer(values['--interval-ms'] || '10000', 500, 60000),
+        interactive: values['--interactive'] === true,
+        tv: live ? Object.fromEntries(TV_FIELDS.filter(field => values[`--tv-${field}`] !== undefined)
+            .map(field => [field, values[`--tv-${field}`]])) : undefined,
         maxFrames: integer(values['--max-frames'] || '120', 1, 120)
     };
 }
@@ -134,7 +146,7 @@ async function run(config, lock = acquireLock, ready = view => process.stderr.wr
             }
             if (config.command === 'live') {
                 viewer = new LiveView(client, { durationMs: config.durationMs, intervalMs: config.intervalMs,
-                    waitMs: Math.min(config.timeoutMs, 1000) });
+                    waitMs: Math.min(config.timeoutMs, 1000), interactive: config.interactive, tv: config.tv });
                 ready(await viewer.start());
                 result = { ...await viewer.done, version };
             }

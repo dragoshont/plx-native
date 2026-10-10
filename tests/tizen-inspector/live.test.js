@@ -170,9 +170,9 @@ test('live options require pixel consent, keep pixels off disk and bound refresh
     assert.throws(() => options(base), /private_pixel_consent_required/);
     const config = options([...base, '--allow-private-pixels']);
     assert.equal(config.durationMs, 300000);
-    assert.equal(config.intervalMs, 1000);
+    assert.equal(config.intervalMs, 10000);
     assert.equal(config.output, undefined);
-    for (const extra of [['--output', '/tmp/x'], ['--max-frames', '2'], ['--interval-ms', '499'],
+    for (const extra of [['--output', '/tmp/x'], ['--max-frames', '2'], ['--interval-ms', '499'], ['--interval-ms', '60001'],
         ['--duration-ms', '1800001']]) {
         assert.throws(() => options([...base, '--allow-private-pixels', ...extra]));
     }

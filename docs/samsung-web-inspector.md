@@ -193,13 +193,15 @@ loopback HTTP URL:
 ```sh
 node tools/tizen/inspector.js live \
     --endpoint http://127.0.0.1:39506 --allow-private-pixels \
-    --duration-ms 300000 --interval-ms 1000
+    --duration-ms 300000 [--interval-ms 10000] [--interactive] \
+    [--tv-model M --tv-year Y --tv-os O --tv-firmware F]
 ```
 
 The URL is written to stderr as a JSON line. It contains a random 192-bit path
 token. Treat it as private and never paste it into a shared log. The server
 binds to `127.0.0.1` only. It rejects any `Host` other than the exact loopback
-host and port, and returns 405 for anything other than GET. Responses use
+host and port, and returns 405 for anything other than GET (except the
+interactive POST routes below). Responses use
 `no-store`, a nonce-based CSP, `DENY` framing and `no-referrer`. `--output` is
 rejected: pixels are never written to disk, and the previous capture is
 discarded when a new one is published. A frame URL for an older sequence
@@ -218,8 +220,82 @@ that leaves geometry and paint alone (such as a CSS transform spinner) is
 not detected. Each capture costs about a second of
 sequential replays, so the session is bounded:
 - Duration: 1 s to 30 min, default 5 min.
-- Interval: 0.5 to 10 s, default 1 s.
+- Interval: 0.5 to 60 s, default 10 s. Captures never overlap and never run
+  less than 0.5 s apart; a refresh requested during a capture coalesces into
+  at most one follow-up capture, never a backlog.
 - Viewer connections: at most 8.
+
+`/state` reports the transport contract: `state` (`starting`, `live`,
+`ended`), `endReason`, `paused`, `sequence`, `captureStartedAt`, `capturedAt`,
+`captureMs`, `intervalMs`, per-layer geometry (`width`, `height`, `offsetX`,
+`offsetY`, `hasTransform`), PNG `sha256` and `changed`, `failures`,
+`lastError`, `provenance` (`source: actual-tv-web-inspector`,
+`emulator: false`, discrete paint replays, separate layers) and `tvMetadata`.
+A new capture of an unchanged screen gets a new `capturedAt` and `sequence`
+but `changed: false`; the page reuses the image it already holds when every
+layer hash is unchanged. The page computes frame age from `capturedAt`. When
+the viewer ends, errors or stops answering, the page keeps the last genuine
+image under a yellow **STALE** banner; it never substitutes another source.
+
+`--tv-model`, `--tv-year`, `--tv-os` and `--tv-firmware` are optional,
+limited to 40 characters of `[A-Za-z0-9 ._-]`, and reported with provenance
+`operator-supplied-not-observed`. Absent values are `unknown`. Nothing is
+inferred from them, and the viewer does not measure them.
+
+#### Interactive remote (`--interactive`)
+
+Without `--interactive` the page is view-only and every POST returns 405.
+With it, the page shows Up/Down/Left/Right/OK/Back, **Refresh now** and
+**Pause** buttons. The remote surface (the image area) also takes keys once it
+has keyboard focus:
+
+| Key | Remote |
+|---|---|
+| Arrow keys | Up/Down/Left/Right |
+| Enter, Space | OK |
+| Backspace | Back (the TV's Back, never browser history) |
+
+Keys are handled only when the remote surface itself is the event target.
+Inputs, selects, text areas and contenteditable elements never send keys.
+IME composition, any modifier (Ctrl, Alt, Meta, Shift) and unknown keys are
+ignored. An auto-repeated handled key is swallowed but not sent, so holding a
+key cannot flood the TV. Handled keys call `preventDefault`. The buttons and
+the keyboard share one sender, which allows one command in flight. A second
+press is shown as `dropped (command_in_flight)`; Enter on a focused button
+therefore cannot send twice.
+
+Each command is a POST to `<url>key` with `{"key": "up"}` (and optionally a
+numeric `ratingKey` string with `ok`). The server:
+- requires the exact viewer `Origin`, a JSON content type and an
+  `X-Plx-Viewer` header equal to a per-viewer random value that only the page
+  carries (403 otherwise), and a body of at most 256 bytes (413);
+- holds at most two commands (one dispatching, one waiting) and refuses more
+  with 429 `queue_full`; it never builds a queue;
+- returns 409 `viewer_ended` after the viewer stops;
+- runs the same guarded `press` as `key`: a fresh focus read for every
+  command and the full OK policy of [Guarded navigation](#guarded-navigation).
+  The Settings save opt-in is never available from the viewer.
+
+Commands and captures are serialized on the one Inspector connection, but a
+waiting command goes ahead of a waiting capture. A key waits at most for the
+capture already in flight, never for the next 10-second interval. The response
+reports `status` (`pressed`, `refused`, `rejected`, `error`), `reason`,
+`queuedMs` and `rttMs`; `rttMs` is the server-side command time, separate from
+`captureMs`. The page also shows the client round trip. A pressed key schedules
+a capture 350 ms later (unless paused), so the result appears without waiting
+for the interval. `<url>refresh` (`{}`) requests a capture now;
+`<url>pause` (`{"paused": true|false}`) stops or resumes interval captures.
+
+Limits:
+- Input is synthetic `Input.dispatchKeyEvent` (raw key down and up).
+  Native-remote fidelity is unverified. Back is keyCode 10009, which was
+  observed to work once on this app (detail to Home); the viewer has not
+  re-verified it.
+- Clicking the image is unsupported. A paint replay has no hit-testing and no
+  proven mapping to panel or page coordinates.
+- A blanket OK is never available. The guard's denylist (playback, watch
+  state, DVR, sign-out and similar) applies to every viewer user; a user
+  asking for a remote is not permission for household writes.
 
 The loop stops in any of these cases:
 - The duration elapses.
