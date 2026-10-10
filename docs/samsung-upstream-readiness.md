@@ -7,13 +7,21 @@ LG remains unchanged. Plex Media Server remains the library/watch-state authorit
 
 ## Current deployment receipt
 
-On 2026-10-10, source `5b84f02f` was packaged with the existing Samsung developer certificate,
+On 2026-10-11, source `7c6f7158cb95ecffad955fc7ccac477d444c9bcf` was packaged with the existing Samsung developer certificate,
 installed over `PlxTizenDv.PlexTv` and launched on the owner's previously identified 2017
 UE55MU6172 (recorded firmware `T-KTMDEUC-1410.1`; not re-read during this deployment).
-Samsung's install and launch commands reported success.
-Signed package SHA-256: `a4ba3275e7993ca146f73aee3193b3330dbb159cced2324ba8c8a46c6060ec32`.
-The relay was used only for installation/launch; no remote navigation, playback or household
-Plex mutation was performed by the agent. This is an install/launch receipt, not panel or
+Samsung's install command exited successfully and the debug relaunch returned an Inspector port.
+Signed package SHA-256: `69b0f2cfd39471168f1efd1847d504328cf65eea58dc314a756f6eff989d0428`.
+The package's application assets were compared byte-for-byte with the committed source;
+only the staged manifest received the explicit application/package IDs.
+No remote navigation, playback or household Plex mutation was performed by the agent.
+Fresh native renderer-layer captures were inspected: the installed sign-in screen has no
+remember-me checkbox. A bounded live viewer completed 89 cycles without capture failures,
+approximately 0.86 seconds per capture, on this static screen. These are separate paint
+layers, not full panel/compositor screenshots, and exclude AVPlay's hardware video plane.
+See [Inspector capture evidence and limits](samsung-web-inspector.md).
+Manual sign-in and subsequent Home/library/playback acceptance remain pending.
+This is an install/launch and sign-in-rendering receipt, not panel or
 native-playback acceptance. Host suites, strict ES5 parsing and unsigned source build passed
 on the committed source before packaging.
 
@@ -30,7 +38,7 @@ implemented movie/show behaviors to their actual source.
 | Collection navigation lost Load more on returning from details and could repeat page one | Preserve cached page, loader and cursor; pass collection offsets to PMS | Synthetic 51-item collection journey |
 | Careers stopped at 200 credits and local matching at 500 titles | 50-credit Previous/Next pages; compact incremental GUID index with reported 10,000-title safety ceiling | Synthetic 251-credit career and 900-title index; incomplete page rejection |
 | Artwork concurrency ended at download, and the 61st URL could revoke an undecoded visible image | Include decode in the three-job limit, revoke after decode, timeout failed decodes and cancel on view exit | Synthetic 73-image lifetime/cancellation journey |
-| Account icons overlapped labels; generic choices looked like More actions | Separate static leading icon slots; semantic refresh/clock/sort icons, no generic ellipsis fallback, localized sort directions | Failing-then-passing DOM/CSS regressions; inspected synthetic 1280x720 and 1920x1080 captures, not a new TV install |
+| Account icons overlapped labels; generic choices looked like More actions | Separate static leading icon slots; semantic refresh/clock/sort icons, no generic ellipsis fallback, localized sort directions | Failing-then-passing DOM/CSS regressions; inspected 1280x720 and 1920x1080 host captures; included in the installed package, Account-screen native acceptance pending |
 
 The LG-inspired Home/detail changes are documented in the [loop analysis](samsung-lg-loop-analysis.md).
 They are not a substitute for closing the following runtime gates.
