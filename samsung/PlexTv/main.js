@@ -106,13 +106,14 @@
         while (imageActive < 3 && imageQueue.length) {
             (function (job) {
                 imageActive += 1;
-                Promise.resolve().then(function () { return job.client.image(job.path); }).then(function (blob) {
+                Promise.resolve().then(function () { return job.client.image(job.path, job.size); }).then(function (blob) {
                     if (job.generation !== imageGeneration) { return; }
-                    if (blob.size > 2 * 1024 * 1024) { throw new Error("Artwork exceeds the image memory limit."); }
+                    if (blob.size > (job.maxBytes || 2 * 1024 * 1024)) { throw new Error("Artwork exceeds the image memory limit."); }
                     var url = window.URL.createObjectURL(blob);
                     imageUrls.push(url);
                     if (imageUrls.length > 60) { window.URL.revokeObjectURL(imageUrls.shift()); }
                     job.node.src = url;
+                    if (job.loaded) { job.loaded(); }
                 }).catch(function () {
                     if (job.generation === imageGeneration) { job.node.alt = "Artwork unavailable"; }
                 }).then(function () { imageActive -= 1; pumpImages(); });
@@ -149,6 +150,18 @@
         }
         return node;
     }
+
+    function queueImage(node, client, path, size, maxBytes, loaded, first) {
+        if (!path || !client.image || !window.URL || !window.URL.createObjectURL || imageQueue.length >= 200) { return; }
+        var job = { client: client, path: path, node: node, generation: imageGeneration, size: size, maxBytes: maxBytes, loaded: loaded };
+        if (first) { imageQueue.unshift(job); } else { imageQueue.push(job); }
+        pumpImages();
+    }
+
+    function setDetailMode(enabled) {
+        var shell = document.querySelector && document.querySelector(".app-shell");
+        if (shell) { shell.className = enabled ? "app-shell detail-mode" : "app-shell"; }
+    }
     var usingRelay = false;
 
     function recoverSession(error) {
@@ -183,6 +196,7 @@
             viewCleanup = null;
             cleanup();
         }
+        if (node === screen) { setDetailMode(false); }
         while (node.firstChild) {
             node.removeChild(node.firstChild);
         }
@@ -1128,38 +1142,121 @@
         });
     }
 
+    function durationLabel(ms) {
+        var minutes = Math.max(1, Math.round(ms / 60000));
+        return minutes < 60 ? translate("{minutes} min", { minutes: minutes }) :
+            translate("{hours} hr {minutes} min", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
+    }
+
+    function detailBadges(item) {
+        var media = item.Media && item.Media[0];
+        var badges = [];
+        if (media) {
+            var resolution = String(media.videoResolution || "").toLowerCase();
+            if (resolution === "4k") { badges.push("4K"); }
+            else if (/^\d+$/.test(resolution)) { badges.push(resolution + "p"); }
+            else if (resolution === "sd") { badges.push("SD"); }
+            if (media.videoDynamicRange && media.videoDynamicRange !== "SDR") { badges.push(media.videoDynamicRange); }
+            var channels = Number(media.audioChannels);
+            if (channels >= 6) { badges.push(channels === 8 ? "7.1" : "5.1"); }
+            var streams = media.Part && media.Part[0] && media.Part[0].Stream || [];
+            if (streams.some(function (stream) { return stream.streamType === 3; })) { badges.push("CC"); }
+        }
+        return badges;
+    }
+
+    function detailAction(parent, label, icon, action, literal) {
+        var node = button(parent, label, action, literal);
+        node.className = "detail-pill" + (icon ? " detail-pill-" + icon : "");
+        return node;
+    }
+
     function renderDetail(item, client) {
         viewGeneration += 1;
         clear(screen);
         viewClients.push(client);
         resetImages();
         restoreView = function () { openDetail(item.ratingKey, client); };
-        screen.appendChild(element("h2", "", item.title || "Details"));
-        screen.appendChild(element("p", "detail-meta", [item.year, item.contentRating,
-            item.duration ? translate("{minutes} min", { minutes: Math.round(item.duration / 60000) }) : "",
-            item.viewCount ? translate("Watched") : ""].filter(Boolean).join(" / ")));
-        screen.appendChild(element("p", "synopsis", item.summary || "No synopsis is available."));
-        if (item.type === "movie" || item.type === "episode" || item.type === "clip" || item.type === "track") {
-            if (item.viewOffset) {
-                button(screen, translate("Resume at {time}", { time: timeLabel(item.viewOffset) }), function () { startPlayer(item, client, item.viewOffset); });
-            }
-            button(screen, "Play from beginning", function () { startPlayer(item, client, 0); });
-            (item.Media || []).forEach(function (media, index) {
-                button(screen, "Version " + (index + 1) + " / " + (media.videoResolution || "") +
-                    " " + (media.videoCodec || ""), function () { startPlayer(item, client, 0, index); });
+        setDetailMode(true);
+        var playable = ["movie", "episode", "clip", "track"].indexOf(item.type) !== -1;
+        var backdropPath = item.art || item.grandparentArt || item.parentArt ||
+            (item.type === "episode" || item.type === "clip" ? item.thumb : "");
+        if (backdropPath) {
+            var backdrop = element("img", "detail-backdrop");
+            backdrop.alt = "";
+            screen.appendChild(backdrop);
+            queueImage(backdrop, client, backdropPath, { width: 1280, height: 720 }, 4 * 1024 * 1024, function () {
+                backdrop.className = "detail-backdrop detail-backdrop-ready";
+            }, true);
+        }
+        screen.appendChild(element("div", "detail-scrim"));
+
+        var hero = element("section", "detail-hero");
+        var main = element("div", "detail-main");
+        hero.appendChild(main);
+        if (item.type === "episode" && item.grandparentTitle) {
+            main.appendChild(element("p", "detail-eyebrow", item.grandparentTitle +
+                (item.parentIndex !== undefined && item.index !== undefined ? "  ·  S" + item.parentIndex + " E" + item.index : "")));
+        } else if ((item.type === "season" || item.type === "album") && item.parentTitle) {
+            main.appendChild(element("p", "detail-eyebrow", item.parentTitle));
+        }
+        main.appendChild(element("h2", "detail-title", item.title || "Details"));
+
+        var identity = element("p", "detail-identity");
+        var genres = (item.Genre || []).slice(0, 3).map(function (genre) { return genre.tag; }).filter(Boolean);
+        if (genres.length) { identity.appendChild(element("span", "detail-genres", genres.join("  ·  "))); }
+        detailBadges(item).forEach(function (badge) { identity.appendChild(element("span", "detail-badge", badge)); });
+        if (identity.children && identity.children.length || identity.childNodes && identity.childNodes.length) { main.appendChild(identity); }
+
+        main.appendChild(element("p", "synopsis detail-synopsis", item.summary || translate("No synopsis is available.")));
+
+        var year = item.year || (item.originallyAvailableAt ? String(item.originallyAvailableAt).slice(0, 4) : "");
+        var remaining = item.viewOffset && item.duration ? Math.max(1, Math.round((item.duration - item.viewOffset) / 60000)) : 0;
+        main.appendChild(element("p", "detail-meta", [year, item.contentRating,
+            item.duration ? durationLabel(item.duration) : "",
+            remaining ? translate("{minutes} min left", { minutes: remaining }) : item.viewCount ? translate("Watched") : ""
+        ].filter(Boolean).join("  ·  ")));
+        if (item.viewOffset && item.duration) {
+            var track = element("div", "detail-progress");
+            var fill = element("div", "detail-progress-fill");
+            if (fill.style) { fill.style.width = Math.min(100, Math.round(item.viewOffset * 100 / item.duration)) + "%"; }
+            track.appendChild(fill);
+            main.appendChild(track);
+        }
+
+        var actions = element("div", "detail-actions");
+        main.appendChild(actions);
+        var more = element("div", "detail-more");
+        if (playable) {
+            var primary = detailAction(actions, item.viewOffset ? "Resume" : "Play", "play", function () {
+                startPlayer(item, client, item.viewOffset || 0);
             });
+            primary.className = "detail-pill detail-primary detail-pill-play";
+            if (item.viewOffset) {
+                detailAction(actions, "Play from beginning", "restart", function () { startPlayer(item, client, 0); });
+            }
+            if ((item.Media || []).length > 1) {
+                item.Media.forEach(function (media, index) {
+                    detailAction(more, translate("Version {number}", { number: index + 1 }) + "  ·  " +
+                        [media.videoResolution ? String(media.videoResolution).toUpperCase() : "", media.videoCodec || ""].filter(Boolean).join(" "),
+                    "", function () { startPlayer(item, client, 0, index); }, true);
+                });
+            }
         }
         if (item.type === "album") {
-            button(screen, "Play album", function () { startAlbum(item, client, false); });
-            button(screen, "Shuffle album", function () { startAlbum(item, client, true); });
+            detailAction(actions, "Play album", "play", function () { startAlbum(item, client, false); }).className =
+                "detail-pill detail-primary detail-pill-play";
+            detailAction(actions, "Shuffle album", "shuffle", function () { startAlbum(item, client, true); });
         }
         if (item.type === "photo") {
-            button(screen, "View photo", function () { visit(function () { openPhotos([item], 0, client); }); });
+            detailAction(actions, "View photo", "play", function () { visit(function () { openPhotos([item], 0, client); }); }).className =
+                "detail-pill detail-primary detail-pill-play";
         }
         if (["show", "season", "collection", "artist", "album", "photoalbum"].indexOf(item.type) !== -1) {
-            button(screen, item.type === "show" ? "Seasons" : item.type === "season" ? "Episodes" :
+            var childLabel = item.type === "show" ? "Seasons" : item.type === "season" ? "Episodes" :
                 item.type === "artist" ? "Albums" : item.type === "album" ? "Tracks" :
-                    item.type === "photoalbum" ? "Photos" : "Collection items", function () {
+                    item.type === "photoalbum" ? "Photos" : "Collection items";
+            var children = detailAction(actions, childLabel, "list", function () {
                 visit(function () {
                     openListing(item.title, function (offset) {
                         return item.type === "collection" ? client.getCollectionItems(item.ratingKey, offset) :
@@ -1167,27 +1264,28 @@
                     }, client);
                 });
             });
+            if (item.type !== "album") { children.className = "detail-pill detail-primary detail-pill-list"; }
         }
         if (["movie", "episode", "show", "season"].indexOf(item.type) !== -1) {
-            button(screen, "Mark watched", function () { confirmWatchAction(item, client, "watched"); });
-            button(screen, "Mark unwatched", function () { confirmWatchAction(item, client, "unwatched"); });
-        }
-        if (["movie", "episode"].indexOf(item.type) !== -1) {
-            button(screen, "Remove from Continue Watching", function () { confirmWatchAction(item, client, "remove"); });
+            detailAction(actions, "Mark watched", "watched", function () { confirmWatchAction(item, client, "watched"); });
+            detailAction(actions, "Mark unwatched", "unwatched", function () { confirmWatchAction(item, client, "unwatched"); });
         }
         var plexGuid = /^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(item.guid || "") ? item.guid :
             (item.Guid || []).filter(function (guid) { return /^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(guid.id || ""); })[0];
         if (plexGuid && accountClient) {
             var guid = typeof plexGuid === "string" ? plexGuid : plexGuid.id;
-            button(screen, "Add to Watchlist", function () {
+            detailAction(actions, "Add to Watchlist", "add", function () {
                 var linked = accountClient;
                 confirmServiceWrite("Add to Watchlist", function () { return linked.setWatchlist(guid, true); },
                     function () { openDetail(item.ratingKey, client); });
             });
         }
+        if (["movie", "episode"].indexOf(item.type) !== -1) {
+            detailAction(more, "Remove from Continue Watching", "", function () { confirmWatchAction(item, client, "remove"); });
+        }
         if (plexGuid && currentServerId && client === currentClient && servers.length > 1 && (item.type === "movie" || item.type === "show")) {
             var copyGuid = typeof plexGuid === "string" ? plexGuid : plexGuid.id;
-            button(screen, "Other servers", function () {
+            detailAction(more, "Other servers", "", function () {
                 visit(function () {
                     findCatalogueItem({ type: item.type, guid: copyGuid, title: item.title }, {
                         exclude: currentServerId, title: "Other servers", labelled: true
@@ -1195,21 +1293,7 @@
                 });
             });
         }
-        (item.Role || []).concat(item.Director || [], item.Writer || []).slice(0, 60).forEach(function (person) {
-            button(screen, (person.tag || "Cast") + (person.role ? " / " + person.role : ""), function () {
-                visit(function () {
-                    openPerson(person, client);
-                });
-            }, true);
-        });
-        var extras = item.Extras && item.Extras.Metadata || [];
-        if (extras.length) {
-            var shelf = element("section", "shelf");
-            shelf.appendChild(element("h3", "", translate("Extras and trailers")));
-            extras.slice(0, 20).forEach(function (extra) { card(shelf, extra, client); });
-            screen.appendChild(shelf);
-        }
-        button(screen, "Related titles", function () {
+        detailAction(more, "Related titles", "", function () {
             visit(function () {
                 openListing("Related titles", function () {
                     return client.getRelated(item.ratingKey).then(function (container) {
@@ -1220,7 +1304,52 @@
                 }, client);
             });
         });
-        button(screen, "Back", backView);
+        detailAction(more, "Back", "", backView);
+        main.appendChild(more);
+
+        var directors = (item.Director || []).slice(0, 2).map(function (person) { return person.tag; }).filter(Boolean);
+        var stars = (item.Role || []).slice(0, 3).map(function (person) { return person.tag; }).filter(Boolean);
+        if (directors.length || stars.length) {
+            var people = element("div", "detail-people");
+            [["Directed by", directors], ["Starring", stars]].forEach(function (row) {
+                if (!row[1].length) { return; }
+                var line = element("p", "detail-people-line");
+                line.appendChild(element("span", "detail-people-label", translate(row[0]) + " "));
+                line.appendChild(element("span", "", row[1].join(", ")));
+                people.appendChild(line);
+            });
+            hero.appendChild(people);
+        }
+        screen.appendChild(hero);
+
+        var credits = (item.Role || []).concat(item.Director || [], item.Writer || []).slice(0, 60);
+        if (credits.length) {
+            var cast = element("section", "detail-section");
+            cast.appendChild(element("h3", "detail-section-title", translate("Cast & Crew")));
+            var row = element("div", "detail-cast-row");
+            credits.forEach(function (person) {
+                var node = button(row, person.tag || "Cast", function () {
+                    visit(function () { openPerson(person, client); });
+                }, true);
+                node.className = "detail-person";
+                var face = element("img", "detail-person-photo");
+                face.alt = "";
+                node.appendChild(face);
+                var role = person.role || (item.Director || []).indexOf(person) !== -1 && translate("Director") ||
+                    (item.Writer || []).indexOf(person) !== -1 && translate("Writer") || "";
+                if (role) { node.appendChild(element("span", "detail-person-role", role)); }
+                queueImage(face, client, person.thumb, { width: 200, height: 200 });
+            });
+            cast.appendChild(row);
+            screen.appendChild(cast);
+        }
+        var extras = item.Extras && item.Extras.Metadata || [];
+        if (extras.length) {
+            var shelf = element("section", "shelf detail-section");
+            shelf.appendChild(element("h3", "detail-section-title", translate("Extras and trailers")));
+            extras.slice(0, 20).forEach(function (extra) { card(shelf, extra, client); });
+            screen.appendChild(shelf);
+        }
         setStatus("Choose Play or Resume to start playback. Browsing does not update watch history.");
         focusFirst();
     }

@@ -243,5 +243,13 @@
   "Your sign-in is stored unencrypted on this TV. Leave this off on a shared TV.": { "es": "Tu sesión se guarda sin cifrar en este televisor. Déjalo desactivado en un televisor compartido.", "be": "Ваш уваход захоўваецца на тэлевізары без шыфравання. Не ўключайце гэта на агульным тэлевізары." },
   "Sign-in was denied. Get a new code to try again.": { "es": "Se denegó el inicio de sesión. Obtén un código nuevo para volver a intentarlo.", "be": "Уваход адхілены. Атрымайце новы код, каб паспрабаваць зноў." },
   "This code expired. Get a new code to try again.": { "es": "Este código ha caducado. Obtén un código nuevo para volver a intentarlo.", "be": "Тэрмін дзеяння кода скончыўся. Атрымайце новы код, каб паспрабаваць зноў." },
-  "Network issue while checking sign-in. Retrying…": { "es": "Problema de red al comprobar el inicio de sesión. Reintentando…", "be": "Праблема з сеткай пры праверцы ўваходу. Спрабуем зноў…" }
+  "Network issue while checking sign-in. Retrying…": { "es": "Problema de red al comprobar el inicio de sesión. Reintentando…", "be": "Праблема з сеткай пры праверцы ўваходу. Спрабуем зноў…" },
+  "{hours} hr {minutes} min": { "es": "{hours} h {minutes} min", "be": "{hours} г {minutes} хв" },
+  "{minutes} min left": { "es": "Quedan {minutes} min", "be": "Засталося {minutes} хв" },
+  "Version {number}": { "es": "Versión {number}", "be": "Версія {number}" },
+  "Cast & Crew": { "es": "Reparto y equipo", "be": "Акцёры і здымачная група" },
+  "Directed by": { "es": "Dirigida por", "be": "Рэжысёр" },
+  "Starring": { "es": "Protagonistas", "be": "У ролях" },
+  "Director": { "es": "Director", "be": "Рэжысёр" },
+  "Writer": { "es": "Guionista", "be": "Сцэнарыст" }
 }

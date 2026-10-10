@@ -769,9 +769,11 @@
             getCollections: function (section) {
                 return get("/library/sections/" + key(section) + "/collections");
             },
-            image: function (path) {
+            image: function (path, size) {
                 if (!/^https:\/\/(?:metadata-static\.plex\.tv|image\.tmdb\.org)\//.test(path)) { localPath(path); }
-                return timedFetch(fetchRequest, baseUrl + "/photo/:/transcode?width=240&height=360&minSize=1&url=" +
+                var width = size && size.width > 0 && size.width <= 1920 ? Math.round(size.width) : 240;
+                var height = size && size.height > 0 && size.height <= 1080 ? Math.round(size.height) : 360;
+                return timedFetch(fetchRequest, baseUrl + "/photo/:/transcode?width=" + width + "&height=" + height + "&minSize=1&url=" +
                     encodeURIComponent(path), {
                         credentials: "omit", redirect: "error", headers: { "X-Plex-Token": token }
                     }, scope).then(function (response) {

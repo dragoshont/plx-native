@@ -96,6 +96,12 @@ async function run() {
         assert(!control.disabled, "Disabled control: " + text);
         control.click();
     }
+    function clickPlay() {
+        var hasRestart = Array.from(window.document.querySelectorAll("button")).some(function (node) {
+            return node.textContent === "Play from beginning";
+        });
+        click(hasRestart ? "Play from beginning" : "Play");
+    }
     async function settle() {
         for (var i = 0; i < 30; i += 1) { await Promise.resolve(); }
         await new Promise(function (resolve) { window.setTimeout(resolve, 0); });
@@ -148,7 +154,7 @@ async function run() {
         await settle();
         assert.deepStrictEqual(mutations().map(function (request) { return request.path; }),
             ["/:/scrobble", "/:/unscrobble", "/actions/removeFromContinueWatching"]);
-        click("Play from beginning");
+        clickPlay();
         await settle();
         assert.strictEqual(state, "PLAYING");
         assert.strictEqual(window.document.body.className, "playing");
@@ -172,7 +178,7 @@ async function run() {
         var writes = requests.filter(function (request) { return request.path === "/:/timeline"; });
         assert(writes.every(function (request) { return request.method === "POST"; }));
         assert(writes.some(function (request) { return request.query.get("state") === "stopped" && request.query.get("time") === "20000"; }));
-        click("Play from beginning"); await settle();
+        clickPlay(); await settle();
         Object.defineProperty(window.document, "hidden", { configurable: true, value: true });
         window.document.dispatchEvent(new window.Event("visibilitychange")); await settle();
         assert.strictEqual(state, "NONE", "Backgrounding must stop native playback");
