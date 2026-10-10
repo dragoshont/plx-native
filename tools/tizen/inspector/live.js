@@ -9,6 +9,7 @@ const KIND = 'live-on-device-renderer-paint-replay-not-panel';
 const LABEL = 'Live native renderer paint layers replayed on the TV. Separate and incomplete: ' +
     'NOT the panel image (no hardware video plane, system UI, compositing or panel processing).';
 const MAX_FAILURES = 3;
+const GEOMETRY = ['width', 'height', 'offsetX', 'offsetY', 'hasTransform'];
 
 function code(error) {
     return error instanceof InspectorError ? error.code : 'internal_error';
@@ -133,13 +134,17 @@ class LiveView {
         let changed = false;
         const layers = capture.frames.map((frame, index) => {
             const sha256 = crypto.createHash('sha256').update(frame.image).digest('hex');
+            const geometry = GEOMETRY.map(key => frame.layer[key]).join(',');
             const before = previous[index];
-            const layerChanged = !before || before.sha256 !== sha256;
+            const pixelsChanged = !before || before.sha256 !== sha256;
+            const layerChanged = pixelsChanged || before.geometry !== geometry;
             changed = changed || layerChanged;
-            return { ...frame.layer, imageWidth: frame.width, imageHeight: frame.height, sha256, changed: layerChanged };
+            return { ...frame.layer, imageWidth: frame.width, imageHeight: frame.height, sha256, changed: layerChanged,
+                pixelsChanged };
         });
         if (previous.length !== layers.length) changed = true;
-        this.frames = capture.frames.map((frame, index) => ({ image: frame.image, sha256: layers[index].sha256 }));
+        this.frames = capture.frames.map((frame, index) => ({ image: frame.image, sha256: layers[index].sha256,
+            geometry: GEOMETRY.map(key => frame.layer[key]).join(',') }));
         Object.assign(this.state, { sequence: this.state.sequence + 1, cycles: this.state.cycles + 1,
             changedCycles: this.state.changedCycles + (changed ? 1 : 0), capturedAt: new Date().toISOString(),
             captureMs: Date.now() - began, layers, drawableLayers: capture.receipt.drawableLayers,

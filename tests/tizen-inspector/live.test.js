@@ -6,8 +6,8 @@ const http = require('node:http');
 const { fake, image } = require('./fake');
 const { LiveView, LABEL } = require('../../tools/tizen/inspector/live');
 
-function layer(id = 'PRIVATE') {
-    return { layerId: id, width: 1920, height: 1080, offsetX: 3, offsetY: 4, drawsContent: true, title: 'PRIVATE' };
+function layer(offsetX = 3) {
+    return { layerId: 'PRIVATE', width: 1920, height: 1080, offsetX, offsetY: 4, drawsContent: true, title: 'PRIVATE' };
 }
 
 function server(mode = 'changing') {
@@ -15,7 +15,7 @@ function server(mode = 'changing') {
     return fake((request, reply, socket) => {
         if (request.method === 'LayerTree.enable') {
             if (mode !== 'disconnect' || replays === 0) {
-                socket.send(JSON.stringify({ method: 'LayerTree.layerTreeDidChange', params: { layers: [layer()] } }));
+                socket.send(JSON.stringify({ method: 'LayerTree.layerTreeDidChange', params: { layers: [layer(mode === 'moving' ? 3 + replays : 3)] } }));
             }
             reply();
         } else if (request.method === 'LayerTree.makeSnapshot') {
@@ -115,6 +115,21 @@ test('a static screen is reported unchanged rather than presented as motion', as
     const receipt = await viewer.done;
     assert.equal(receipt.changedCycles, 1);
     assert.ok(receipt.cycles >= 2);
+});
+
+test('a layer that moves without repainting is reported changed', async t => {
+    const device = await server('moving');
+    t.after(() => device.close());
+    const client = await device.connect(200);
+    t.after(() => client.close());
+    const viewer = new LiveView(client, { durationMs: 60000, intervalMs: 500, waitMs: 100 });
+    await viewer.start();
+    await until(() => viewer.state.sequence >= 2);
+    assert.equal(viewer.state.layers[0].changed, true);
+    assert.equal(viewer.state.layers[0].pixelsChanged, false);
+    viewer.stop('interrupted');
+    const receipt = await viewer.done;
+    assert.equal(receipt.changedCycles, receipt.cycles);
 });
 
 test('the session ends by itself at its duration bound', async t => {

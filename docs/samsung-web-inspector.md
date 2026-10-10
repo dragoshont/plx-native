@@ -208,9 +208,14 @@ number.
 
 The page shows a red label: **separate and incomplete renderer layers, not the
 panel**. It does not composite layers. Each layer caption shows the
-parent-relative offset, a transform warning and whether its SHA-256 changed
-since the previous capture. A static screen is therefore reported as
-`unchanged`, not presented as motion. Each capture costs about a second of
+parent-relative offset, a transform warning and whether the layer changed
+since the previous capture. A layer counts as changed when its PNG SHA-256 or
+its reported geometry (size, offset, transform presence) differs; `state`
+also reports `pixelsChanged` separately, so a layer that moved without
+repainting is not mistaken for new paint. A static screen is therefore
+reported as `unchanged`, not presented as motion. Compositor-only animation
+that leaves geometry and paint alone (such as a CSS transform spinner) is
+not detected. Each capture costs about a second of
 sequential replays, so the session is bounded:
 - Duration: 1 s to 30 min, default 5 min.
 - Interval: 0.5 to 10 s, default 1 s.
