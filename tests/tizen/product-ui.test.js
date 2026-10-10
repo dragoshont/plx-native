@@ -164,6 +164,8 @@ async function run() {
         assert(window.document.querySelector(".home-utilities .menu-icon-settings"), "Settings needs a visible icon");
         assert(window.document.querySelector(".library-button"), "Library choices need visible labels");
         click("Account");
+        assert(window.document.querySelector(".home-utilities .menu-icon-refresh"),
+            "Refresh must use its own icon rather than unexplained More dots");
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 27, bubbles: true }));
         assert(window.document.querySelector(".home-utilities").hidden,
             "Back must close account controls before leaving Home");
@@ -198,6 +200,15 @@ async function run() {
         await settle();
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 50);
         assert(window.document.querySelector(".screen-library .page-toolbar"), "Browse tools belong to one navigation row");
+        click("Sort and filters");
+        await settle();
+        assert(window.document.querySelector(".screen-filters .menu-icon-sort-asc"));
+        assert(window.document.querySelector(".screen-filters .menu-icon-sort-desc"));
+        assert(window.document.querySelector(".screen-filters .menu-icon-sort-asc").textContent.indexOf("Ascending") !== -1);
+        assert.strictEqual(window.document.querySelector(".screen-filters .menu-icon-more"), null,
+            "Filter choices must not impersonate More menus");
+        click("Back");
+        await settle();
         var retainedCard = window.document.querySelectorAll(".media-card")[30];
         retainedCard.focus();
         click("Load more"); await settle();

@@ -648,6 +648,27 @@ input:focus {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='%23f7fafc'%3E%3Cpath d='M2 5v22l14-11zM16 5v22l14-11z'/%3E%3C/svg%3E");
 }
 
+.menu-icon-none::before {
+    display: none;
+}
+
+.menu-control.menu-icon-none {
+    padding-left: 28px;
+}
+
+.menu-icon-refresh::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M26 11a11 11 0 1 0 1 9M26 4v8h-8'/%3E%3C/svg%3E");
+}
+.menu-icon-clock::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='16' cy='16' r='12'/%3E%3Cpath d='M16 8v8l6 4'/%3E%3C/svg%3E");
+}
+.menu-icon-sort-asc::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 27V5m-5 5 5-5 5 5M19 8h4M19 16h7M19 24h10'/%3E%3C/svg%3E");
+}
+.menu-icon-sort-desc::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 5v22m-5-5 5 5 5-5M19 8h10M19 16h7M19 24h4'/%3E%3C/svg%3E");
+}
+
 .menu-control:focus::before {
     -webkit-filter: brightness(0);
     filter: brightness(0);
@@ -1890,6 +1911,7 @@ select:focus {
 .browse-header .menu-control::before,
 .home-feature-actions .menu-control::before {
     position: static;
+    margin-top: 0;
     flex-shrink: 0;
 }
 
@@ -1926,11 +1948,20 @@ select:focus {
 }
 
 .home-utilities .menu-control {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
     width: 100%;
     margin: 0 0 4px;
     padding: 16px;
     font-size: 22px;
+    text-align: left;
+}
+
+.home-utilities .menu-control::before {
+    position: static;
+    flex-shrink: 0;
+    margin: 0 16px 0 0;
 }
 
 .home-utilities .menu-control:focus,

@@ -17,6 +17,8 @@
   "Profile PIN": { "es": "PIN del perfil", "be": "PIN профілю" },
   "Plex shelves": { "es": "Filas de Plex", "be": "Паліцы Plex" },
   "Sort": { "es": "Orden", "be": "Парадак" },
+  "Ascending": { "es": "Ascendente", "be": "Па ўзрастанні" },
+  "Descending": { "es": "Descendente", "be": "Па змяншэнні" },
   "Filters": { "es": "Filtros", "be": "Фільтры" },
   "Privacy and data": { "es": "Privacidad y datos", "be": "Прыватнасць і даныя" },
   "Enter a title to search.": { "es": "Introduce un título para buscar.", "be": "Увядзіце назву для пошуку." },

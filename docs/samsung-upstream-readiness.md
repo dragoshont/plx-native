@@ -30,9 +30,31 @@ implemented movie/show behaviors to their actual source.
 | Collection navigation lost Load more on returning from details and could repeat page one | Preserve cached page, loader and cursor; pass collection offsets to PMS | Synthetic 51-item collection journey |
 | Careers stopped at 200 credits and local matching at 500 titles | 50-credit Previous/Next pages; compact incremental GUID index with reported 10,000-title safety ceiling | Synthetic 251-credit career and 900-title index; incomplete page rejection |
 | Artwork concurrency ended at download, and the 61st URL could revoke an undecoded visible image | Include decode in the three-job limit, revoke after decode, timeout failed decodes and cancel on view exit | Synthetic 73-image lifetime/cancellation journey |
+| Account icons overlapped labels; generic choices looked like More actions | Separate static leading icon slots; semantic refresh/clock/sort icons, no generic ellipsis fallback, localized sort directions | Failing-then-passing DOM/CSS regressions; inspected synthetic 1280x720 and 1920x1080 captures, not a new TV install |
 
 The LG-inspired Home/detail changes are documented in the [loop analysis](samsung-lg-loop-analysis.md).
 They are not a substitute for closing the following runtime gates.
+
+## Follow-up feature parity review
+
+Compared the current checked-out LG sources, not the historical official-Plex gap inventory
+in `parity-gaps.md`. The website loop establishes composition, not coverage of these features.
+**Full source parity is still incomplete**, separately from native acceptance.
+
+| Area | LG evidence | Samsung evidence and verdict |
+|---|---|---|
+| Home, libraries and search | `screens/src/home/`, `library/`, `search/`, `onboard.rs` | Home feature/shelves, favorite libraries, server search, A-Z, server sort/filter choices and paged browse are present in `main.js`. Remote/Back coverage is host exercised, not complete panel acceptance |
+| Movie/show navigation | `screens/src/detail/hero.rs`, `item_menu.rs` | Resume/restart, on-deck episode, seasons/episodes, related, collection and people routes are present. **Missing:** show/season Play from a card menu; show without OnDeck requires choosing an episode; trailer has an Extras route but no direct hero/cached-context shortcut |
+| People, collections and alternate sources | `screens/src/person.rs`, `filmography.rs`, `collection.rs`, `alt_sources.rs` | Paged careers/collections, local GUID availability and Other servers are implemented. Local lookup has an explicit 10,000-title safety ceiling; this is not unlimited-library parity |
+| Playback progress and continuation | `plex/src/plex/timeline.rs`, `media/src/route/`, `screens/src/player/` | Timeline, episode queue identity, Up Next, auto-next, markers/chapters, track/version changes and stop paths are implemented in `plex-api.js`, `player.js` and `main.js`. Actual AVPlay/PMS acceptance is pending |
+| Audio/subtitle selection | `appkit/src/track_menu.rs` | Existing embedded/external subtitle and audio selection is not full menu parity. **Missing:** caption size/position/color/timing controls, server subtitle search/download and LG's audio boost/loudness controls. Samsung native subtitle styling and audio processing need capability evidence before promising equivalence |
+| Playback/account preferences | `screens/src/preferences.rs` (`page_fields`, `field_options`) | `js/preferences.js` persists quality limit, locale, auto-next and Continue Watching action. **Missing:** user-selectable Auto/Forced/Disabled direct-play policy, configurable skip interval, account audio/subtitle language/mode/forced preferences and caption size/position preferences. Current safe negotiation is not the full LG quality/policy ladder |
+| File information | `screens/src/tracks_panel.rs` | Samsung reports source/stream quality and exposes selectable tracks. **Missing:** the read-only file inspector with container/size, video technicals/Dolby Vision layers and every track's technical details |
+| Platform and additional domains | LG Starfish/ACB/FFmpeg and platform lifecycle; Samsung AVPlay | LG-specific native mechanisms cannot be copied or certified by a browser. Music/photos/DVR/catalogue source paths do not close movie/show gaps; live tuning/licensed playback and Store distribution remain separate blockers |
+
+Close the named source gaps with failing-then-passing synthetic journeys first; retain bounded
+navigation and explicit failures. Then run the named-model native matrix below. Do not mark
+this table complete merely by adding unavailable controls or copying LG's private interfaces.
 
 ## Required before a parity announcement
 

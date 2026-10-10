@@ -434,7 +434,9 @@
             /^(Change server|Refresh servers|Retry discovery)/.test(label) ? "server" :
             /^(Favorite|Watchlist|Mark|Remove from)/.test(label) ? "check" :
             /^(Change profile|Sign out|Use linked account)/.test(label) ? "profile" :
-            /^Live TV/.test(label) ? "television" : "more");
+            /^Live TV/.test(label) ? "television" :
+            /^Refresh$/.test(label) ? "refresh" :
+            /^More$/.test(label) ? "more" : "none");
         var node = element("button", "secondary-button menu-control menu-icon-" + icon,
             literal ? label : translate(label));
         node.type = "button";
@@ -1220,17 +1222,17 @@
         clear(screen);
         page(translate("Sort and filters"), "filters");
         var quick = group(screen, "", "page-toolbar");
-        button(quick, "All titles", function () { libraryFilters = {}; openSection(section); });
+        button(quick, "All titles", function () { libraryFilters = {}; openSection(section); }, false, "library");
         button(quick, "Unwatched", function () {
             var filters = {};
             filters[section.type === "show" ? "unwatchedLeaves" : "unwatched"] = 1;
             openSection(section, { items: [], offset: 0, filters: filters });
             loadNextPage();
-        });
+        }, false, "check");
         button(quick, "Recently added", function () {
             openSection(section, { items: [], offset: 0, filters: { sort: "addedAt:desc" } });
             loadNextPage();
-        });
+        }, false, "clock");
         button(screen, "Back", backView);
         setStatus("Loading this server's supported filters and sorts...");
         currentClient.getBrowseMenus(section.key, section.type === "show" ? 2 : section.type === "artist" ? 8 :
@@ -1241,11 +1243,12 @@
             var sorting = group(screen, translate("Sort"), "selection-list");
             (type.Sort || []).forEach(function (sort) {
                 ["asc", "desc"].forEach(function (direction) {
-                    var choice = button(sorting, (sort.title || sort.key) + " / " + direction, function () {
+                    var choice = button(sorting, translate(sort.title || sort.key) + " / " +
+                        translate(direction === "asc" ? "Ascending" : "Descending"), function () {
                         selected.sort = direction === "desc" && sort.descKey ? sort.descKey : sort.key + ":" + direction;
                         openSection(section, { items: [], offset: 0, filters: selected });
                         loadNextPage();
-                    });
+                    }, true, "sort-" + direction);
                     var sortKey = direction === "desc" && sort.descKey ? sort.descKey : sort.key + ":" + direction;
                     choice.setAttribute("aria-pressed", selected.sort === sortKey ? "true" : "false");
                 });

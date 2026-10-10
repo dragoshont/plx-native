@@ -489,11 +489,16 @@ Each row compares source behaviour; Samsung evidence is host-only.
 | Extras/trailers shelf, Play from beginning, Remove from Continue Watching, related items | Present |
 | Up Next via `/allLeaves` | Present (`nextEpisode`) |
 | Show hero uses the PMS-selected on-deck episode (`plex/library.rs::metadata`, `screens/detail/hero.rs`) | **Added:** `includeOnDeck=1`, object/array metadata handling and Play next episode/Resume/Restart actions tied to the episode's own ID. Regression exercises the episode lookup and 20000ms resume, not show playback. Season selection remains available; without an on-deck result, choose an episode from Seasons |
-| Item context menu on cards (`item_menu.rs`: go to item/show, mark watched, play, play from start, trailer, remove from deck) | **Added:** `js/item-menu.js`. Holding OK (600 ms), Tools or Info opens it; Play/Resume is always the first row and never a write; Cancel returns focus to the card. A short OK opens the card on key-up. `lg-parity.test.js`, `lg-parity-ui.test.js`. Physical Enter key-up delivery is unverified on a TV |
+| Item context menu on cards (`item_menu.rs`: go to item/show, mark watched, play, play from start, trailer, remove from deck) | **Partial:** `js/item-menu.js`. Holding OK (600 ms), Tools or Info opens it; leaf Play/Resume is the first row and never a write; Cancel returns focus to the card. A short OK opens the card on key-up. Show/season Play and the cached-trailer context action are missing, although episode browsing and the Extras shelf are available. `lg-parity.test.js`, `lg-parity-ui.test.js`. Physical Enter key-up delivery is unverified on a TV |
 | Continue Watching OK = Play vs Open details preference | **Added:** `continueAction` preference, default Open details, as on LG |
 | Video server PlayQueue (`timeline.rs` `create_play_queue`) | **Added:** `createVideoPlayQueue` POSTs `/playQueues` (`type=video`, continuous for episodes); timelines carry `playQueueID`/`playQueueItemID`. A queue failure falls back to plain playback. Creating a queue is a server write: fakes only until an authorized test profile exists |
 | Alternate sources across servers (`/library/all?guid=…`) | **Added:** "Other servers" on movie/show detail, which excludes the current server and labels each copy with server, library and resolution. OK opens that server's detail page; the playing copy is never swapped |
 | Favorite libraries onboarding (`screens/src/onboard.rs` first-run step, then Settings) | **Added:** `js/favorites.js`. First visit to each server offers the step; Skip writes nothing and at least one library stays selected; hidden libraries also drop their Home shelves. Sign-in is the existing plex.tv PIN link and profile picker |
+
+The follow-up [source parity review](samsung-upstream-readiness.md#follow-up-feature-parity-review)
+also identifies missing caption customization/search, audio enhancements, account track
+preferences, configurable skip intervals and detailed file inspection. These are source gaps,
+not merely device tests waiting to be run.
 
 ### Remaining work by dependency
 
