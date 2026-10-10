@@ -222,7 +222,7 @@
     function profileImageTarget(url) {
         url = String(url || "");
         return profileImagePath(url) ||
-            /^https:\/\/assets\.plex\.tv\/avatars\/[A-Za-z0-9_-]+(?:\?[^#]*)?$/.test(url);
+            /^https:\/\/assets\.plex\.tv\/avatars\/[A-Za-z0-9_-]+(?:\.(?:png|jpe?g|gif|webp))?(?:\?[^#]*)?$/i.test(url);
     }
 
     function createAccountClient(options) {
