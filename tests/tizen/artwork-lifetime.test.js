@@ -60,6 +60,16 @@ async function run() {
         await settle();
         assert.strictEqual(created.length, 3, "Image concurrency must include decode, not just download");
         assert.deepStrictEqual(revoked, [], "An undecoded displayed URL must not be evicted");
+        var failedImage = Array.from(window.document.querySelectorAll("img")).find(function (image) {
+            return typeof image.onerror === "function";
+        });
+        assert.strictEqual(failedImage.getAttribute("data-artwork-state"), "decoding");
+        decoded.push(failedImage.src);
+        failedImage.onerror();
+        await settle();
+        assert.strictEqual(failedImage.getAttribute("data-artwork-state"), "unavailable");
+        assert.strictEqual(failedImage.getAttribute("data-artwork-error"), "decode",
+            "Fallback diagnostics must distinguish decoder failure from missing metadata or transport");
         for (var batch = 0; batch < 30; batch += 1) {
             var pending = Array.from(window.document.querySelectorAll("img")).filter(function (image) {
                 return image.src.indexOf("blob:") === 0 && typeof image.onload === "function";
@@ -74,6 +84,8 @@ async function run() {
         }
         assert(created.length > 60, "Exercise more images than the old eviction limit");
         assert.strictEqual(revoked.length, created.length);
+        assert(window.document.querySelector('img[data-artwork-state="loaded"]'),
+            "Successful images expose decode completion without leaking their URL");
         assert(revoked.every(function (url) { return decoded.indexOf(url) !== -1; }));
         function click(label) {
             Array.from(window.document.querySelectorAll("button")).find(function (node) {

@@ -88,6 +88,14 @@ allowlisting rejects malformed geometry instead of printing the peer's data.
 Output is **`dom-css-geometry-not-pixels`**: it cannot prove text rasterization,
 colors, artwork, overlays, a hardware video plane or what the panel displays.
 
+The Samsung app's queued artwork nodes expose local `data-artwork-state`
+values (`queued`, `fetching`, `decoding`, `loaded`, `unavailable`). Failure
+attribution uses `data-artwork-error` (`metadata`, `unsupported`, `capacity`,
+`fetch`, `size`, `decode`), never URLs, tokens or remote error text. These
+attributes are not exported by the geometry command. They distinguish stages
+for a separately authorized local inspection; `fetch` alone cannot distinguish
+HTTP, redirect, CORS or transport failures, and `loaded` is not panel evidence.
+
 Exit status is `0` for a completed discovery/diagnostic or saved capture, `2`
 for an unavailable/unsupported screenshot or screencast, and `1` for invalid input,
 transport, geometry, filesystem, interruption or lease errors.

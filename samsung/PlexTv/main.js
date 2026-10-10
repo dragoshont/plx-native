@@ -117,10 +117,15 @@
         while (imageActive < 3 && imageQueue.length) {
             (function (job) {
                 imageActive += 1;
+                var failure = "fetch";
+                job.node.setAttribute("data-artwork-state", "fetching");
                 Promise.resolve().then(function () { return job.client.image(job.path, job.size); }).then(function (blob) {
                     if (job.generation !== imageGeneration) { return; }
+                    failure = "size";
                     if (blob.size > (job.maxBytes || 2 * 1024 * 1024)) { throw new Error("Artwork exceeds the image memory limit."); }
                     if (screen.contains && !screen.contains(job.node)) { return; }
+                    failure = "decode";
+                    job.node.setAttribute("data-artwork-state", "decoding");
                     return new Promise(function (resolve, reject) {
                         var url = window.URL.createObjectURL(blob);
                         imageUrls.push(url);
@@ -138,7 +143,10 @@
                             imageDecodes.splice(imageDecodes.indexOf(cancel), 1);
                             if (error) { reject(error); }
                             else {
-                                if (loaded && job.generation === imageGeneration && job.loaded) { job.loaded(); }
+                                if (loaded && job.generation === imageGeneration) {
+                                    job.node.setAttribute("data-artwork-state", "loaded");
+                                    if (job.loaded) { job.loaded(); }
+                                }
                                 resolve();
                             }
                         }
@@ -149,6 +157,8 @@
                     });
                 }).catch(function () {
                     if (job.generation === imageGeneration) {
+                        job.node.setAttribute("data-artwork-state", "unavailable");
+                        job.node.setAttribute("data-artwork-error", failure);
                         job.node.alt = translate("Artwork unavailable");
                         job.node.src = placeholderArt();
                     }
@@ -213,7 +223,16 @@
     }
 
     function queueImage(node, client, path, size, maxBytes, loaded, first) {
-        if (!path || !client.image || !window.URL || !window.URL.createObjectURL || imageQueue.length >= 200) { return; }
+        node.removeAttribute("data-artwork-error");
+        var unavailable = !path ? "metadata" :
+            !client.image || !window.URL || !window.URL.createObjectURL ? "unsupported" :
+            imageQueue.length >= 200 ? "capacity" : null;
+        if (unavailable) {
+            node.setAttribute("data-artwork-state", "unavailable");
+            node.setAttribute("data-artwork-error", unavailable);
+            return;
+        }
+        node.setAttribute("data-artwork-state", "queued");
         var job = { client: client, path: path, node: node, generation: imageGeneration, size: size, maxBytes: maxBytes, loaded: loaded };
         if (first) { imageQueue.unshift(job); } else { imageQueue.push(job); }
         pumpImages();
