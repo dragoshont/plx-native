@@ -33,7 +33,7 @@ app_name="$(basename -- "$app_dir")"
 output_dir="$(dirname -- "$app_dir")/dist"
 mkdir -p "$output_dir"
 package_dir="$(mktemp -d "$output_dir/.${app_name}.XXXXXX")"
-if ! "$TIZEN" package -t wgt -s "$profile" -o "$package_dir" -- "$app_dir"; then
+if ! "$TIZEN" package -t wgt -s "$profile" -o "$package_dir" -- "$app_dir/.buildResult"; then
     rmdir "$package_dir" 2>/dev/null || true
     exit 1
 fi
