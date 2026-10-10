@@ -19,6 +19,8 @@ const HELP = `Samsung Web Inspector (Node >=22)
   node tools/tizen/inspector.js state --endpoint http://127.0.0.1:PORT
   node tools/tizen/inspector.js key --endpoint http://127.0.0.1:PORT --key up|down|left|right|back|ok [--rating-key N]
     (ok is refused unless the focused control is browse-only; a card needs its observed --rating-key)
+  node tools/tizen/inspector.js key --endpoint http://127.0.0.1:PORT --key ok --save-sign-in
+    (only on Settings' exact "Stay signed in on this TV: Off" control: saves the owner's sign-in locally)
 Options: --target-index N (required for multiple pages), --timeout-ms 15000 (100..15000).
 Fixed probes only; no arbitrary evaluation or app launch. Keys only through the guarded key command.
 Capture output is PRIVATE and is never a DOM reconstruction. See docs/samsung-web-inspector.md.
@@ -40,7 +42,7 @@ function options(args) {
     for (let i = 1; i < args.length; i++) {
         const name = args[i];
         if (Object.hasOwn(values, name)) throw new InspectorError('duplicate_option');
-        if (name === '--allow-private-pixels') { values[name] = true; continue; }
+        if (['--allow-private-pixels', '--save-sign-in'].includes(name)) { values[name] = true; continue; }
         if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms', '--key', '--rating-key'].includes(name) ||
             i + 1 >= args.length || args[i + 1].startsWith('--')) throw new InspectorError('invalid_option');
         values[name] = args[++i];
@@ -54,14 +56,15 @@ function options(args) {
         (!['screencast', 'live'].includes(command) && values['--duration-ms']) ||
         (command !== 'screencast' && values['--max-frames']) ||
         (command !== 'live' && values['--interval-ms']) ||
-        (command !== 'key' && (values['--key'] || values['--rating-key']))) {
+        (command !== 'key' && (values['--key'] || values['--rating-key'] || values['--save-sign-in'])) ||
+        (values['--save-sign-in'] && (values['--key'] !== 'ok' || values['--rating-key']))) {
         throw new InspectorError('inapplicable_option');
     }
     if (command === 'key' && !Object.hasOwn(KEYS, values['--key'] || '')) throw new InspectorError('invalid_key');
     if (values['--rating-key'] !== undefined && !/^\d{1,12}$/.test(values['--rating-key'])) throw new InspectorError('invalid_option');
     const live = command === 'live';
     return {
-        key: values['--key'], ratingKey: values['--rating-key'],
+        key: values['--key'], ratingKey: values['--rating-key'], saveSignIn: values['--save-sign-in'] === true,
         command, endpoint: localEndpoint(values['--endpoint']),
         timeoutMs: integer(values['--timeout-ms'] || '15000', 100, 15000),
         targetIndex: values['--target-index'] === undefined ? undefined : integer(values['--target-index'], 0, 99),
@@ -109,7 +112,7 @@ async function run(config, lock = acquireLock, ready = view => process.stderr.wr
             if (interrupted) throw new InspectorError('interrupted');
             await client.rpc('Page.enable');
             if (config.command === 'state') result = { status: 'inspected', version, state: await readState(client) };
-            if (config.command === 'key') result = { ...await press(client, config.key, { ratingKey: config.ratingKey }), version };
+            if (config.command === 'key') result = { ...await press(client, config.key, { ratingKey: config.ratingKey, saveSignIn: config.saveSignIn }), version };
             if (config.command === 'geometry') result = { status: 'inspected', version, geometry: await geometry(client) };
             if (config.command === 'probe') result = { status: 'inspected', version,
                 geometry: await geometry(client), screencast: await screencastCapability(client),

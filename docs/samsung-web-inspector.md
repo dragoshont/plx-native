@@ -288,6 +288,13 @@ OK is allowed on:
 - library names in the Home navigation capsule;
 - a server choice, and "Use linked account", outside menus.
 
+One local write is allowed, and only with an explicit opt-in: `key --key ok
+--save-sign-in` presses Settings' exact "Stay signed in on this TV: Off"
+control, outside a menu. That saves the owner's existing sign-in in the app's
+local storage. It is not a Plex write, and the tool never reads the token.
+Without `--save-sign-in` the control is refused. With the option, every other
+control is refused, including the "On" label that forgets the saved sign-in.
+
 The guard reduces the chance of a household write; it does not prove an app
 control is read-only. Read the source of any new label before allowlisting it.
 

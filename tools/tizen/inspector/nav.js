@@ -73,6 +73,10 @@ const DENY = /play|continue|resume|start|trailer|watch|record|dvr|delete|remove|
 // Exact pre-Home routing controls that only read: "Use linked account" opens the server list
 // without the profile-switch request, and a server choice only connects and loads Home.
 const ROUTE = new Set(['Use linked account']);
+// The one local-storage write this tool can make, and only when the caller passes the explicit
+// `saveSignIn` opt-in: turning the owner's saved sign-in ON from the Settings screen. The "On"
+// label (which forgets the saved sign-in) stays refused by the deny pattern.
+const SAVE_SIGN_IN = 'Stay signed in on this TV: Off';
 const PLAYABLE = new Set(['movie', 'episode', 'clip', 'track']);
 
 function text(value, max) {
@@ -112,7 +116,7 @@ function sanitizeState(value) {
 }
 
 // Decides whether OK may be pressed on the observed focus. Returns null when allowed.
-function refuseOk(state, ratingKey) {
+function refuseOk(state, ratingKey, { saveSignIn = false } = {}) {
     if (state.player) return 'player_active';
     const active = state.active;
     if (active.kind === 'card') {
@@ -129,6 +133,11 @@ function refuseOk(state, ratingKey) {
     if (active.disabled) return 'control_disabled';
     // Selecting a profile leads to the switch request; never automate it.
     if (active.choice === 'profile') return 'profile_switch_refused';
+    if (active.label === SAVE_SIGN_IN) {
+        if (!saveSignIn) return 'save_sign_in_requires_opt_in';
+        return state.screen === 'screen screen-settings' && !state.menu ? null : 'save_sign_in_outside_settings';
+    }
+    if (saveSignIn) return 'save_sign_in_option_mismatch';
     if (active.choice === 'server' && !state.menu) return null;
     if (ROUTE.has(active.label) && !state.menu) return null;
     if (DENY.test(active.label) && !BROWSE.has(active.label)) return 'denied_label';
@@ -152,16 +161,16 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // One guarded key press. OK requires the same allowed focus on two reads `stableMs` apart, so an
 // asynchronous focus move cannot redirect it onto a refused control just before it is pressed.
-async function press(client, name, { ratingKey, stableMs = 250 } = {}) {
+async function press(client, name, { ratingKey, saveSignIn = false, stableMs = 250 } = {}) {
     if (!Object.hasOwn(KEYS, name)) throw new InspectorError('invalid_key');
     const before = await readState(client);
     if (name === 'ok') {
-        const reason = refuseOk(before, ratingKey);
+        const reason = refuseOk(before, ratingKey, { saveSignIn });
         if (reason) return { status: 'refused', key: name, reason, before };
         await sleep(stableMs);
         const again = await readState(client);
         if (!same(before, again)) return { status: 'refused', key: name, reason: 'focus_moved', before };
-    } else if (ratingKey) {
+    } else if (ratingKey || saveSignIn) {
         throw new InspectorError('inapplicable_option');
     } else if (before.player) {
         return { status: 'refused', key: name, reason: 'player_active', before };
@@ -173,4 +182,4 @@ async function press(client, name, { ratingKey, stableMs = 250 } = {}) {
     return { status: 'pressed', key: name, before };
 }
 
-module.exports = { KEYS, STATE, BROWSE, sanitizeState, refuseOk, readState, press };
+module.exports = { KEYS, STATE, BROWSE, SAVE_SIGN_IN, sanitizeState, refuseOk, readState, press };

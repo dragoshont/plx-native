@@ -34,6 +34,28 @@ test('OK allows browse-only buttons and library names in the Home capsule', () =
     assert.equal(refuseOk(sanitizeState(button('Open details')), '42'), 'rating_key_given_for_non_card');
 });
 
+test('saving sign-in needs the explicit opt-in, the exact Off label and the Settings screen', () => {
+    const settings = (label, extra = {}) => ({ ...button(label), screen: 'screen screen-settings', ...extra });
+    const off = 'Stay signed in on this TV: Off';
+    assert.equal(refuseOk(sanitizeState(settings(off))), 'save_sign_in_requires_opt_in');
+    assert.equal(refuseOk(sanitizeState(settings(off)), undefined, { saveSignIn: true }), null);
+    assert.equal(refuseOk(sanitizeState(button(off)), undefined, { saveSignIn: true }), 'save_sign_in_outside_settings');
+    assert.equal(refuseOk(sanitizeState(settings(off, { menu: true })), undefined, { saveSignIn: true }),
+        'save_sign_in_outside_settings');
+    for (const label of ['Stay signed in on this TV: On', 'Sign out', 'Delete saved sign-in', 'Open details']) {
+        assert.notEqual(refuseOk(sanitizeState(settings(label)), undefined, { saveSignIn: true }), null, label);
+    }
+    assert.equal(refuseOk(sanitizeState(settings('Stay signed in on this TV: On'))), 'denied_label');
+    assert.equal(refuseOk(sanitizeState(card({}, { screen: 'screen screen-settings' })), undefined, { saveSignIn: true }),
+        'card_requires_rating_key');
+    const base = ['key', '--endpoint', 'http://127.0.0.1:1'];
+    assert.equal(options([...base, '--key', 'ok', '--save-sign-in']).saveSignIn, true);
+    assert.equal(options([...base, '--key', 'ok']).saveSignIn, false);
+    assert.throws(() => options([...base, '--key', 'down', '--save-sign-in']), /inapplicable_option/);
+    assert.throws(() => options([...base, '--key', 'ok', '--save-sign-in', '--rating-key', '42']), /inapplicable_option/);
+    assert.throws(() => options(['state', '--endpoint', 'http://127.0.0.1:1', '--save-sign-in']), /inapplicable_option/);
+});
+
 test('card OK needs the observed rating key and never a deck card that may play', () => {
     assert.equal(refuseOk(sanitizeState(card())), 'card_requires_rating_key');
     assert.equal(refuseOk(sanitizeState(card()), '41'), 'rating_key_mismatch');
