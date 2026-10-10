@@ -20,10 +20,33 @@ remember-me checkbox. A bounded live viewer completed 89 cycles without capture 
 approximately 0.86 seconds per capture, on this static screen. These are separate paint
 layers, not full panel/compositor screenshots, and exclude AVPlay's hardware video plane.
 See [Inspector capture evidence and limits](samsung-web-inspector.md).
-Manual sign-in and subsequent Home/library/playback acceptance remain pending.
+The owner subsequently signed in manually. The native navigation lane observed the profile/server
+pickers, Home and shelves; its full LG-reference loop and after-fix comparison are still in progress.
+Current-app native playback acceptance remains pending.
 This is an install/launch and sign-in-rendering receipt, not panel or
 native-playback acceptance. Host suites, strict ES5 parsing and unsigned source build passed
 on the committed source before packaging.
+
+## Latest upstream check
+
+Fetched `GLinnik21/plx-native` on 2026-10-11 without merging it into this branch.
+The latest observed upstream commit is
+[`4e454ea037e355898d22f7f78198c64227748032`](https://github.com/GLinnik21/plx-native/commit/4e454ea037e355898d22f7f78198c64227748032).
+It is 14 commits ahead of the original inspected/common-base revision
+`38c07fc3e513066c70a90584ef6760672d6c6e5f`. This is a dated snapshot, not a live feed.
+
+| New upstream work | Relevance to Samsung |
+|---|---|
+| [AV1](https://github.com/GLinnik21/plx-native/commit/17290659fae6ee1bdc2c6445b13ee2474d6984e1) and [VP9](https://github.com/GLinnik21/plx-native/commit/4e454ea037e355898d22f7f78198c64227748032) direct play gated by the set's codec table | LG-specific native playback/FFmpeg/platform changes. Do not transfer the supported-codec claim to AVPlay or newer Samsung models |
+| [Reload details after player return](https://github.com/GLinnik21/plx-native/commit/1e07e0bc2e7a657939ad3522ac2fa65a5d30957f) | Product invariant worth checking: resume must reflect the PMS stop position; Samsung's current-app write/read-back acceptance is still pending |
+| Undecodable-audio rejection and reopening interrupted direct-play transfers | Useful negotiation/recovery cases, not evidence Samsung already handles native decoder/transport failures |
+| Bounded Recently Added paging and ahead-of-scroll posters | Recheck Samsung's 12-item Home shelf limit, decode concurrency and scrolling rather than copying LG's scheduler |
+| Multiline subtitle cues, sign-out forgetting plaintext-connection answers, preference defaults staying reset | Include equivalent state/privacy tests where Samsung has that feature; not every LG preference exists in Samsung |
+| ELF/storage-helper checks, agent/build docs and website press updates | Mostly LG packaging/tooling/documentation. They do not justify changing the preserved LG app in this Samsung slice |
+
+The local LG description below the README's Samsung section still describes the checked-out LG
+revision, not these unmerged AV1/VP9 additions. Keep upstream integration separate from the
+Samsung fixes so a port update cannot silently replace working LG code.
 
 This is the release gate for **LG movie/show capability parity**, not a promise to finish the
 official Plex service ecosystem by copying LG. Music, photos, DVR, live tuning and licensed

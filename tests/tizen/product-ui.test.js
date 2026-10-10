@@ -159,9 +159,16 @@ async function run() {
             "Utilities must be reachable from the top navigation");
         var selectedHome = window.document.querySelector('.home-navigation button[aria-current="page"]');
         selectedHome.focus();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
+        assert.strictEqual(window.document.activeElement, selectedHome,
+            "Up at the fixed Home navigation must not jump into a shelf below it");
+        window.document.querySelector("#screen").scrollTop = 700;
+        window.document.querySelector("#screen").classList.add("shelves-focused");
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
         assert(window.document.activeElement.classList.contains("home-feature-primary"),
             "Down from Home must reach the feature, not jump over it to a distant poster");
+        assert.strictEqual(window.document.querySelector("#screen").scrollTop, 0,
+            "Returning to the hero must reset scrolling before focusing its controls");
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
         assert(window.document.activeElement.classList.contains("media-card"),
             "Down from the feature must reach the first shelf");
@@ -169,6 +176,34 @@ async function run() {
         assert(window.document.activeElement.classList.contains("home-feature-primary"),
             "Up from the first shelf restores the visible feature");
         assert(!window.document.querySelector("#screen").classList.contains("shelves-focused"));
+        var firstShelfCard = window.document.querySelector(".shelf-row .media-card");
+        var secondShelf = window.document.createElement("section");
+        secondShelf.className = "shelf";
+        var secondRow = window.document.createElement("div");
+        secondRow.className = "shelf-row";
+        var secondShelfCard = window.document.createElement("button");
+        secondShelfCard.className = "media-card";
+        secondShelfCard.plexCard = firstShelfCard.plexCard;
+        secondRow.appendChild(secondShelfCard);
+        secondShelf.appendChild(secondRow);
+        window.document.querySelector(".home-shelves").appendChild(secondShelf);
+        var firstBounds = firstShelfCard.getBoundingClientRect;
+        firstShelfCard.getBoundingClientRect = function () {
+            return { left: 100, top: -1200, right: 300, bottom: -900, width: 200, height: 300 };
+        };
+        secondShelfCard.getBoundingClientRect = function () {
+            return { left: 100, top: 200, right: 300, bottom: 500, width: 200, height: 300 };
+        };
+        secondShelfCard.focus();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
+        assert.strictEqual(window.document.activeElement, firstShelfCard,
+            "Up from a scrolled shelf must reach the adjacent shelf, not a geometrically nearer fixed nav");
+        firstShelfCard.getBoundingClientRect = firstBounds;
+        secondShelf.remove();
+        window.document.querySelector(".home-feature-primary").focus();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
+        assert.strictEqual(window.document.activeElement, selectedHome,
+            "Up from the hero must return to navigation, not the separate Account control");
         var navigation = window.document.querySelector(".home-navigation");
         assert(navigation, "Home navigation belongs above the shelves, not below them");
         assert(navigation.querySelector(".menu-icon-search"), "Search needs a visible icon");

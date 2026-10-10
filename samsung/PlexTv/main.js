@@ -184,7 +184,9 @@
         image.alt = item.title || "Media";
         image.src = placeholderArt();
         node.appendChild(image);
-        node.appendChild(element("span", "card-title", seriesPoster ? item.grandparentTitle || item.title : item.title || item.tag || "Untitled"));
+        node.appendChild(element("span", "card-title", seriesPoster ? item.grandparentTitle || item.title :
+            item.type === "season" && item.parentTitle ? item.parentTitle + " · " + item.title :
+            item.title || item.tag || "Untitled"));
         var episodeNumber = item.type === "episode" && item.parentIndex !== undefined && item.index !== undefined ?
             "S" + item.parentIndex + " E" + item.index : "";
         var remaining = options.shelf && item.viewOffset && item.duration ?
@@ -2693,17 +2695,26 @@
             if (adjacent && !adjacent.disabled) { adjacent.focus(); }
             return;
         }
-        if (key === 40 && active && active.parentNode &&
+        if ((key === 38 || key === 40) && active && active.parentNode &&
                 /home-navigation/.test(active.parentNode.className || "")) {
+            if (key === 38) { return; }
             var featuredAction = screen.querySelector(".home-feature-primary");
             var firstCard = screen.querySelector(".media-card");
-            if (featuredAction) { screen.className = "screen screen-home"; }
+            if (featuredAction) {
+                screen.className = "screen screen-home";
+                screen.scrollTop = 0;
+            }
             if (featuredAction || firstCard) { (featuredAction || firstCard).focus(); return; }
         }
         if (key === 40 && active && active.parentNode &&
                 /home-feature-actions/.test(active.parentNode.className || "")) {
             var cardBelow = screen.querySelector(".media-card");
             if (cardBelow) { cardBelow.focus(); return; }
+        }
+        if (key === 38 && active && active.parentNode &&
+                /home-feature-actions/.test(active.parentNode.className || "")) {
+            var homeNavigation = screen.querySelector(".home-navigation");
+            if (homeNavigation) { homeNavigation.querySelector("button").focus(); return; }
         }
         if (key === 38 && active && active.plexCard && screen.className.indexOf("screen-home") !== -1) {
             var shelves = screen.querySelectorAll(".shelf-row");
@@ -2714,6 +2725,29 @@
                     featureAbove.focus();
                     return;
                 }
+            }
+        }
+        if ((key === 38 || key === 40) && active && active.plexCard &&
+                screen.className.indexOf("screen-home") !== -1) {
+            var homeRows = Array.prototype.slice.call(screen.querySelectorAll(".shelf-row")).filter(function (row) {
+                return row.querySelector(".media-card");
+            });
+            var rowPosition = homeRows.indexOf(active.parentNode);
+            if (rowPosition >= 0) {
+                var targetRow = homeRows[rowPosition + (key === 38 ? -1 : 1)];
+                if (targetRow) {
+                    var sourceBounds = active.getBoundingClientRect();
+                    var sourceCenter = sourceBounds.left + sourceBounds.width / 2;
+                    var closest = null;
+                    var distance = Infinity;
+                    Array.prototype.forEach.call(targetRow.querySelectorAll(".media-card"), function (candidate) {
+                        var bounds = candidate.getBoundingClientRect();
+                        var delta = Math.abs(bounds.left + bounds.width / 2 - sourceCenter);
+                        if (!candidate.disabled && delta < distance) { closest = candidate; distance = delta; }
+                    });
+                    if (closest) { closest.focus(); }
+                }
+                return;
             }
         }
         var menu = document.getElementById("player-menu");

@@ -95,10 +95,12 @@ Host DOM journeys exercise actual Samsung UI code against synthetic Plex/AVPlay 
 Browser captures at 1280x720 and 1920x1080 establish host composition and directional focus,
 not Samsung font rasterization, legacy-engine rendering, remote latency or hardware playback.
 
-No television was used for this revision. It has not been installed or accepted on the owner's
-2017 UE55MU6172; that model's earlier install evidence cannot certify this new layout or 2018+
-models. The wider [product acceptance gaps](samsung-tizen-client-spec.md#current-acceptance-gaps)
-remain open. Once device access is authorized, acceptance must include feature/shelf transitions,
+The initial revision was host-only. The subsequent signed `7c6f7158` package was installed on
+the owner's 2017 UE55MU6172 on 2026-10-11; genuine sign-in and initial browsing paint layers
+were captured. A full recorded LG-loop comparison is still in progress. Installation and
+those partial captures do not certify all layouts or any 2018+ model. The wider
+[product acceptance gaps](samsung-tizen-client-spec.md#current-acceptance-gaps)
+remain open. Current authorized acceptance must include feature/shelf transitions,
 long library names, long titles, synopsis expansion, account/More return paths, season navigation
 and player-menu dismissal/auto-hide on the named model and firmware. Native performance,
 codecs, actual stream decisions and The Frame lifecycle require their own evidence.

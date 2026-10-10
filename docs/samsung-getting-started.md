@@ -1,9 +1,10 @@
 # Samsung Tizen TV: getting started (for beginners)
 
 Part of the [Samsung feasibility study](samsung-tizen-feasibility.md). This is a plain-language
-checklist for preparing a Samsung TV and a computer for the
-[proof of concept](samsung-tizen-poc.md). **Run end to end once** (2026-10-09, macOS, a 2017 set): Tizen
-Studio 6.1 CLI, a Samsung certificate, Developer Mode, and a hello app installed and launched. The gotchas
+checklist for installing the separate experimental Samsung client and preparing a named-model
+[test](samsung-tizen-poc.md). **Developer installation observed** (2026-10-09/11, macOS, a 2017 set):
+Tizen Studio 6.1 installation, Tizen CLI 2.5.25, SDB 4.2.36, Samsung signing, Developer Mode,
+hello/probe apps and the current Plex client installed and launched. The gotchas
 below are the ones actually hit. Where a page changes, Samsung's wins. Ask the owner before installing anything.
 
 ## What you are building
@@ -11,6 +12,11 @@ below are the ones actually hit. Where a page changes, Samsung's wins. Ask the o
 A Samsung TV app is a small website packaged as a `.wgt` file. You sign it with a certificate that
 names your TV, install it over your home network, and run it. No rooting or jailbreaking is involved,
 and none is proposed. This is different from the existing LG app, which stays untouched.
+
+There is no Samsung Store release or universal download you can install on any TV. The current
+route needs a computer and a Samsung developer certificate containing **your** TV's DUID.
+An LG `.ipk` or Homebrew Channel package cannot install on Samsung. If you only want a supported
+one-click app today, this experimental build is not that yet.
 
 ## 1. Find out exactly which TV you have
 
@@ -103,6 +109,60 @@ See the [product specification](samsung-tizen-client-spec.md) for current featur
 acceptance gaps, and the [development process](samsung-tizen-development-process.md) for the reusable
 workflow. The installed x86_64 Tizen 10 emulator did not launch on this Apple-Silicon host.
 
+### Install the current Samsung client
+
+Complete sections 1–4 first: identify the TV, install the SDK/TV Extension, create the Samsung
+certificate profile with its DUID, and enable Developer Mode. Keep Certificate Manager closed
+while using the command line. The steps below are for macOS/Linux with the Tizen CLI and SDB
+on `PATH`; on Windows use the equivalent SDK tools and a copied source folder.
+
+1. Download or clone **this fork's Samsung branch**, not an LG release:
+   ```sh
+   git clone --branch dragoshont-samsung-tizen-feasibility https://github.com/dragoshont/plx-native.git
+   cd plx-native
+   ```
+   Record `git rev-parse HEAD`. Follow the host-test/source-build commands above first.
+2. Copy `samsung/PlexTv` outside the checkout so your private signing setup and build output
+   cannot enter a commit. In the copy's `config.xml`, replace the application line with:
+   ```xml
+   <tizen:application id="PlxTizenDv.PlexTv" package="PlxTizenDv" required_version="3.0"/>
+   ```
+   These are development IDs, not Store-approved identifiers. Reuse them for updates; changing
+   them creates a separate app. Never put an account token, server address or certificate in
+   this folder.
+3. Build and sign the copy with your existing Samsung certificate profile:
+   ```sh
+   tizen build-web -- /path/to/PlexTv
+   tizen package -t wgt -s YOUR_PROFILE -- /path/to/PlexTv
+   ```
+   The SDK prints the signed `.wgt` path; use that exact file, not an earlier build. On macOS,
+   `shasum -a 256 /path/to/app.wgt` records its checksum (PowerShell: `Get-FileHash -Algorithm SHA256`).
+4. Connect and install:
+   ```sh
+   sdb connect TV_IP:26101
+   sdb devices
+   tizen install -n /path/to/app.wgt -s TARGET_SERIAL
+   ```
+   Replace `TARGET_SERIAL` with the exact serial printed by `sdb devices`. Complete the
+   certificate-install-permit step from section 3 before the first install. Stop on an error;
+   a successfully signed package is not proof it installed.
+5. Open **Plex Tizen Development** from the TV's Apps screen. Scan the QR or enter the displayed
+   code at `plex.tv/link`, select your profile (PIN only if protected), then your server.
+   The TV and PMS keep your existing library and progress. Use Settings only if you want to
+   save sign-in; that explicit option stores the account token unencrypted. By default a
+   restart/update may require signing in again.
+6. Start with read-only Home/library/detail/search navigation. For playback, use content you
+   intend to watch or explicitly disposable test records. See the
+   [remaining acceptance gates](samsung-upstream-readiness.md#required-before-a-parity-announcement).
+   To update, build/sign the new source with the **same author identity and app IDs**, then
+   install its `.wgt` again. To remove it, delete the app through the TV's Apps management UI.
+
+The observed target is UE55MU6172 (2017, Tizen 3.0; previously recorded firmware
+`T-KTMDEUC-1410.1`). Installation on that set does not certify another model. Before moving to
+a newer TV, add its DUID to your distributor certificate and record its exact model/firmware;
+repeat installation, sign-in, the same navigation loop, then codec and standby/Art Mode checks.
+Do not reuse the older set's Inspector port or assume its decoder results carry over.
+
 ### Mac emulator: acceleration and Apple Silicon
 
 Research checked 2026-10-10; this is source evidence, not a newly observed emulator launch.
@@ -170,7 +230,7 @@ an app. Signing and retail installation are separate authorized steps. If the in
 still requires HAXM, Linux/KVM on an AMD host is the documented AMD-V alternative; do not assume
 an ARM Windows VM or CrossOver supplies the missing backend.
 
-Credentials stay in memory unless a user explicitly selects **remember-me**. That option stores
+Credentials stay in memory unless a user explicitly enables saved sign-in **in Settings**. That option stores
 the account token **unencrypted** in Web Storage; leave it off on shared or untrusted TVs.
 Sign-out deletes the saved token; if deletion fails the app warns that its data must be cleared.
 Never include a saved token in a developer package, test fixture or screenshot.

@@ -61,14 +61,16 @@ value with separate choice pages; audio and subtitles have distinct groups and n
 are secondary. Closing player menus returns focus to More. Original-source metadata, the
 PMS-reported stream and the requested transcode limit are now distinct; missing output metadata
 is not replaced with the chosen limit. Original direct play remains capability-gated and is not
-enabled by this UI work. These follow-up changes have not been installed or accepted on the TV.
-The next host-only revision follows the full LG application demo loop: full-bleed Home artwork,
+enabled by this UI work. These changes were included in the signed `7c6f7158` deployment;
+installation does not establish native acceptance of every screen or playback behavior.
+The LG-inspired revision follows the application demo loop: full-bleed Home artwork,
 persistent capsule navigation, a top Account menu, explicit feature play/info/cycling, focused-only
 Home poster captions, expandable detail descriptions and secondary actions behind More.
 Season selection opens episodes directly. The [loop analysis](samsung-lg-loop-analysis.md)
 records the 27 timeline captures, composition measurements, interaction mapping and deviations;
-the loop does not show every LG screen. This revision remains uninstalled and cannot establish
-native rendering, playback performance or complete LG/official-Plex parity.
+the loop does not show every LG screen. The installed revision has genuine native sign-in and
+initial navigation captures; the full loop comparison, playback performance and complete
+LG/official-Plex parity remain unverified.
 The installed emulator has not launched on this Apple-Silicon host. Developer-signed application
 installation/launch has been observed on the owner's Samsung; that is an install/launch smoke
 result, not a pass for every redesigned screen, codec, performance target or retail model.
@@ -545,6 +547,12 @@ playback and watch-state writes remain excluded.
 | UX-02 | `openProfiles` inserts “Use this profile” even for an unprotected identity, adding a redundant confirmation. | Candidate switches an unprotected profile in one click; protected identities retain PIN validation and stale-result guards. Host journey passes; native acceptance pending. |
 | UX-03 | Account opens utilities on Home but jumps directly to Settings in a library (`browseHeader`). | Implemented in `29f8ab60`: same Account panel on Home and libraries; Refresh stays in the selected destination. Host library Account/Back/focus journey passes. Native loop acceptance pending. |
 | CAP-01 | Full-panel capture/screencast unavailable on this firmware; genuine renderer-layer replay works. | Keep fresh layers and timing/step receipts. Do not label the recording full-panel or 60-fps LG-equivalent footage. Actual signed-in loop capture in progress. |
+| UX-04 | Native baseline: focused first-shelf episode caption is clipped at the left edge. The scaled first card extends beyond a horizontally clipped row with zero left padding. | Candidate gives the row a 1vw overscan gutter while preserving the 5vw poster inset. Native after-fix comparison required. |
+| UX-05 | Native follow-up confirms feature exists and nav Down correctly returns to it at scroll 0; the earlier nav-Down failure claim was withdrawn. Real defects: nav Up enters shelves, lower-shelf Up skips adjacent rows for fixed nav/other shelves, hero Up targets Account. | Candidate bounds nav Up, uses adjacent shelf rows with nearest horizontal column, and routes hero Up to Home navigation. Separate host regressions failed before the fixes. Native after-fix comparison required. |
+| UX-06 | Native baseline: one Recently Added poster is a play-glyph placeholder. | Cause unresolved: distinguish missing metadata, HTTP failure and decode failure before changing image handling. |
+| UX-07 | Native baseline: shelf titles are Romanian while navigation is English/UK wording. | App locale and server-supplied library/hub names are separate. Investigate metadata/locale requests; do not translate personal library names or claim all localized source titles are UI errors. |
+| UX-08 | Native baseline: focused season reads “Sezonul 8” without series identity. | Candidate includes `parentTitle` with the season title when supplied. Native comparison required. |
+| UX-09 | Native baseline: linked-account/profile and server pickers add two screens/three presses; server connection observed at roughly 30–72 seconds. | Record account protection/admin flags and advertised connection attempts before removing gates. Never bypass a protected profile or assume a sole server grant is reachable. Connection latency cause remains open. |
 
 Fix batch `29f8ab60` passed the committed-tree Samsung suite, strict ES5 parser, unsigned SDK
 build and quality gate. Its signed development package was verified byte-for-byte against the
