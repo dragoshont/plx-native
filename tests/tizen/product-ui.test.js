@@ -216,6 +216,14 @@ async function run() {
         await settle();
         click("Movies");
         await settle();
+        click("Account");
+        assert(!window.document.querySelector(".home-utilities").hidden,
+            "Account must open the same utility panel in a library, not jump to Settings");
+        assert(!window.document.querySelector(".settings-menu"));
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 27, bubbles: true }));
+        assert(window.document.querySelector(".home-utilities").hidden);
+        assert(window.document.activeElement.classList.contains("account-control"));
+        await settle();
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 50);
         assert(window.document.querySelector(".screen-library .page-toolbar"), "Browse tools belong to one navigation row");
         click("Sort and filters");

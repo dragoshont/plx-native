@@ -165,7 +165,6 @@ function boot(storage) {
         click("Get a new code");
         await settle();
         click("Synthetic Guest");
-        click("Use this profile");
         await settle();
         var serverButton = screen.querySelectorAll().find(function (node) { return node.textContent.indexOf(serverLabel) === 0; });
         assert(serverButton, "Missing server control " + serverLabel);

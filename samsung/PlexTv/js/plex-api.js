@@ -215,6 +215,10 @@
         });
     }
 
+    function profileImagePath(path) {
+        return /^https:\/\/plex\.tv\/users\/[a-zA-Z0-9_-]+\/avatar(?:\?c=[a-zA-Z0-9_.-]+)?$/.test(String(path || ""));
+    }
+
     function createAccountClient(options) {
         options = options || {};
         var token = String(options.token || "");
@@ -305,6 +309,15 @@
         }
         return {
             cancelRequests: function () { scope.cancel(); },
+            image: function (path) {
+                if (!profileImagePath(path)) { return Promise.reject(new Error("Invalid Plex profile artwork.")); }
+                return timedFetch(fetchRequest, path, {
+                    credentials: "omit", redirect: "error", headers: { Accept: "image/*" }
+                }, scope).then(function (response) {
+                    if (!response.ok) { throw new Error("Profile artwork is unavailable (HTTP " + response.status + ")."); }
+                    return response.blob();
+                });
+            },
             watchlist: function (filter, start) {
                 if (["all", "available", "released"].indexOf(filter) === -1 || !isNonNegativeInteger(start || 0)) {
                     return Promise.reject(new Error("Invalid Watchlist filter or page."));
@@ -795,7 +808,7 @@
                 });
             },
             image: function (path, size) {
-                if (!/^https:\/\/(?:metadata-static\.plex\.tv|image\.tmdb\.org)\//.test(path)) { localPath(path); }
+                if (!profileImagePath(path) && !/^https:\/\/(?:metadata-static\.plex\.tv|image\.tmdb\.org)\//.test(path)) { localPath(path); }
                 var width = size && size.width > 0 && size.width <= 1920 ? Math.round(size.width) : 240;
                 var height = size && size.height > 0 && size.height <= 1080 ? Math.round(size.height) : 360;
                 return timedFetch(fetchRequest, baseUrl + "/photo/:/transcode?width=" + width + "&height=" + height + "&minSize=1&url=" +

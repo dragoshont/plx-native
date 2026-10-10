@@ -116,7 +116,6 @@ async function journey(indexFails, language, largeCareer) {
     click("Get a new code");
     await settle();
     click("Synthetic Guest");
-    click("Use this profile");
     await settle();
     var serverButton = screen.querySelectorAll().find(function (node) { return /^Synthetic \(owned\)/.test(node.textContent); });
     assert(serverButton, "Missing server control");

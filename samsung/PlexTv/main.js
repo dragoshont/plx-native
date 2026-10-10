@@ -20,6 +20,8 @@
     var authGeneration = 0;
     var accountToken = "";
     var accountClient = null;
+    var activeProfile = null;
+    var linkedProfile = null;
     var servers = [];
     var libraryFilters = {};
     var navigation = [];
@@ -453,6 +455,7 @@
             if (generation !== viewGeneration) { return; }
             var identities = group(screen, "", "identity-list");
             profiles.forEach(function (profile) {
+                if (profile.admin) { linkedProfile = profile; }
                 var identity = button(identities, profile.title || profile.username || "Profile", function () {
                     var selection = ++viewGeneration;
                     clear(screen);
@@ -463,7 +466,7 @@
                     pin.setAttribute("inputmode", "numeric");
                     pin.setAttribute("aria-label", translate("Profile PIN"));
                     if (profile.protected) { screen.appendChild(pin); }
-                    button(screen, "Use this profile", function () {
+                    function selectProfile() {
                         if (profile.protected && !/^[0-9]{4}$/.test(pin.value)) {
                             setStatus("Enter the four-digit profile PIN.", true);
                             return;
@@ -475,6 +478,7 @@
                             .then(function (token) {
                                 pin.value = "";
                                 if (generation !== viewGeneration || request !== selection) { return; }
+                                activeProfile = profile;
                                 accountClient = window.PlexApi.createAccountClient({ token: token });
                                 openServers();
                             }).catch(function (error) {
@@ -492,16 +496,19 @@
                                     });
                                 } else { setStatus(error.message, true); }
                             });
-                    });
+                    }
+                    if (profile.protected) { button(screen, "Use this profile", selectProfile); }
                     button(screen, "Back to profiles", openProfiles);
                     focusFirst();
+                    if (!profile.protected) { selectProfile(); }
                 }, true);
                 identity.className = "identity-choice";
                 identity.setAttribute("data-initial", (profile.title || profile.username || "P").slice(0, 1).toUpperCase());
                 if (profile.protected) { identity.setAttribute("data-protected", "true"); }
+                profileAvatar(identity, profile, accountClient);
             });
             var actions = group(screen, "", "page-actions");
-            button(actions, "Use linked account", openServers);
+            button(actions, "Use linked account", function () { activeProfile = linkedProfile; openServers(); });
             button(actions, "Sign out", signOut);
             setStatus("Select the Plex identity to use. Protected profiles require their PIN.");
             focusFirst();
@@ -525,6 +532,8 @@
         stopAuthorization();
         accountToken = "";
         accountClient = null;
+        activeProfile = null;
+        linkedProfile = null;
         servers = [];
         currentClient = null;
         currentServerId = "";
@@ -918,19 +927,6 @@
         homeSections = sections;
         screen.className = "screen screen-home";
         browseHeader(null);
-        var utilities = element("div", "home-utilities");
-        button(utilities, "Settings", function () { visit(openSettings); });
-        button(utilities, "Refresh", function () { loadHome(false); }, false, "refresh");
-        button(utilities, "Live TV and DVR", function () { visit(openTelevision); }, false, "television");
-        if (accountClient) { button(utilities, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
-        if (accountClient) { button(utilities, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
-        button(utilities, "Change server", function () {
-            currentClient = null;
-            currentServerId = "";
-            if (accountClient) { openServers(); } else { addConnectForm(""); }
-        });
-        utilities.hidden = true;
-        screen.appendChild(utilities);
         var homeTitle = element("h2", "page-title home-title", translate("Home"));
         screen.appendChild(homeTitle);
         var favorites = favoriteKeys();
@@ -1052,13 +1048,13 @@
         setDetailMode(true);
         var header = element("header", "browse-header");
         var account = button(header, "Account", function () {
-            if (selected) { visit(openSettings); return; }
             var utilities = screen.querySelector(".home-utilities");
             utilities.hidden = !utilities.hidden;
             if (!utilities.hidden) { utilities.querySelector("button").focus(); }
         }, false, "profile");
         account.className += " account-control round-control";
         account.setAttribute("aria-label", translate("Account"));
+        profileAvatar(account, activeProfile || linkedProfile, currentClient);
         var nav = element("nav", "home-navigation");
         nav.setAttribute("aria-label", translate("Home"));
         var home = button(nav, "Home", function () { navigation = []; loadHome(false); }, false, "home");
@@ -1077,6 +1073,31 @@
         button(nav, "Search", function () { visit(openSearch); });
         header.appendChild(nav);
         screen.appendChild(header);
+        var utilities = element("div", "home-utilities");
+        button(utilities, "Settings", function () { visit(openSettings); });
+        button(utilities, "Refresh", function () {
+            if (selected) { openSection(selected); } else { loadHome(false); }
+        }, false, "refresh");
+        button(utilities, "Live TV and DVR", function () { visit(openTelevision); }, false, "television");
+        if (accountClient) { button(utilities, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
+        if (accountClient) { button(utilities, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
+        button(utilities, "Change server", function () {
+            currentClient = null;
+            currentServerId = "";
+            if (accountClient) { openServers(); } else { addConnectForm(""); }
+        });
+        utilities.hidden = true;
+        screen.appendChild(utilities);
+    }
+
+    function profileAvatar(parent, profile, client) {
+        if (!profile || !profile.thumb) { return; }
+        var image = element("img", "profile-avatar");
+        image.alt = "";
+        parent.appendChild(image);
+        queueImage(image, client, profile.thumb, { width: 168, height: 168 }, 256 * 1024, function () {
+            parent.setAttribute("data-avatar", "true");
+        });
     }
 
     function openSection(section, saved) {

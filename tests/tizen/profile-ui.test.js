@@ -9,12 +9,13 @@ function Node(tag, text) {
     this.children = [];
     this.events = {};
     this.value = "";
+    this.attributes = {};
 }
 Node.prototype.appendChild = function (child) { this.children.push(child); return child; };
 Node.prototype.removeChild = function (child) { this.children.splice(this.children.indexOf(child), 1); };
 Object.defineProperty(Node.prototype, "firstChild", { get: function () { return this.children[0]; } });
 Node.prototype.addEventListener = function (name, callback) { this.events[name] = callback; };
-Node.prototype.setAttribute = function () {};
+Node.prototype.setAttribute = function (name, value) { this.attributes[name] = value; };
 Node.prototype.focus = function () {};
 Node.prototype.querySelectorAll = function () {
     var result = [];
@@ -33,6 +34,7 @@ async function run() {
     var switches = 0;
     var expire = false;
     var linkPin = true;
+    var protectedProfile = true;
     var document = {
         getElementById: function (id) { return id === "screen" ? screen : status; },
         createElement: function (tag) { return new Node(tag); },
@@ -41,7 +43,8 @@ async function run() {
     };
     var accountApi = {
         getProfiles: function () { return Promise.resolve([
-            { uuid: "synthetic-profile", title: "Synthetic Guest", protected: true }
+            { uuid: "synthetic-profile", title: "Synthetic Guest", protected: protectedProfile,
+                thumb: "https://plex.tv/users/synthetic/avatar?c=1" }
         ]); },
         switchProfile: function (uuid, pin) {
             switches += 1;
@@ -93,6 +96,9 @@ async function run() {
     async function settle() { for (var i = 0; i < 20; i += 1) { await Promise.resolve(); } }
     click("Get a new code");
     await settle();
+    var identity = screen.querySelectorAll().find(function (node) { return node.textContent === "Synthetic Guest"; });
+    assert(identity.children.some(function (node) { return node.tag === "img" && node.className === "profile-avatar"; }),
+        "Profiles must render their returned photo, retaining initials as a loading/error fallback");
     click("Synthetic Guest");
     click("Use this profile");
     assert.strictEqual(switches, 0);
@@ -135,6 +141,21 @@ async function run() {
     assert.strictEqual(tokens.indexOf("synthetic-stale-token"), -1);
     assert(screen.querySelectorAll().some(function (node) { return node.textContent === "Get a new code"; }),
         "Signing out while a profile switch is pending must land on the sign-in screen");
+    linkPin = true;
+    protectedProfile = false;
+    accountApi.switchProfile = function (uuid, pinValue) {
+        assert.strictEqual(pinValue, "");
+        switches += 1;
+        return Promise.resolve("synthetic-unprotected-token");
+    };
+    click("Get a new code");
+    await settle();
+    var before = switches;
+    click("Synthetic Guest");
+    await settle();
+    assert.strictEqual(switches, before + 1, "An unprotected profile must switch with one click");
+    assert(!screen.querySelectorAll().some(function (node) { return node.textContent === "Use this profile"; }),
+        "An unprotected profile must not require an intermediate confirmation");
     console.log("Tizen synthetic profile UI/recovery tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

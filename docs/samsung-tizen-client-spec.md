@@ -531,6 +531,21 @@ entries remain outstanding. Repository edits, builds and synthetic tests are app
 device, signing, publishing and household-account operations retain their specific safety gates.
 Work directly through the dependency-ready items rather than waiting for a native worker.
 
+### Real-TV navigation issue ledger
+
+The owner authorized ongoing issue capture, fixes and deployment on the existing UE55MU6172
+on 2026-10-11. Record the LG-reference Home/feature → shelves → movie details → Back →
+Movies journey before and after each deployment. Native recordings contain fresh renderer
+paint layers at approximately one frame per second, not panel/video-plane output. Household
+playback and watch-state writes remain excluded.
+
+| ID | Issue and evidence | Fix / acceptance status |
+|---|---|---|
+| UX-01 | Owner reports missing profile photo. Source confirms initials-only profile picker and generic Account glyph. LG `plex/account.rs` supplies `thumb`; `session_profile_cache_tests.rs` uses a plex.tv user-avatar URL. | Candidate renders returned avatars in the picker and active Account control using bounded image loading; initials/glyph remain until decode succeeds. Regression failed before the fix and passes after. Native acceptance pending. |
+| UX-02 | `openProfiles` inserts “Use this profile” even for an unprotected identity, adding a redundant confirmation. | Candidate switches an unprotected profile in one click; protected identities retain PIN validation and stale-result guards. Host journey passes; native acceptance pending. |
+| UX-03 | Account opens utilities on Home but jumps directly to Settings in a library (`browseHeader`). | Candidate uses the same Account panel on Home and libraries; Refresh stays in the selected destination. Native loop acceptance pending. |
+| CAP-01 | Full-panel capture/screencast unavailable on this firmware; genuine renderer-layer replay works. | Keep fresh layers and timing/step receipts. Do not label the recording full-panel or 60-fps LG-equivalent footage. Actual signed-in loop capture in progress. |
+
 ### Player and protocol
 
 - [x] Implement joined multipart server transcodes with whole-title resume/progress; host contract tested. Source: `docs/plex-openapi.json`, decision `partIndex=-1`.

@@ -76,7 +76,7 @@ cropped lettering in those fixtures is not a second product title or evidence ab
 - Choosing a season opens its episodes directly, without an intervening season detail dead end.
   Episode browsing retains episode identity, progress and stills; Home prefers series posters.
 - The player retains its compact transport/progress system and five-second playing auto-hide.
-  Seek controls expose their 10/30-second amounts. Back from a submenu returns to Playback
+  Seek controls expose the configured skip interval. Back from a submenu returns to Playback
   options before dismissing the menu; Stop, tracks, chapters and quality remain reachable.
 - Source-file quality, PMS-reported stream quality and requested transcode limits remain separate.
   This redesign does not enable or advertise unverified original/direct playback.
