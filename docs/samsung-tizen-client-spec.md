@@ -26,6 +26,15 @@ contracts and the real app DOM with fake networking/AVPlay, including a 250-item
 200-card retained window, explicit watch-state confirmations and cancellation. Playback requests
 server-side audio/subtitle selection before negotiation and asks PMS to join multipart titles.
 ES5 parsing and an unsigned Samsung source build are separate gates.
+The sign-in PIN and its QR renew automatically on local or Plex-reported expiry, including
+when a poll stalls. Failed PIN acquisition retries after five seconds with a visible error;
+denial still requires an explicit retry. Renewal retains remember-me consent, and stale polls
+and timers cannot complete an older pairing. Backgrounding or leaving pairing cancels renewal.
+Samsung menu styling follows the LG implementation's capsule navigation and icon-bearing form
+rows (`rust-modules/ui/src/widgets.rs`'s `TabStrip` and `rust-modules/ui/src/theme.rs`'s control
+roles), rather than reusing its renderer. Home destinations appear above the shelves; settings
+show selected values independently of focus and retain the focused row after preference changes.
+These behaviors have synthetic UI coverage; browser previews are not Samsung-panel evidence.
 The installed emulator has not launched on this Apple-Silicon host; earlier retail probes did not
 run this application. No current-product emulator, decoder, performance or retail-model pass is
 claimed.

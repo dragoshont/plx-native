@@ -15,6 +15,7 @@
     var authClient = null;
     var authPin = null;
     var authTimer = null;
+    var authExpiryTimer = null;
     var authGeneration = 0;
     var accountToken = "";
     var rememberControl = null;
@@ -248,6 +249,10 @@
             clearTimeout(authTimer);
             authTimer = null;
         }
+        if (authExpiryTimer !== null) {
+            clearTimeout(authExpiryTimer);
+            authExpiryTimer = null;
+        }
         authPin = null;
     }
 
@@ -273,6 +278,8 @@
                 }
                 accountClient = window.PlexApi.createAccountClient({ token: accountToken });
                 openProfiles(warning);
+            } else if (result.status === "expired") {
+                beginAuthorization(info.parentNode);
             } else {
                 stopAuthorization();
                 info.textContent = translate(result.status === "denied" ?
@@ -291,8 +298,17 @@
         });
     }
 
-    function button(parent, label, action, literal) {
-        var node = element("button", "secondary-button", literal ? label : translate(label));
+    function button(parent, label, action, literal, iconName) {
+        var icon = iconName || (/^(Play|Resume|Pause|Start watching)/.test(label) ? "play" :
+            /^(Back|Cancel|Close|Stop and return)/.test(label) ? "back" :
+            /^(Search|Plex catalogue)/.test(label) ? "search" :
+            /^(Settings|Diagnostics|Reset|Transcode|Sort)/.test(label) ? "settings" :
+            /^(Change server|Refresh servers|Retry discovery)/.test(label) ? "server" :
+            /^(Favorite|Watchlist|Mark|Remove from)/.test(label) ? "check" :
+            /^(Change profile|Sign out|Use linked account)/.test(label) ? "profile" :
+            /^Live TV/.test(label) ? "television" : "more");
+        var node = element("button", "secondary-button menu-control menu-icon-" + icon,
+            literal ? label : translate(label));
         node.type = "button";
         node.addEventListener("click", action);
         parent.appendChild(node);
@@ -467,6 +483,11 @@
                 return;
             }
             authPin = pin;
+            if (typeof pin.expiresAt === "number" && isFinite(pin.expiresAt)) {
+                authExpiryTimer = setTimeout(function () {
+                    if (generation === authGeneration) { beginAuthorization(info); }
+                }, Math.max(0, pin.expiresAt - Date.now()));
+            }
             clear(info);
             info.appendChild(element("p", "auth-step", translate("On your phone or computer, go to")));
             info.appendChild(element("p", "auth-url", "plex.tv/link"));
@@ -492,8 +513,11 @@
             if (generation !== authGeneration) {
                 return;
             }
-            info.textContent = translate("Could not reach Plex. Check the TV's internet connection, then get a new code.");
+            info.textContent = translate("Could not reach Plex. Retrying in a few seconds…");
             setStatus(info.textContent, true);
+            authTimer = setTimeout(function () {
+                if (generation === authGeneration) { beginAuthorization(info); }
+            }, 5000);
         });
     }
 
@@ -757,6 +781,19 @@
         resetImages();
         restoreView = function () { loadHome(false); };
         currentSection = null;
+        var nav = element("nav", "home-navigation");
+        nav.setAttribute("aria-label", translate("Home"));
+        button(nav, "Search", function () { visit(openSearch); });
+        button(nav, "Settings", function () { visit(openSettings); });
+        button(nav, "Live TV and DVR", function () { visit(openTelevision); });
+        if (accountClient) { button(nav, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
+        if (accountClient) { button(nav, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
+        button(nav, "Change server", function () {
+            currentClient = null;
+            currentServerId = "";
+            if (accountClient) { openServers(); } else { addConnectForm(""); }
+        });
+        screen.appendChild(nav);
         screen.appendChild(element("h2", "", translate("Home")));
 
         var sectionPanel = element("section", "content-panel");
@@ -769,7 +806,7 @@
             return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
         });
         (window.PlexFavorites ? window.PlexFavorites.filter(browsable, favorites) : browsable).forEach(function (section) {
-            var button = element("button", "library-button", section.title || "Untitled library");
+            var button = element("button", "library-button menu-control menu-icon-library", section.title || "Untitled library");
             button.type = "button";
             button.addEventListener("click", function () {
                 visit(function () { openSection(section); });
@@ -797,20 +834,6 @@
             hubPanel.appendChild(hubSection);
         });
         screen.appendChild(hubPanel);
-        button(screen, "Search", function () { visit(openSearch); });
-        button(screen, "Settings", function () { visit(openSettings); });
-        button(screen, "Live TV and DVR", function () { visit(openTelevision); });
-        if (accountClient) { button(screen, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
-        if (accountClient) { button(screen, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
-
-        var disconnect = element("button", "secondary-button", translate("Change server"));
-        disconnect.type = "button";
-        disconnect.addEventListener("click", function () {
-            currentClient = null;
-            currentServerId = "";
-            if (accountClient) { openServers(); } else { addConnectForm(""); }
-        });
-        screen.appendChild(disconnect);
         setStatus((usingRelay ? "Connected through Plex relay (bandwidth limited). " : "Connected. ") +
             "Select a title for details. Hold OK on a card for more actions.");
         focusFirst();
@@ -848,18 +871,10 @@
         });
         previousPage.id = "previous-page";
         previousPage.disabled = currentOffset <= currentItems.length;
-        var loadMore = element("button", "secondary-button", translate("Load more"));
-        loadMore.type = "button";
+        var loadMore = button(screen, "Load more", loadNextPage);
         loadMore.id = "load-more";
-        loadMore.addEventListener("click", loadNextPage);
-        screen.appendChild(loadMore);
-        var back = element("button", "secondary-button", translate("Back to Home"));
-        back.type = "button";
+        var back = button(screen, "Back to Home", backView);
         back.id = "home-back";
-        back.addEventListener("click", function () {
-            backView();
-        });
-        screen.appendChild(back);
         focusFirst();
         if (!saved) { loadNextPage(); }
     }
@@ -1967,37 +1982,45 @@
     }
 
     function openSettings() {
+        var focusedSetting = restoreView === openSettings ?
+            Array.prototype.slice.call(screen.querySelectorAll("button")).indexOf(document.activeElement) : -1;
         viewGeneration += 1;
         clear(screen);
         screen.appendChild(element("h2", "", translate("Settings")));
         screen.appendChild(element("p", "help-text", translate("Account credentials are session-only unless you explicitly enabled unencrypted remember-me. No analytics or crash uploads are enabled.")));
+        var menu = element("section", "settings-menu");
+        menu.setAttribute("aria-label", translate("Settings"));
+        screen.appendChild(menu);
         ["720", "1080"].forEach(function (quality) {
-            button(screen, "Transcode quality: " + quality + "p" + (preferences.quality === quality ? " (selected)" : ""), function () {
+            var choice = button(menu, "Transcode quality: " + quality + "p" + (preferences.quality === quality ? " (selected)" : ""), function () {
                 preferences.quality = quality;
                 if (savePreferences()) { openSettings(); }
             });
+            choice.setAttribute("aria-pressed", preferences.quality === quality ? "true" : "false");
         });
-        button(screen, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
+        var autoNext = button(menu, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
             preferences.autoNext = !preferences.autoNext;
             if (savePreferences()) { openSettings(); }
-        });
-        button(screen, translate("Continue Watching: {state}", {
+        }, false, "play");
+        autoNext.setAttribute("aria-pressed", preferences.autoNext ? "true" : "false");
+        button(menu, translate("Continue Watching: {state}", {
             state: translate(preferences.continueAction === "play" ? "Play" : "Open details")
         }), function () {
             preferences.continueAction = preferences.continueAction === "play" ? "details" : "play";
             if (savePreferences()) { openSettings(); }
-        });
+        }, false, "play");
         if (currentClient && currentServerId) {
-            button(screen, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
+            button(menu, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
         }
         ["en", "es", "be"].forEach(function (language) {
             var names = { en: "English", es: "Español", be: "Беларуская" };
-            button(screen, translate("Language") + ": " + names[language], function () {
+            var choice = button(menu, translate("Language") + ": " + names[language], function () {
                 preferences.language = language;
                 if (savePreferences()) { openSettings(); }
-            });
+            }, false, "language");
+            choice.setAttribute("aria-pressed", preferences.language === language ? "true" : "false");
         });
-        button(screen, "Reset preferences", function () {
+        button(menu, "Reset preferences", function () {
             try {
                 window.PlexPreferences.reset(window.localStorage);
                 if (window.PlexFavorites) { window.PlexFavorites.reset(window.localStorage); }
@@ -2006,7 +2029,7 @@
                 openSettings();
             } catch (error) { setStatus("Could not reset preferences. Check app storage permissions.", true); }
         });
-        button(screen, "Diagnostics", function () {
+        button(menu, "Diagnostics", function () {
             visit(function () {
                 viewGeneration += 1;
                 clear(screen);
@@ -2018,11 +2041,13 @@
                 focusFirst();
             });
         });
-        button(screen, "Sign out", signOut);
-        button(screen, "Back", backView);
+        button(menu, "Sign out", signOut);
+        button(menu, "Back", backView);
         restoreView = openSettings;
         setStatus("Unknown codec capabilities use server transcoding, not guessed direct play.");
         focusFirst();
+        var controls = screen.querySelectorAll("button");
+        if (focusedSetting >= 0 && controls[focusedSetting]) { controls[focusedSetting].focus(); }
     }
 
     function insideHidden(node) {

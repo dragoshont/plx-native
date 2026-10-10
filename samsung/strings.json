@@ -237,6 +237,7 @@
   "and enter this code": { "es": "e introduce este código", "be": "і ўвядзіце гэты код" },
   "Waiting for you to sign in…": { "es": "Esperando a que inicies sesión…", "be": "Чакаем вашага ўваходу…" },
   "Could not reach Plex. Check the TV's internet connection, then get a new code.": { "es": "No se pudo conectar con Plex. Comprueba la conexión a internet del televisor y obtén un código nuevo.", "be": "Не ўдалося звязацца з Plex. Праверце інтэрнэт на тэлевізары і атрымайце новы код." },
+  "Could not reach Plex. Retrying in a few seconds…": { "es": "No se pudo conectar con Plex. Se reintentará en unos segundos…", "be": "Не ўдалося звязацца з Plex. Паўторым спробу праз некалькі секунд…" },
   "Get a new code": { "es": "Obtener un código nuevo", "be": "Атрымаць новы код" },
   "Connect to a server directly": { "es": "Conectar directamente a un servidor", "be": "Падключыцца да сервера напрамую" },
   "Stay signed in on this TV": { "es": "Mantener la sesión iniciada en este televisor", "be": "Заставацца ў сістэме на гэтым тэлевізары" },

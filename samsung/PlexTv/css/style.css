@@ -513,6 +513,165 @@ input:focus {
     text-align: left;
 }
 
+/* LG's TabStrip and FormTable: capsule navigation, icon rows, white focus.
+   SVG strokes avoid font-dependent symbol rendering on older Samsung engines. */
+.menu-control {
+    position: relative;
+    min-height: 72px;
+    padding: 18px 28px 18px 76px;
+    border-radius: 36px;
+    background: rgba(247, 250, 252, 0.10);
+    border: 2px solid rgba(247, 250, 252, 0.12);
+    font-size: 26px;
+    line-height: 1.35;
+}
+
+.menu-control::before {
+    content: "";
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    width: 32px;
+    height: 32px;
+    margin-top: -16px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 32px 32px;
+}
+
+.menu-icon-more::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%23f7fafc'%3E%3Ccircle cx='6' cy='16' r='2'/%3E%3Ccircle cx='16' cy='16' r='2'/%3E%3Ccircle cx='26' cy='16' r='2'/%3E%3C/g%3E%3C/svg%3E");
+}
+.menu-icon-search::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='13' cy='13' r='9'/%3E%3Cpath d='m20 20 8 8'/%3E%3C/svg%3E");
+}
+.menu-icon-settings::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M4 8h24M4 16h24M4 24h24'/%3E%3Cpath d='M11 4v8M22 12v8M13 20v8' stroke-width='5'/%3E%3C/svg%3E");
+}
+.menu-icon-library::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='20' height='23' rx='3'/%3E%3Cpath d='M8 1h19a2 2 0 0 1 2 2v21M12 12l6 4-6 4z'/%3E%3C/svg%3E");
+}
+.menu-icon-server::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round'%3E%3Crect x='3' y='4' width='26' height='10' rx='3'/%3E%3Crect x='3' y='18' width='26' height='10' rx='3'/%3E%3Cpath d='M8 9h1M8 23h1M16 9h7M16 23h7'/%3E%3C/svg%3E");
+}
+.menu-icon-check::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='12'/%3E%3Cpath d='m10 16 4 4 8-8'/%3E%3C/svg%3E");
+}
+.menu-icon-profile::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='16' cy='10' r='6'/%3E%3Cpath d='M5 28v-3a11 11 0 0 1 22 0v3'/%3E%3C/svg%3E");
+}
+.menu-icon-television::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round'%3E%3Crect x='3' y='4' width='26' height='20' rx='3'/%3E%3Cpath d='M10 29h12M16 24v5'/%3E%3C/svg%3E");
+}
+.menu-icon-play::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linejoin='round'%3E%3Cpath d='m9 4 19 12L9 28z'/%3E%3C/svg%3E");
+}
+.menu-icon-back::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m19 6-10 10 10 10'/%3E%3C/svg%3E");
+}
+.menu-icon-language::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23f7fafc' stroke-width='2.5'%3E%3Ccircle cx='16' cy='16' r='12'/%3E%3Cellipse cx='16' cy='16' rx='5' ry='12'/%3E%3Cpath d='M4 16h24M7 9h18M7 23h18'/%3E%3C/svg%3E");
+}
+
+.menu-control:focus::before {
+    -webkit-filter: brightness(0);
+    filter: brightness(0);
+}
+
+.home-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0 0 36px;
+    padding: 8px;
+    border-radius: 44px;
+    background: rgba(8, 8, 10, 0.30);
+}
+
+.home-navigation .menu-control {
+    margin: 4px;
+    background: transparent;
+    border-color: transparent;
+}
+
+.menu-control:focus,
+.home-navigation .menu-control:focus {
+    background: #f7fafc;
+    color: #08080a;
+    outline: 3px solid #f7fafc;
+    outline-offset: 4px;
+    transform: none;
+}
+
+.library-button.menu-control {
+    min-height: 104px;
+    margin: 0 16px 16px 0;
+    border-radius: 24px;
+}
+
+.settings-menu {
+    max-width: 1000px;
+    margin: 32px 0;
+    padding: 12px;
+    border-radius: 28px;
+    background: rgba(8, 8, 10, 0.30);
+}
+
+.settings-menu .menu-control,
+.player-menu .menu-control {
+    display: block;
+    width: 100%;
+    margin: 4px 0;
+    padding-right: 80px;
+    border-radius: 16px;
+    border-color: transparent;
+    background: transparent;
+}
+
+.settings-menu .menu-control::after {
+    content: "\203A";
+    position: absolute;
+    right: 28px;
+    top: 50%;
+    margin-top: -20px;
+    font-size: 32px;
+}
+
+.settings-menu [aria-pressed]::after {
+    content: "";
+    width: 24px;
+    height: 24px;
+    margin-top: -12px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+}
+
+.settings-menu [aria-pressed="true"]::after {
+    background: currentColor;
+    box-shadow: inset 0 0 0 5px #2c2c2e;
+}
+
+.settings-menu .menu-control:focus,
+.player-menu .menu-control:focus {
+    background: #f7fafc;
+    color: #08080a;
+}
+
+.player-menu {
+    border-radius: 28px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.screen::-webkit-scrollbar,
+.player-menu::-webkit-scrollbar {
+    width: 6px;
+}
+.screen::-webkit-scrollbar-thumb,
+.player-menu::-webkit-scrollbar-thumb {
+    background: rgba(247, 250, 252, 0.30);
+    border-radius: 3px;
+}
+
 /* Detail page, after the LG hero: full-bleed backdrop, bottom-left column, white primary pill. */
 .detail-mode {
     padding: 0;

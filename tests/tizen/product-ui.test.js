@@ -112,6 +112,26 @@ async function run() {
         await settle();
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 1);
         assert.strictEqual(nativeCalls.length, 0, "Home must not start playback");
+        var navigation = window.document.querySelector(".home-navigation");
+        assert(navigation, "Home navigation belongs above the shelves, not below them");
+        assert(navigation.querySelector(".menu-icon-search"), "Search needs a visible icon");
+        assert(navigation.querySelector(".menu-icon-settings"), "Settings needs a visible icon");
+        assert(window.document.querySelector(".library-button.menu-icon-library"), "Library choices need icons");
+        click("Settings");
+        assert(window.document.querySelector(".settings-menu"), "Settings uses a grouped menu surface");
+        assert(window.document.querySelector('.settings-menu button[aria-pressed="true"]'),
+            "Selected settings must be visible independently of focus");
+        var autoNext = Array.from(window.document.querySelectorAll(".settings-menu button")).find(function (node) {
+            return node.textContent === "Auto-play next episode: Off";
+        });
+        autoNext.focus();
+        autoNext.click();
+        assert.strictEqual(window.document.activeElement.textContent, "Auto-play next episode: On",
+            "Changing a preference must retain remote focus on that row");
+        assert.strictEqual(window.document.activeElement.getAttribute("aria-pressed"), "true");
+        click("Auto-play next episode: On");
+        click("Back");
+        await settle();
         click("Movies");
         await settle();
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 50);
@@ -188,7 +208,9 @@ async function run() {
         assert.strictEqual(nativeCalls.filter(function (call) { return call === "open"; }).length, opens,
             "Foregrounding must never start playback automatically");
         assert(window.document.querySelector(".synopsis"), "Foreground recovery must restore fresh details");
-        assert.strictEqual(window.localStorage.length, 1, "Only the non-secret device identifier is stored");
+        assert.strictEqual(window.localStorage.length, 2, "Only the device identifier and explicitly saved preferences are stored");
+        assert(window.localStorage.getItem("plx-tizen-preferences"));
+        assert.strictEqual(window.localStorage.getItem("plx-tizen-account"), null, "Preference changes must not persist account credentials");
         console.log("Tizen host DOM product journey: 250-item browse/search/details/playback/progress passed");
     } finally { dom.window.close(); }
 }
