@@ -133,13 +133,35 @@ async function run() {
         assert.strictEqual(nativeCalls.length, 0, "Home must not start playback");
         assert(window.document.querySelector('.home-navigation button[aria-current="page"]'),
             "Home must be a real selected destination alongside the libraries");
-        assert.strictEqual(window.document.querySelectorAll(".home-hero-description").length, 0,
-            "Home must prioritize browsing, not a large block of synopsis text");
+        assert.strictEqual(window.document.querySelectorAll(".home-hero-description").length, 1,
+            "The LG-style hero has a short synopsis, not a separate text panel");
+        assert(window.document.querySelector(".home-hero .home-feature-primary"),
+            "The feature needs a distinct primary action");
+        assert(window.document.querySelector(".account-control"),
+            "Utilities must be reachable from the top navigation");
+        var selectedHome = window.document.querySelector('.home-navigation button[aria-current="page"]');
+        selectedHome.focus();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
+        assert(window.document.activeElement.classList.contains("home-feature-primary"),
+            "Down from Home must reach the feature, not jump over it to a distant poster");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
+        assert(window.document.activeElement.classList.contains("media-card"),
+            "Down from the feature must reach the first shelf");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
+        assert(window.document.activeElement.classList.contains("home-feature-primary"),
+            "Up from the first shelf restores the visible feature");
+        assert(!window.document.querySelector("#screen").classList.contains("shelves-focused"));
         var navigation = window.document.querySelector(".home-navigation");
         assert(navigation, "Home navigation belongs above the shelves, not below them");
         assert(navigation.querySelector(".menu-icon-search"), "Search needs a visible icon");
         assert(window.document.querySelector(".home-utilities .menu-icon-settings"), "Settings needs a visible icon");
-        assert(window.document.querySelector(".library-button.menu-icon-library"), "Library choices need icons");
+        assert(window.document.querySelector(".library-button"), "Library choices need visible labels");
+        click("Account");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 27, bubbles: true }));
+        assert(window.document.querySelector(".home-utilities").hidden,
+            "Back must close account controls before leaving Home");
+        assert(window.document.activeElement.classList.contains("account-control"));
+        click("Account");
         click("Settings");
         assert(window.document.querySelector(".settings-menu"), "Settings uses a grouped menu surface");
         assert(window.document.querySelector('.settings-menu button[aria-pressed]'),
@@ -190,18 +212,31 @@ async function run() {
         window.document.querySelector(".media-card").click();
         await settle();
         assert(window.document.querySelector(".synopsis").textContent.includes("Synthetic metadata"));
+        assert(window.document.querySelector(".detail-expand"),
+            "A clamped synopsis must have a full-description route");
+        assert(window.document.querySelector(".detail-overflow[hidden]"),
+            "Secondary detail actions must not form a visible wall of pills");
+        click("Read more");
+        assert(window.document.querySelector(".detail-synopsis").classList.contains("expanded"));
+        click("Read less");
         assert.strictEqual(requests.filter(function (request) { return request.path === "/:/timeline"; }).length, 0);
         var mutations = function () {
             return requests.filter(function (request) {
                 return ["/:/scrobble", "/:/unscrobble", "/actions/removeFromContinueWatching"].indexOf(request.path) !== -1;
             });
         };
+        click("More");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 27, bubbles: true }));
+        assert(window.document.querySelector(".detail-overflow").hidden);
+        assert.strictEqual(window.document.activeElement.getAttribute("aria-label"), "More");
+        click("More");
         click("Mark unwatched");
         assert(window.document.body.textContent.includes("saved resume position"));
         assert.strictEqual(mutations().length, 0, "Opening a confirmation must not mutate Plex");
         click("Cancel");
         await settle();
         assert.strictEqual(mutations().length, 0, "Cancellation must not mutate Plex");
+        click("More");
         click("Mark watched");
         click("Confirm mark watched");
         Array.from(window.document.querySelectorAll("button")).find(function (node) {
@@ -209,9 +244,11 @@ async function run() {
         }).click();
         await settle();
         assert.strictEqual(mutations().length, 1, "Repeated confirmation must produce exactly one write");
+        click("More");
         click("Mark unwatched");
         click("Confirm mark unwatched");
         await settle();
+        click("More");
         click("Remove from Continue Watching");
         click("Confirm remove from continue watching");
         await settle();

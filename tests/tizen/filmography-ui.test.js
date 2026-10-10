@@ -16,6 +16,10 @@ Object.defineProperty(Node.prototype, "textContent", {
     set: function (value) { this.text = value; }
 });
 Node.prototype.removeChild = function (child) { this.children.splice(this.children.indexOf(child), 1); };
+Node.prototype.replaceChild = function (next, previous) {
+    this.children.splice(this.children.indexOf(previous), 1, next);
+    return previous;
+};
 Object.defineProperty(Node.prototype, "firstChild", { get: function () { return this.children[0]; } });
 Node.prototype.addEventListener = function (name, callback) { this.events[name] = callback; };
 Node.prototype.setAttribute = function () {};

@@ -57,6 +57,13 @@ are secondary. Closing player menus returns focus to More. Original-source metad
 PMS-reported stream and the requested transcode limit are now distinct; missing output metadata
 is not replaced with the chosen limit. Original direct play remains capability-gated and is not
 enabled by this UI work. These follow-up changes have not been installed or accepted on the TV.
+The next host-only revision follows the full LG application demo loop: full-bleed Home artwork,
+persistent capsule navigation, a top Account menu, explicit feature play/info/cycling, focused-only
+Home poster captions, expandable detail descriptions and secondary actions behind More.
+Season selection opens episodes directly. The [loop analysis](samsung-lg-loop-analysis.md)
+records the 27 timeline captures, composition measurements, interaction mapping and deviations;
+the loop does not show every LG screen. This revision remains uninstalled and cannot establish
+native rendering, playback performance or complete LG/official-Plex parity.
 The installed emulator has not launched on this Apple-Silicon host. Developer-signed application
 installation/launch has been observed on the owner's Samsung; that is an install/launch smoke
 result, not a pass for every redesigned screen, codec, performance target or retail model.

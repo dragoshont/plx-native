@@ -1,4 +1,7 @@
 {
+  "Next featured title": { "es": "Siguiente título destacado", "be": "Наступная выбраная назва" },
+  "Read more": { "es": "Leer más", "be": "Чытаць далей" },
+  "Read less": { "es": "Leer menos", "be": "Згарнуць" },
   "Connected through Plex relay (bandwidth limited).": { "es": "Conectado mediante el relay de Plex (ancho de banda limitado).", "be": "Падключана праз рэле Plex (абмежаваная прапускная здольнасць)." },
   "Not reported by server": { "es": "El servidor no lo indica", "be": "Сервер не паведаміў" },
   "Original source": { "es": "Archivo original", "be": "Арыгінальная крыніца" },

@@ -15,8 +15,9 @@ and quieter secondary actions. The poster shelf meets the hero rather than start
 isolated feature panel. In the shelf view, focused artwork grows and its title/remaining time
 become prominent without a heavy rectangular border around the whole card.
 
-Use those compositions as the Samsung target; do not treat the current boxed Home hero and
-bottom-of-page utilities as accepted equivalents. The source describes the loop as frame-by-frame
+Samsung now reproduces those compositions instead of the boxed Home hero and bottom-of-page
+utilities. The [loop analysis](../docs/samsung-lg-loop-analysis.md) records captured states,
+implementation mapping and deliberate deviations. The source describes the loop as frame-by-frame
 webOS simulator output from an openly licensed library. It is visual evidence, not independently
 observed LG hardware behavior or proof that Samsung rendering/playback matches it.
 The loop covers Home, a movie detail page and library navigation; it does not establish the
@@ -27,9 +28,9 @@ appearance or behavior of every settings, episode or playback menu.
 Near-black `#101012` ground, neutral `#222224` surfaces, white `#f2f2f7` foreground/focus,
 `#b8bfcc` secondary copy and pale-red explicit errors. Use the installed system sans-serif stack;
 do not download fonts. Ordinary screen copy is 24px or larger, page headings 48px, identity
-headings 56px and the Home feature title 64px at the 1920px reference viewport.
+headings 56px; cinematic Home/detail type scales with viewport height (Home title `7vh`).
 Button focus fills only the control with white and dark text, without an outer border or halo.
-Media focus uses a small lift, brighter artwork and an underlined title; it never frames the
+Media focus uses a small lift and brighter artwork; Home reveals only the focused caption. It never frames the
 whole poster and caption. Selected settings have a separate indicator. Transport controls use
 icons with retained accessible names; other controls keep visible labels.
 
@@ -40,10 +41,10 @@ icons with retained accessible names; other controls keep visible labels.
 | Sign-in and account recovery | Existing paired short code/QR and explicit consent/retry controls; automatic expiry renewal |
 | Profiles and PIN | Centred identities with circular initials; protected-profile marker; separate numeric PIN entry |
 | Servers and favourites | Structured selection rows, then grouped account/navigation actions |
-| Home | Selected Home destination alongside favourite libraries and Search; short featured title, poster shelves, service/account utilities below |
+| Home | Full-bleed feature, persistent Home/favourite-library/Search capsule, separate Account menu, explicit play/info/cycle controls and poster shelves |
 | Libraries and collections | Browse toolbar and six-column portrait grid; three-column landscape or square music artwork |
 | Search and people | Large search field, server-labelled shelves; biography/portrait and image/title credit rows |
-| Details | Cinematic art and scrim, two-line synopsis and primary action; square music/collection cover; extras and cast below |
+| Details | Cinematic art and scrim, expandable two-line synopsis, primary action and round restart/More controls; secondary actions hidden until requested; extras and cast below |
 | Watchlist and catalogue | Poster grid and selected filters; cover, metadata and explicit local-availability actions |
 | Guide and DVR | Provider selection, program rows, channel/date views, recording status and server-supplied preference fields |
 | Photos | Contained image above one grouped navigation/slideshow row |
@@ -59,7 +60,8 @@ or modern browser-only framework dependencies. Portrait grids reduce to four col
 revealed using rectangle-based nearest-edge scrolling, without depending on modern
 `scrollIntoView` options. Card focus is restored by media identity after a library page append.
 
-Do not initiate playback from a Home feature, biography or availability lookup. Resume uses the
+Displaying, focusing or cycling a Home feature never initiates playback. Its explicit Play/Continue
+button does; info opens details. Biography and availability lookups never play. Resume uses the
 PMS-selected on-deck **episode**, not its show ID. A missing on-deck episode leaves season browsing
 available. All watched-state, Watchlist and DVR changes retain explicit confirmation.
 Home episode shelves use the series poster when supplied, retaining episode number/title and

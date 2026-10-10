@@ -18,6 +18,12 @@ function Node(tag, text) {
 }
 Node.prototype.appendChild = function (child) { child.parentNode = this; this.children.push(child); return child; };
 Node.prototype.removeChild = function (child) { this.children.splice(this.children.indexOf(child), 1); child.parentNode = null; };
+Node.prototype.replaceChild = function (next, previous) {
+    this.children.splice(this.children.indexOf(previous), 1, next);
+    next.parentNode = this;
+    previous.parentNode = null;
+    return previous;
+};
 Object.defineProperty(Node.prototype, "firstChild", { get: function () { return this.children[0]; } });
 Node.prototype.addEventListener = function (name, callback) { this.events[name] = callback; };
 Node.prototype.setAttribute = function (name, value) { this.attributes[name] = value; };
