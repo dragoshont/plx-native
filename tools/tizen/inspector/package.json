@@ -1,0 +1,13 @@
+{
+  "name": "plx-samsung-inspector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bounded, read-only Samsung Web Inspector diagnostics",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test ../../../tests/tizen-inspector/*.test.js"
+  },
+  "dependencies": {
+    "ws": "8.21.0"
+  }
+}
