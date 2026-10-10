@@ -570,6 +570,7 @@
             try { window.PlexSession.forget(window.localStorage); }
             catch (error) { storageError = true; }
         }
+        if (window.PlexRecents && !window.PlexRecents.reset(window.localStorage)) { storageError = true; }
         stopAuthorization();
         accountToken = "";
         accountClient = null;
@@ -1406,10 +1407,33 @@
         input.value = typeof savedQuery === "string" ? savedQuery : "";
         input.setAttribute("aria-label", "Search movies and television");
         screen.appendChild(input);
+        var recents = element("section", "search-recents");
         var results = element("div", "search-results");
+        function recentProfile() {
+            var profile = activeProfile || linkedProfile;
+            return profile && profile.uuid ? String(profile.uuid) : "default";
+        }
+        function renderRecents() {
+            clear(recents);
+            var terms = window.PlexRecents && !input.value.trim() ?
+                window.PlexRecents.load(window.localStorage, recentProfile()) : [];
+            recents.hidden = !terms.length;
+            if (!terms.length) { return; }
+            recents.appendChild(element("h3", "", translate("RECENT SEARCHES")));
+            terms.forEach(function (term) {
+                button(recents, term, function () { input.value = term; search(); }, true, "search");
+            });
+            button(recents, "Clear recent searches", function () {
+                window.PlexRecents.clear(window.localStorage, recentProfile());
+                renderRecents();
+                input.focus();
+            });
+        }
         function search() {
             var query = input.value.trim();
             if (!query) { setStatus("Enter a title to search.", true); input.focus(); return; }
+            if (window.PlexRecents) { window.PlexRecents.remember(window.localStorage, recentProfile(), query); }
+            recents.hidden = true;
             var searchGeneration = ++viewGeneration;
             cancelViewRequests();
             clear(results);
@@ -1485,12 +1509,15 @@
         }
         button(screen, "Search", search);
         button(screen, "Back", backView);
+        screen.appendChild(recents);
         screen.appendChild(results);
         input.addEventListener("keydown", function (event) {
             if (event.keyCode === 13) { event.preventDefault(); search(); }
         });
+        input.addEventListener("input", function () { if (!input.value.trim()) { clear(results); } renderRecents(); });
         restoreView = function () { openSearch(input.value); };
-        setStatus("Search results keep each server's identifiers and permissions.");
+        renderRecents();
+        setStatus("");
         focusFirst();
         if (typeof savedQuery === "string" && savedQuery) { search(); }
     }
@@ -2728,6 +2755,7 @@
             try {
                 window.PlexPreferences.reset(window.localStorage);
                 if (window.PlexFavorites) { window.PlexFavorites.reset(window.localStorage); }
+                if (window.PlexRecents) { window.PlexRecents.reset(window.localStorage); }
                 preferences = window.PlexPreferences.load(window.localStorage);
                 window.PlexI18n.setLanguage(preferences.language);
                 openSettings();

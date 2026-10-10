@@ -1562,6 +1562,22 @@ select:focus {
     font-size: 40px;
 }
 
+.search-recents {
+    margin: 24px 0 8px;
+}
+
+.search-recents[hidden] {
+    display: none;
+}
+
+.search-recents h3 {
+    margin: 0 0 16px;
+    font-size: 24px;
+    letter-spacing: 0.08em;
+    opacity: 0.72;
+}
+
+.search-recents .menu-control,
 .people-results .menu-control {
     margin: 0 16px 16px 0;
 }

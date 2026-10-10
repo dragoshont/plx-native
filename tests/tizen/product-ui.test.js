@@ -123,7 +123,7 @@ async function run() {
         });
     };
     ["js/plex-api.js", "js/avplay.js", "js/playback.js", "js/subtitles.js", "js/preferences.js",
-        "js/session.js", "js/item-menu.js", "js/file-info.js", "js/i18n.js", "main.js"].forEach(function (file) {
+        "js/session.js", "js/recents.js", "js/item-menu.js", "js/file-info.js", "js/i18n.js", "main.js"].forEach(function (file) {
         window.eval(fs.readFileSync(path.join(app, file), "utf8"));
     });
     function click(text) {
@@ -315,6 +315,8 @@ async function run() {
         click("Back to Home");
         await settle();
         click("Search");
+        assert(!window.document.body.textContent.includes("identifiers and permissions"),
+            "Search must not open on developer-facing copy");
         var searches = requests.filter(function (request) { return request.path === "/hubs/search"; }).length;
         click("Search"); await settle();
         assert.strictEqual(requests.filter(function (request) { return request.path === "/hubs/search"; }).length, searches,
@@ -322,6 +324,32 @@ async function run() {
         window.document.querySelector('input[type="search"]').value = "Synthetic";
         click("Search");
         await settle();
+        assert.strictEqual(window.document.querySelectorAll(".media-card").length, 1);
+        assert(!window.document.body.textContent.includes("identifiers and permissions"),
+            "Search results must not show developer-facing copy");
+        assert.deepStrictEqual(JSON.parse(window.localStorage.getItem("plx-tizen-recent-searches") || "{}")
+            [Object.keys(JSON.parse(window.localStorage.getItem("plx-tizen-recent-searches") || "{}"))[0]], ["Synthetic"],
+            "A search that ran is remembered for the profile");
+        var searchInput = window.document.querySelector('input[type="search"]');
+        searchInput.value = "";
+        searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+        var recentList = window.document.querySelector(".search-recents");
+        assert(recentList && !recentList.hidden, "An empty query shows the profile's recent searches");
+        assert(recentList.textContent.includes("RECENT SEARCHES"));
+        var recentButton = Array.from(recentList.querySelectorAll("button")).filter(function (node) {
+            return node.textContent === "Synthetic";
+        })[0];
+        assert(recentButton, "Each recent search is a focusable control");
+        assert(Array.from(recentList.querySelectorAll("button")).some(function (node) {
+            return node.textContent === "Clear recent searches";
+        }), "Recent searches can be cleared");
+        var searchesBefore = requests.filter(function (request) { return request.path === "/hubs/search"; }).length;
+        recentButton.click();
+        await settle();
+        assert.strictEqual(searchInput.value, "Synthetic", "A recent search fills the query");
+        assert(requests.filter(function (request) { return request.path === "/hubs/search"; }).length > searchesBefore,
+            "A recent search runs the search");
+        assert(window.document.querySelector(".search-recents").hidden, "Recents hide once a query is present");
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 1);
         window.document.querySelector(".media-card").click();
         assert.strictEqual(window.document.activeElement.textContent, "Back",
@@ -481,7 +509,9 @@ async function run() {
         assert.strictEqual(nativeCalls.filter(function (call) { return call === "open"; }).length, opens,
             "Foregrounding must never start playback automatically");
         assert(window.document.querySelector(".synopsis"), "Foreground recovery must restore fresh details");
-        assert.strictEqual(window.localStorage.length, 2, "Only the device identifier and explicitly saved preferences are stored");
+        assert.strictEqual(window.localStorage.length, 3,
+            "Only the device identifier, explicitly saved preferences and recent searches are stored");
+        assert(window.localStorage.getItem("plx-tizen-recent-searches"));
         assert(window.localStorage.getItem("plx-tizen-preferences"));
         assert.strictEqual(window.localStorage.getItem("plx-tizen-account"), null, "Preference changes must not persist account credentials");
         movie.type = "show";
