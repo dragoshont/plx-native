@@ -413,6 +413,48 @@ depends on them.
 | Initial distribution promise? | Developer-mode sideload for engineering only; public store path unresolved. |
 | Plex branding/name? | Independent, unofficial Plex client; conduct trademark/licensing review before public distribution or naming. |
 
+## 9A. LG comparison and remaining-work dashboard
+
+Source audit of this fork at `b6aa83a8`, not a claim about every upstream release or the official
+Plex client. Samsung results below are host/synthetic implementation evidence only. The historical
+[LG parity audit](parity-gaps.md) scopes itself to movies/shows and contains older paths and
+superseded assertions; current source takes precedence.
+
+| Feature | Actual LG source boundary | Samsung baseline and remaining work |
+|---|---|---|
+| Music and photos | `rust-modules/data/src/browse/mod.rs`, `SecKind::from_wire`, accepts only movie/show. Tests in `browse_fetch_state_tests.rs` explicitly reject artist/photo. Generic metadata/hub names are not playable screens. | Music queues/shuffle/repeat and photo slideshow exist on host. Server music PlayQueues, larger queues, native audio/image formats, interruption recovery and memory limits remain. These are new product features, not copied LG screens. |
+| Live TV/DVR | No `/livetv` or `/media/subscriptions` bindings found in Rust source; the LG parity audit excludes this domain. | Guide/grid and confirmed DVR operations exist on host. Tuner consumer allocation/keepalive/release, storage-location selection, conflict workflows and actual server/native acceptance remain. LG provides no tuner lifecycle to reuse. |
+| Watchlist | No Watchlist read/add/remove bindings found in Rust source. | Paged reads, confirmed mutations and exact-GUID local matches exist on host. Cloud/profile acceptance, packaged remote paging and recovery remain. |
+| Cloud catalogue | `rust-modules/plex/src/plex/discover.rs` implements person biographies and `CreditGroup` filmography, not general catalogue search or licensed playback. `rust-modules/data/src/person.rs` joins credits to local availability; unowned credits are not local playback targets. | Metadata search/details and local matching exist on host. Career paging remains capped; licensed/ad-supported streaming is blocked on authorization, DRM and ad contracts. A Discover module name does not prove AVOD support. |
+| Server queues and Up Next | `rust-modules/plex/src/plex/timeline.rs`, `create_play_queue`, POSTs `/playQueues` with `type=video`, continuous episodes, queue/item IDs and server identity. `rust-modules/media/src/route/plan.rs` retains queue projections. | Local music queue is not equivalent to a server PlayQueue. Reuse the identity/projection rules, but establish music-specific creation, mutation, paging and cleanup contracts rather than copying the video-only call. |
+| Localization | LG has English/Spanish/Belarusian catalogs under `locales/`; translated movie/show surfaces do not supply translations for the new media/service domains. | Static/conditional copy and named placeholders covered on host. Dynamic errors/composite copy, old-engine formatting and actual display text fit remain. |
+| Playback and lifecycle | `rust-modules/media/src/player/CLAUDE.md` documents bundled FFmpeg demux, access-unit queues, Starfish feed and ACB hardware-plane binding. Those are LG-specific native interfaces. | AVPlay is a separate adapter. Hidden-state stop and foreground no-auto-play are host exercised; codecs, HDR/audio/subtitles, seeks, process kill, standby and The Frame Art Mode need Samsung acceptance. LG device results cannot certify these. |
+
+**Reusable:** PMS/account identity separation, GUID versus local ratingKey boundaries, stream
+selection, timeline/queue identity and movie/show domain rules. The ES5 app currently reimplements
+these contracts; it does not execute the Rust core. LG GPU widgets, raw-socket/libcurl runtime and
+Starfish/ACB decoder integration are not drop-in Tizen Web code.
+
+### Remaining work by dependency
+
+These rows summarize the detailed unchecked tasks in section 10; they are not additional scope.
+No row is complete merely because its host fixtures pass.
+
+| Priority | Work | Completion evidence | Dependency/hold |
+|---|---|---|---|
+| 1 | Legacy bounded transport and old-engine compatibility | Timeout/body-size/token/redirect regressions plus oldest-target runtime exercise | Ordinary coding; runtime result needs supported emulator or named TV |
+| 2 | Server music PlayQueues and larger queues | Queue identity, paging/order/shuffle/repeat, transition and failure tests; native playback acceptance | Music-specific PMS contracts and authorized test records |
+| 3 | Dynamic localization, paging, focus/HUD and resource ceilings | Every screen's error/empty/retry/remote journeys; text-fit and measured memory | Host work first, then packaged runtime |
+| 4 | DVR destinations/conflict workflows | Server-provided settings/storage choices, explicit confirmation and ambiguous-failure handling; actual scheduling acceptance | Authorized named test profile/recording |
+| 5 | Live channel playback | Proven consumer allocation, keepalive and release on success/error/exit; no leaked tuner | Unresolved service lifecycle; no speculative tune action |
+| 6 | Licensed catalogue streaming | Authorized playable source, DRM/ad requirements and compliant native playback | Service/legal contract blocker, not solved by LG reuse |
+| 7 | CI/package checks and Windows/Ryzen emulator workflow | Host/ES5/source gates, manifest/credential checks; observed emulator launch/readiness/input/capture | Windows x64 tooling readiness unobserved; no installation here |
+| 8 | Model acceptance and release | Named firmware codec/lifecycle/performance register; signing/update/uninstall and release checks | Explicit signing/deploy/account-write/publish grants still required |
+
+**Not ready for a full-support claim:** the expanded host baseline is implemented, but live tuning,
+licensed catalogue streaming, legacy runtime compatibility and current-app Samsung acceptance
+remain open. Earlier feasibility probes are not acceptance of this application.
+
 ## 10. Unfinished product backlog
 
 This is the editable task list requested by the owner. Checked entries mean the named **host
