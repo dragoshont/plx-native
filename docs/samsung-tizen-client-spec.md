@@ -52,7 +52,7 @@ official-Plex parity.
 | Surface | Existing implementation/evidence | Required before completion |
 |---|---|---|
 | Account/profiles/servers | Synthetic short-code, PIN, scoped grants and recovery tests | Actual Plex and Samsung TLS/CORS, profile PIN acceptance, QR and relaunch checks |
-| Browse/search/details | Mock PMS and host DOM journeys; collections and local/catalogue people paths | Full remote navigation, search cancellation, large-library/image memory and text-fit evidence; catalogue filmography currently displays at most 200 credits |
+| Browse/search/details | Mock PMS and host DOM journeys; collections and local/catalogue people paths | Full remote navigation, search cancellation, large-library/image memory and text-fit evidence; catalogue filmography currently displays at most 200 credits and checks at most 500 local titles for availability |
 | Playback/progress | Fake AVPlay state/seek and PMS decision/timeline/read-back tests | Named-model native playback, direct/transcode, HDR/audio, native/external/burned subtitle matrix |
 | Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
 | Up Next/quality/versions | Source implementation with opt-in auto-next; multipart titles request a joined PMS transcode (`partIndex=-1`), never direct-play just the first file | Long sessions, interrupted transitions and actual server/native multipart joins, resume and completion |
@@ -435,6 +435,22 @@ selection, timeline/queue identity and movie/show domain rules. The ES5 app curr
 these contracts; it does not execute the Rust core. LG GPU widgets, raw-socket/libcurl runtime and
 Starfish/ACB decoder integration are not drop-in Tizen Web code.
 
+### LG capability parity (owner re-scope)
+
+The owner asked to target LG capability parity first, taking low-risk gaps before new domains.
+Each row compares source behaviour; Samsung evidence is host-only.
+
+| LG capability (source) | Samsung status |
+|---|---|
+| Person biography and catalogue credits (`discover.rs`) | Present: `personProfile`, `personCredits` |
+| Credit-to-local availability join (`person.rs` `guid_index`/`match_local` over `/library/people/{id}/media`, keyed by the GUID tail) | **Added:** `localCatalogueIndex`/`matchCredit`/`personLibraryIndex`. Held credits open the local item ("In this library"); others keep "Search libraries"; an unreadable or truncated index is reported, never shown as availability. `people.test.js` and `filmography-ui.test.js` (fails against the previous commit) |
+| Extras/trailers shelf, Play from beginning, Remove from Continue Watching, related items | Present |
+| Up Next via `/allLeaves` | Present (`nextEpisode`) |
+| Item context menu on cards (`item_menu.rs`: go to item/show, mark watched, play, play from start, trailer, remove from deck) | Gap: actions exist on detail only |
+| Continue Watching OK = Play vs Open details preference | Gap |
+| Video server PlayQueue (`timeline.rs` `create_play_queue`) | Gap: local episode advance only |
+| Alternate sources across servers (`/library/all?guid=…`) | Gap |
+
 ### Remaining work by dependency
 
 These rows summarize the detailed unchecked tasks in section 10; they are not additional scope.
@@ -487,7 +503,8 @@ Work directly through the dependency-ready items rather than waiting for a nativ
 - [x] Cancel view-owned reads and active response readers, including search/discovery clients; cancellation/deadline and signed-account journeys exercised on host.
 - [ ] Exercise repeated Back/search/sign-out under packaged-runtime network loss and retry.
 - [ ] Test and fix every screen's remote focus, scroll restoration, loading/empty/error and retry paths.
-- [ ] Complete person/crew career paging beyond the 200-credit display cap and catalogue-to-local availability lookup.
+- [x] Join catalogue credits to this server's titles by GUID tail, as LG `person.rs` does; held credits open the local item. Host helper and DOM journey tested (500-title index cap reported).
+- [ ] Complete person/crew career paging beyond the 200-credit display cap and the 500-title local index cap.
 - [ ] Finish collection/library paging and search type/group completeness, including older PMS response variants.
 - [x] Add explicitly user-initiated watched/unwatched and remove-from-Continue-Watching actions with confirmation, duplicate-click prevention and synthetic writes only. Sources: `docs/pms-api.md` §timeline and `rust-modules/plex/src/plex/hubs.rs`.
 - [ ] Verify explicit watch actions against a named authorized test profile/item, including show/season leaf behavior and metadata refresh failures.

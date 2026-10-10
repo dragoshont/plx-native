@@ -45,6 +45,28 @@
         throw new Error("PMS response is missing the " + field + " list.");
     }
 
+    // Discover credits name a title by its bare catalogue id, while PMS names it plex://movie/<id>
+    // or plex://show/<id>; only the last path segment is the same on both sides.
+    function guidTail(value) {
+        var text = String(value || "");
+        return text.slice(text.lastIndexOf("/") + 1);
+    }
+
+    function localCatalogueIndex(items) {
+        var index = {};
+        (items || []).forEach(function (item) {
+            if (!item || (item.type !== "movie" && item.type !== "show") || !item.guid || !item.ratingKey) { return; }
+            var tail = guidTail(item.guid);
+            if (tail && !Object.prototype.hasOwnProperty.call(index, tail)) { index[tail] = String(item.ratingKey); }
+        });
+        return index;
+    }
+
+    function matchCredit(index, catalogueRatingKey) {
+        var tail = guidTail(catalogueRatingKey);
+        return tail && index && Object.prototype.hasOwnProperty.call(index, tail) ? index[tail] : null;
+    }
+
     function requestCancelled() {
         var error = new Error("The request was cancelled.");
         error.code = "cancelled";
@@ -702,6 +724,23 @@
                     "X-Plex-Container-Size": 50, "X-Plex-Container-Start": start || 0
                 });
             },
+            personLibraryIndex: function (personId) {
+                var items = [];
+                var limit = 500;
+                var self = this;
+                function page(start) {
+                    return self.getPerson(null, personId, start).then(function (container) {
+                        var rows = listFrom(container, "Metadata");
+                        items = items.concat(rows);
+                        var total = Number(container.totalSize);
+                        if (rows.length && items.length < limit && (!isFinite(total) || start + rows.length < total)) {
+                            return page(start + rows.length);
+                        }
+                        return { index: localCatalogueIndex(items), complete: !(items.length >= limit && (!isFinite(total) || total > items.length)) };
+                    });
+                }
+                return page(0);
+            },
             search: function (query) {
                 if (!String(query || "").trim() || String(query).length > 200) {
                     return Promise.reject(new Error("Enter a search of 1 to 200 characters."));
@@ -854,6 +893,8 @@
         createAuthClient: createAuthClient,
         createAccountClient: createAccountClient,
         selectServer: selectServer,
-        validateBaseUrl: validateBaseUrl
+        validateBaseUrl: validateBaseUrl,
+        localCatalogueIndex: localCatalogueIndex,
+        matchCredit: matchCredit
     };
 }));

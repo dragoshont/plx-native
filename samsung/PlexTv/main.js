@@ -1133,24 +1133,39 @@
             }).catch(function (error) {
                 if (generation === viewGeneration) { screen.appendChild(element("p", "inline-error", error.message)); }
             });
-            accountClient.personCredits(person.tagKey).then(function (groups) {
+            var localIndex = client.personLibraryIndex(person.id).catch(function () { return null; });
+            Promise.all([accountClient.personCredits(person.tagKey), localIndex]).then(function (results) {
+                var groups = results[0];
+                var local = results[1];
                 if (generation !== viewGeneration) { return; }
                 var shown = 0;
+                var held = 0;
                 groups.slice(0, 20).forEach(function (group) {
                     if (shown >= 200) { return; }
                     screen.appendChild(element("h3", "", group.title || "Credits"));
                     (group.Credit || []).slice(0, 200 - shown).forEach(function (credit) {
                         var title = credit.Metadata;
                         if (!title) { return; }
-                        button(screen, (title.title || "Untitled") + (title.year ? " / " + title.year : "") +
-                            (credit.role ? " / " + credit.role : "") + " / Search libraries", function () {
-                            visit(function () { openSearch(title.title); });
-                        }, true);
+                        var label = (title.title || "Untitled") + (title.year ? " / " + title.year : "") +
+                            (credit.role ? " / " + credit.role : "");
+                        var ratingKey = local && window.PlexApi.matchCredit(local.index, title.ratingKey);
+                        if (ratingKey) {
+                            held += 1;
+                            button(screen, label + " / " + translate("In this library"), function () {
+                                visit(function () { openDetail(ratingKey, client); });
+                            }, true);
+                        } else {
+                            button(screen, label + " / " + translate("Search libraries"), function () {
+                                visit(function () { openSearch(title.title); });
+                            }, true);
+                        }
                         shown += 1;
                     });
                 });
-                setStatus((shown >= 200 ? "Showing the first 200 credits. " : "") +
-                    "Catalogue credits are not server rating keys. Search libraries to find an available version.");
+                setStatus((shown >= 200 ? translate("Showing the first 200 credits.") + " " : "") +
+                    (local ? translate("{count} credits are in this library.", { count: held }) +
+                        (local.complete ? "" : " " + translate("Only the first 500 local titles were checked.")) :
+                        translate("This server's titles could not be checked. Search libraries to find an available version.")));
             }).catch(function (error) {
                 if (generation === viewGeneration) { screen.appendChild(element("p", "inline-error", error.message)); }
             });

@@ -216,5 +216,11 @@
   "Some servers could not be searched. Retry or change server.": { "es": "No se buscaron algunos servidores. Reintenta o cambia de servidor.", "be": "Некаторыя серверы не правераныя. Паўтарыце спробу або змяніце сервер." },
   "Showing 200 results. Refine your search for more.": { "es": "Se muestran 200 resultados. Refina la búsqueda para ver más.", "be": "Паказана 200 вынікаў. Удакладніце пошук для іншых вынікаў." },
   "Direct play with an explicitly evidenced capability profile.": { "es": "Reproducción directa con un perfil de capacidades verificado.", "be": "Прамое прайграванне з правераным профілем магчымасцей." },
-  "This server advertises no Live TV provider. Configure a supported tuner and check this profile's permissions in Plex.": { "es": "El servidor no anuncia TV en directo. Configura un sintonizador compatible y comprueba los permisos del perfil.", "be": "Сервер не абвяшчае правайдара жывога ТБ. Наладзьце сумяшчальны цюнар і праверце дазволы профілю." }
+  "This server advertises no Live TV provider. Configure a supported tuner and check this profile's permissions in Plex.": { "es": "El servidor no anuncia TV en directo. Configura un sintonizador compatible y comprueba los permisos del perfil.", "be": "Сервер не абвяшчае правайдара жывога ТБ. Наладзьце сумяшчальны цюнар і праверце дазволы профілю." },
+  "In this library": { "es": "En esta biblioteca", "be": "У гэтай бібліятэцы" },
+  "Search libraries": { "es": "Buscar en bibliotecas", "be": "Шукаць у бібліятэках" },
+  "Showing the first 200 credits.": { "es": "Se muestran los primeros 200 créditos.", "be": "Паказаны першыя 200 работ." },
+  "{count} credits are in this library.": { "es": "{count} créditos están en esta biblioteca.", "be": "Работ у гэтай бібліятэцы: {count}." },
+  "Only the first 500 local titles were checked.": { "es": "Solo se comprobaron los primeros 500 títulos locales.", "be": "Правераны толькі першыя 500 лакальных назваў." },
+  "This server's titles could not be checked. Search libraries to find an available version.": { "es": "No se pudieron comprobar los títulos de este servidor. Busca en las bibliotecas una versión disponible.", "be": "Не ўдалося праверыць назвы гэтага сервера. Шукайце даступную версію ў бібліятэках." }
 }
