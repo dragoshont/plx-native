@@ -103,6 +103,39 @@ See the [product specification](samsung-tizen-client-spec.md) for current featur
 acceptance gaps, and the [development process](samsung-tizen-development-process.md) for the reusable
 workflow. The installed x86_64 Tizen 10 emulator did not launch on this Apple-Silicon host.
 
+### Mac emulator: acceleration and Apple Silicon
+
+Research checked 2026-10-10; this is source evidence, not a newly observed emulator launch.
+Tizen's [Emulator Manager guide](https://docs.tizen.org/application/tizen-studio/common-tools/emulator-manager/)
+distinguishes **GPU acceleration** from **CPU VT**. Turning off GPU acceleration can address
+graphics problems; it does not supply Intel CPU virtualization on an ARM Mac. The documented
+[host prerequisites](https://docs.tizen.org/application/tizen-studio/setup/prerequisites/)
+list x64 hosts, and the [emulator guide](https://docs.tizen.org/application/tizen-studio/common-tools/emulator/)
+describes x86 guests with KVM/HAX acceleration. These are the documented legacy requirements,
+not proof that a future ARM release cannot exist.
+
+Public reports corroborate the architecture gap: in
+[Samsung/Tizen.Issues#23](https://github.com/Samsung/Tizen.Issues/issues/23), a Samsung reply
+on 2025-09-18 says Apple Silicon ARM emulation is unsupported. In
+[Samsung/Tizen.Issues#117](https://github.com/Samsung/Tizen.Issues/issues/117), an M4 Pro user
+reports installed TV emulator packages that cannot launch; Samsung replies on 2026-07-15/16
+acknowledge missing Silicon Mac QEMU support and announce an October release. That announcement
+does not establish that the release has shipped or works with our installed SDK. Recheck the
+actual release/package version before upgrading; installation changes require owner approval.
+
+No source-backed, successfully reproduced CPU software-emulation recipe was established in
+this investigation. CPU VT being described as a speed setting is not enough to prove that
+disabling it runs the installed TV image on ARM. Do not present a GPU-off switch as a verified
+workaround. CrossOver is also not an established solution: [CodeWeavers describes it as Windows
+API translation, not an emulator](https://www.codeweavers.com/crossover); that alone provides
+neither a supported Tizen guest nor Intel VT-x. This is an architectural assessment, not an
+observed CrossOver failure.
+
+Practical alternatives are a supported x64 host with working virtualization, or authorized
+testing on a physical Samsung TV. A browser preview remains useful for UI work but does not
+replace the TV emulator or native AVPlay evidence. Keep the TV off during source research;
+turn it on only for a scheduled, authorized device session.
+
 Credentials stay in memory unless a user explicitly selects **remember-me**. That option stores
 the account token **unencrypted** in Web Storage; leave it off on shared or untrusted TVs.
 Sign-out deletes the saved token; if deletion fails the app warns that its data must be cleared.
