@@ -446,10 +446,11 @@ Each row compares source behaviour; Samsung evidence is host-only.
 | Credit-to-local availability join (`person.rs` `guid_index`/`match_local` over `/library/people/{id}/media`, keyed by the GUID tail) | **Added:** `localCatalogueIndex`/`matchCredit`/`personLibraryIndex`. Held credits open the local item ("In this library"); others keep "Search libraries"; an unreadable or truncated index is reported, never shown as availability. `people.test.js` and `filmography-ui.test.js` (fails against the previous commit) |
 | Extras/trailers shelf, Play from beginning, Remove from Continue Watching, related items | Present |
 | Up Next via `/allLeaves` | Present (`nextEpisode`) |
-| Item context menu on cards (`item_menu.rs`: go to item/show, mark watched, play, play from start, trailer, remove from deck) | Gap: actions exist on detail only |
-| Continue Watching OK = Play vs Open details preference | Gap |
-| Video server PlayQueue (`timeline.rs` `create_play_queue`) | Gap: local episode advance only |
-| Alternate sources across servers (`/library/all?guid=…`) | Gap |
+| Item context menu on cards (`item_menu.rs`: go to item/show, mark watched, play, play from start, trailer, remove from deck) | **Added:** `js/item-menu.js`. Holding OK (600 ms), Tools or Info opens it; Play/Resume is always the first row and never a write; Cancel returns focus to the card. A short OK opens the card on key-up. `lg-parity.test.js`, `lg-parity-ui.test.js`. Physical Enter key-up delivery is unverified on a TV |
+| Continue Watching OK = Play vs Open details preference | **Added:** `continueAction` preference, default Open details, as on LG |
+| Video server PlayQueue (`timeline.rs` `create_play_queue`) | **Added:** `createVideoPlayQueue` POSTs `/playQueues` (`type=video`, continuous for episodes); timelines carry `playQueueID`/`playQueueItemID`. A queue failure falls back to plain playback. Creating a queue is a server write: fakes only until an authorized test profile exists |
+| Alternate sources across servers (`/library/all?guid=…`) | **Added:** "Other servers" on movie/show detail, which excludes the current server and labels each copy with server, library and resolution. OK opens that server's detail page; the playing copy is never swapped |
+| Favorite libraries onboarding (`screens/src/onboard.rs` first-run step, then Settings) | **Added:** `js/favorites.js`. First visit to each server offers the step; Skip writes nothing and at least one library stays selected; hidden libraries also drop their Home shelves. Sign-in is the existing plex.tv PIN link and profile picker |
 
 ### Remaining work by dependency
 

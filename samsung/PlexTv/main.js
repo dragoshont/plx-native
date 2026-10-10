@@ -4,6 +4,9 @@
     var screen = document.getElementById("screen");
     var status = document.getElementById("status");
     var currentClient = null;
+    var currentServerId = "";
+    var holdCard = null;
+    var holdTimer = null;
     var currentSection = null;
     var currentItems = [];
     var currentOffset = 0;
@@ -41,7 +44,7 @@
     var viewClients = [];
     var suspendedView = null;
     var foregroundRecovery = null;
-    var preferences = { quality: "1080", autoNext: false, language: "en" };
+    var preferences = { quality: "1080", autoNext: false, language: "en", continueAction: "details" };
     var preferenceError = "";
     var pendingRestore = null;
     if (window.PlexPreferences) {
@@ -117,8 +120,14 @@
         }
     }
 
-    function card(parent, item, client, siblings) {
+    function card(parent, item, client, siblings, options) {
+        options = options || {};
         var node = button(parent, "", function () {
+            if (options.deck && preferences.continueAction === "play" &&
+                    ["movie", "episode", "clip"].indexOf(item.type) !== -1) {
+                playFromCard(item, client, true);
+                return;
+            }
             visit(function () {
                 if (item.type === "photo") {
                     var photos = (siblings || [item]).filter(function (entry) { return entry.type === "photo"; });
@@ -127,6 +136,7 @@
             });
         });
         node.className = "media-card";
+        node.plexCard = { item: item, client: client, options: options };
         var image = element("img", "poster");
         image.alt = item.title || "Media";
         node.appendChild(image);
@@ -353,6 +363,7 @@
         accountClient = null;
         servers = [];
         currentClient = null;
+        currentServerId = "";
         currentItems = [];
         currentSection = null;
         usingRelay = false;
@@ -394,8 +405,9 @@
                     } }).then(function (selected) {
                         if (selection !== viewGeneration) { return; }
                         currentClient = selected.client;
+                        currentServerId = server.id;
                         usingRelay = selected.relay;
-                        loadHome(false);
+                        if (needsFavoritesOnboarding()) { openFavorites(true); } else { loadHome(false); }
                     }).catch(function (error) {
                         if (selection !== viewGeneration) { return; }
                         if (!recoverSession(error)) { setStatus(error.message, true); }
@@ -541,6 +553,7 @@
         stopAuthorization();
         setStatus("Connecting…");
         try {
+            currentServerId = "";
             currentClient = window.PlexApi.createClient({
                 baseUrl: serverUrl,
                 token: token
@@ -552,6 +565,142 @@
         }
 
         loadHome(true);
+    }
+
+    function playFromCard(item, client, resume) {
+        setStatus("Loading details...");
+        var generation = viewGeneration;
+        client.getMetadata(item.ratingKey).then(function (metadata) {
+            if (generation !== viewGeneration || player) { return; }
+            startPlayer(metadata, client, resume ? metadata.viewOffset || 0 : 0);
+        }).catch(function (error) {
+            if (generation === viewGeneration) { setStatus(error.message, true); }
+        });
+    }
+
+    // The LG card hold menu: long-press OK (or the Tools/Info key) on a card. Every write still
+    // goes through the explicit confirmation screen.
+    function openItemMenu(node) {
+        var info = node && node.plexCard;
+        if (!info || !window.PlexItemMenu) { return false; }
+        var rows = window.PlexItemMenu.rows(info.item, {
+            deck: !!info.options.deck, continueAction: preferences.continueAction
+        });
+        if (!rows.length) { return false; }
+        var old = document.getElementById("player-menu");
+        if (old) { old.parentNode.removeChild(old); }
+        var menu = element("section", "player-menu");
+        menu.id = "player-menu";
+        menu.appendChild(element("h2", "", info.item.title || translate("Selected item")));
+        var item = info.item;
+        var client = info.client;
+        function close() {
+            if (menu.parentNode) { menu.parentNode.removeChild(menu); }
+        }
+        rows.forEach(function (row) {
+            button(menu, row.label, function () {
+                close();
+                if (row.id === "play" || row.id === "start") {
+                    playFromCard(item, client, row.id === "play");
+                } else if (row.id === "details") {
+                    visit(function () { openDetail(item.ratingKey, client); });
+                } else if (row.id === "show") {
+                    visit(function () { openDetail(item.grandparentRatingKey, client); });
+                } else if (row.id === "season") {
+                    visit(function () { openDetail(item.parentRatingKey, client); });
+                } else {
+                    confirmWatchAction(item, client, row.id);
+                }
+            });
+        });
+        button(menu, "Cancel", function () { close(); node.focus(); });
+        screen.appendChild(menu);
+        menu.querySelector("button").focus();
+        return true;
+    }
+
+    function favoriteKeys() {
+        if (!currentServerId || !window.PlexFavorites) { return null; }
+        try { return window.PlexFavorites.load(window.localStorage, currentServerId); }
+        catch (error) { return null; }
+    }
+
+    function needsFavoritesOnboarding() {
+        if (!currentServerId || !window.PlexFavorites) { return false; }
+        try { return window.PlexFavorites.load(window.localStorage, currentServerId) === null; }
+        catch (error) { return false; }
+    }
+
+    // LG's onboarding "Favorite libraries" step: choose which libraries Home shows for this
+    // server. Shown once per server after selection; Settings reopens it as an editor. Nothing
+    // is written to Plex; the choice is stored on this TV only.
+    function openFavorites(firstRun) {
+        var generation = ++viewGeneration;
+        clear(screen);
+        resetImages();
+        restoreView = function () { openFavorites(firstRun); };
+        screen.appendChild(element("h2", "", translate("Favorite libraries")));
+        setStatus("Loading libraries...");
+        currentClient.getSections().then(function (sections) {
+            if (generation !== viewGeneration) { return; }
+            sections = sections.filter(function (section) {
+                return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
+            });
+            if (!sections.length) { loadHome(false); return; }
+            var saved = favoriteKeys();
+            var all = sections.map(function (section) { return String(section.key); });
+            var chosen = (saved || all).filter(function (key) { return all.indexOf(key) !== -1; });
+            if (!chosen.length) { chosen = all.slice(); }
+            var initial = chosen.slice().sort().join(",");
+            screen.appendChild(element("p", "help-text", translate(firstRun ?
+                "Choose the libraries Home shows. You can change this later in Settings." :
+                "Choose the libraries Home shows on this server.")));
+            var done;
+            function refreshDone() {
+                if (!done) { return; }
+                done.disabled = !firstRun && chosen.slice().sort().join(",") === initial;
+            }
+            sections.forEach(function (section) {
+                var key = String(section.key);
+                var toggle = button(screen, "", function () {
+                    var index = chosen.indexOf(key);
+                    if (index !== -1) {
+                        if (chosen.length === 1) { setStatus("Keep at least one library.", true); return; }
+                        chosen.splice(index, 1);
+                    } else { chosen.push(key); }
+                    paint();
+                    refreshDone();
+                });
+                function paint() {
+                    toggle.textContent = (chosen.indexOf(key) !== -1 ? "[x] " : "[ ] ") + (section.title || key);
+                    toggle.setAttribute("aria-pressed", chosen.indexOf(key) !== -1 ? "true" : "false");
+                }
+                paint();
+            });
+            done = button(screen, firstRun ? "Start watching" : "Done", function () {
+                try {
+                    window.PlexFavorites.save(window.localStorage, currentServerId, chosen);
+                } catch (error) { setStatus(error.message === "Keep at least one library." ? error.message :
+                    "Could not save favorite libraries. Check app storage permissions.", true); return; }
+                navigation.length = 0;
+                restoreView = null;
+                loadHome(false);
+            });
+            refreshDone();
+            button(screen, firstRun ? "Skip for now" : "Back", function () {
+                if (firstRun) { navigation.length = 0; restoreView = null; loadHome(false); }
+                else { backView(); }
+            });
+            setStatus(firstRun ? "Nothing is saved until you choose Start watching." : "Toggle libraries, then choose Done.");
+            focusFirst();
+        }).catch(function (error) {
+            if (generation !== viewGeneration) { return; }
+            if (recoverSession(error)) { return; }
+            if (firstRun) { loadHome(false); return; }
+            setStatus(error.message, true);
+            button(screen, "Back", backView);
+            focusFirst();
+        });
     }
 
     function loadHome(showConnectOnError) {
@@ -589,9 +738,11 @@
         if (!sections.length) {
             sectionPanel.appendChild(element("p", "empty-state", translate("No libraries were returned by this server.")));
         }
-        sections.filter(function (section) {
+        var favorites = favoriteKeys();
+        var browsable = sections.filter(function (section) {
             return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
-        }).forEach(function (section) {
+        });
+        (window.PlexFavorites ? window.PlexFavorites.filter(browsable, favorites) : browsable).forEach(function (section) {
             var button = element("button", "library-button", section.title || "Untitled library");
             button.type = "button";
             button.addEventListener("click", function () {
@@ -606,12 +757,16 @@
         if (!hubs.length) {
             hubPanel.appendChild(element("p", "empty-state", translate("No Home shelves were returned.")));
         }
-        hubs.forEach(function (hub) {
+        hubs.filter(function (hub) {
+            return !favorites || hub.librarySectionID === undefined ||
+                favorites.indexOf(String(hub.librarySectionID)) !== -1;
+        }).forEach(function (hub) {
+            var deck = !!(window.PlexItemMenu && window.PlexItemMenu.isDeckHub(hub));
             var hubSection = element("section", "shelf");
             hubSection.appendChild(element("h3", "hub-title", hub.title || "Plex shelf"));
             var metadata = Array.isArray(hub.Metadata) ? hub.Metadata : [];
             metadata.slice(0, 12).forEach(function (item) {
-                if (item.ratingKey) { card(hubSection, item, currentClient); }
+                if (item.ratingKey) { card(hubSection, item, currentClient, null, { deck: deck }); }
             });
             hubPanel.appendChild(hubSection);
         });
@@ -626,11 +781,12 @@
         disconnect.type = "button";
         disconnect.addEventListener("click", function () {
             currentClient = null;
+            currentServerId = "";
             if (accountClient) { openServers(); } else { addConnectForm(""); }
         });
         screen.appendChild(disconnect);
         setStatus((usingRelay ? "Connected through Plex relay (bandwidth limited). " : "Connected. ") +
-            "Select a title for details. Playback starts only when you choose Play.");
+            "Select a title for details. Hold OK on a card for more actions.");
         focusFirst();
     }
 
@@ -1017,6 +1173,16 @@
                     function () { openDetail(item.ratingKey, client); });
             });
         }
+        if (plexGuid && currentServerId && client === currentClient && servers.length > 1 && (item.type === "movie" || item.type === "show")) {
+            var copyGuid = typeof plexGuid === "string" ? plexGuid : plexGuid.id;
+            button(screen, "Other servers", function () {
+                visit(function () {
+                    findCatalogueItem({ type: item.type, guid: copyGuid, title: item.title }, {
+                        exclude: currentServerId, title: "Other servers", labelled: true
+                    });
+                });
+            });
+        }
         (item.Role || []).concat(item.Director || [], item.Writer || []).slice(0, 60).forEach(function (person) {
             button(screen, (person.tag || "Cast") + (person.role ? " / " + person.role : ""), function () {
                 visit(function () {
@@ -1205,9 +1371,15 @@
         });
     }
 
-    function findCatalogueItem(item) {
-        var generation = serviceView("Find in my libraries", function () { findCatalogueItem(item); });
-        var targets = servers.length ? servers.slice() : [null];
+    // Exact plex:// GUID matches across reachable servers. "Other servers" (the LG alternate
+    // sources panel) excludes the server you are on and labels each copy with its server and
+    // resolution; OK opens that server's own detail page rather than swapping the playing copy,
+    // because a resume position belongs to one copy.
+    function findCatalogueItem(item, options) {
+        options = options || {};
+        var generation = serviceView(options.title || "Find in my libraries", function () { findCatalogueItem(item, options); });
+        var targets = servers.length ? servers.filter(function (server) { return server.id !== options.exclude; }) : [null];
+        if (!targets.length) { setStatus("No other servers are available to this profile."); return; }
         var index = 0, active = 0, finished = 0, shown = 0, failed = 0;
         function pump() {
             while (active < 2 && index < targets.length) {
@@ -1228,6 +1400,12 @@
                                         return client.findGuid(section.key, item.guid).then(function (items) {
                                             if (generation !== viewGeneration) { return; }
                                             items.slice(0, 200 - shown).forEach(function (match) {
+                                                if (options.labelled) {
+                                                    var media = (match.Media || [])[0] || {};
+                                                    screen.appendChild(element("p", "card-meta", [server ? server.name : "",
+                                                        section.title, media.videoResolution ? media.videoResolution + (/^[0-9]+$/.test(media.videoResolution) ? "p" : "") : ""]
+                                                        .filter(Boolean).join(" / ")));
+                                                }
                                                 card(screen, match, client); shown += 1;
                                             });
                                         });
@@ -1244,7 +1422,8 @@
                             if (generation !== viewGeneration) { return; }
                             if (finished === targets.length) {
                                 setStatus(failed ? "Some libraries could not be checked. Availability is incomplete." :
-                                    shown ? "Exact Plex GUID matches in your libraries." : "This title is not available in the checked libraries.");
+                                    shown ? (options.labelled ? "Other copies of this title. Each copy keeps its own resume position." :
+                                        "Exact Plex GUID matches in your libraries.") : "This title is not available in the checked libraries.");
                                 focusFirst();
                             } else { pump(); }
                         });
@@ -1417,6 +1596,13 @@
                     }
                 }
             });
+            if ((item.type === "movie" || item.type === "episode") && currentServerId &&
+                    client === currentClient && client.createVideoPlayQueue) {
+                var queueSettings = playerSettings;
+                client.createVideoPlayQueue(currentServerId, item.ratingKey).then(function (queue) {
+                    if (playerSettings === queueSettings) { queueSettings.playQueue = queue; }
+                }).catch(function () { /* the queue is optional; playback and progress continue without it */ });
+            }
             ownPlayer = window.PlexPlayback.create({
                 adapter: adapter, client: client, item: item, settings: playerSettings,
                 onEvent: function (event) {
@@ -1602,10 +1788,12 @@
         if (playerItem.type === "track" && musicQueue) { skipMusic(1, true); return; }
         var item = playerItem;
         var client = playerClient;
+        var queue = playerSettings && playerSettings.playQueue;
         stopPlayer(function () {
             renderDetail(item, client);
             var generation = viewGeneration;
-            client.nextEpisode(item).then(function (next) {
+            var successor = queueSuccessor(queue);
+            (successor ? Promise.resolve(successor) : client.nextEpisode(item)).then(function (next) {
                 if (!next || player || playerItem !== item || generation !== viewGeneration) { return; }
                 button(screen, "Up Next: " + next.title, function () {
                     if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
@@ -1624,6 +1812,19 @@
         });
     }
 
+    // The server's continuous play queue knows the next item (including across seasons);
+    // Plex's next-episode lookup is the fallback when no queue was created.
+    function queueSuccessor(queue) {
+        if (!queue || !queue.items) { return null; }
+        for (var index = 0; index < queue.items.length - 1; index += 1) {
+            if (String(queue.items[index].playQueueItemID) === String(queue.itemId)) {
+                var next = queue.items[index + 1];
+                return next && next.ratingKey && next.type === "episode" ? next : null;
+            }
+        }
+        return null;
+    }
+
     function openSettings() {
         viewGeneration += 1;
         clear(screen);
@@ -1639,6 +1840,15 @@
             preferences.autoNext = !preferences.autoNext;
             if (savePreferences()) { openSettings(); }
         });
+        button(screen, translate("Continue Watching: {state}", {
+            state: translate(preferences.continueAction === "play" ? "Play" : "Open details")
+        }), function () {
+            preferences.continueAction = preferences.continueAction === "play" ? "details" : "play";
+            if (savePreferences()) { openSettings(); }
+        });
+        if (currentClient && currentServerId) {
+            button(screen, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
+        }
         ["en", "es", "be"].forEach(function (language) {
             var names = { en: "English", es: "Español", be: "Беларуская" };
             button(screen, translate("Language") + ": " + names[language], function () {
@@ -1649,6 +1859,7 @@
         button(screen, "Reset preferences", function () {
             try {
                 window.PlexPreferences.reset(window.localStorage);
+                if (window.PlexFavorites) { window.PlexFavorites.reset(window.localStorage); }
                 preferences = window.PlexPreferences.load(window.localStorage);
                 window.PlexI18n.setLanguage(preferences.language);
                 openSettings();
@@ -1712,6 +1923,11 @@
         var active = document.activeElement;
         var editing = active && ((active.tagName === "INPUT" && active.type !== "checkbox") || active.tagName === "TEXTAREA");
         if (key === 13 && event.repeat) { event.preventDefault(); return; }
+        if ((key === 10135 || key === 457) && !player && active && active.plexCard) {
+            event.preventDefault();
+            openItemMenu(active);
+            return;
+        }
         if (key === 13 && active && active.type === "checkbox") {
             event.preventDefault();
             active.checked = !active.checked;
@@ -1752,15 +1968,41 @@
         } else if (key === 39) {
             event.preventDefault();
             moveFocus(1, key);
+        } else if (key === 13 && active && active.plexCard && !player) {
+            // A card waits for key-up: a short press opens it, a hold opens the action menu.
+            event.preventDefault();
+            cancelHold();
+            holdCard = active;
+            holdTimer = setTimeout(function () {
+                holdTimer = null;
+                if (holdCard === document.activeElement) { openItemMenu(holdCard); }
+                holdCard = null;
+            }, 600);
         } else if (key === 13 && active && active.tagName === "BUTTON") {
             event.preventDefault();
             active.click();
         }
     }
 
+    function cancelHold() {
+        if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
+        holdCard = null;
+    }
+
+    function onKeyUp(event) {
+        if (event.keyCode !== 13 || !holdCard) { return; }
+        var target = holdCard;
+        var short = holdTimer !== null;
+        cancelHold();
+        event.preventDefault();
+        if (short && target === document.activeElement) { target.click(); }
+    }
+
     document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
     document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
+            cancelHold();
             if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
             if (player) {
                 var item = playerItem;
@@ -1801,6 +2043,9 @@
         try {
             ["MediaPlay", "MediaPause", "MediaPlayPause", "MediaStop", "MediaFastForward", "MediaRewind"].forEach(function (name) {
                 window.tizen.tvinputdevice.registerKey(name);
+            });
+            ["Tools", "Info"].forEach(function (name) {
+                try { window.tizen.tvinputdevice.registerKey(name); } catch (ignore) { /* optional card-menu shortcut */ }
             });
         } catch (error) { setStatus("Some media keys could not be registered. Use on-screen playback controls.", true); }
     }

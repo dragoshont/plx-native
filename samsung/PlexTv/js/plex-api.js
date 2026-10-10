@@ -830,16 +830,40 @@
             removeContinueWatching: function (id) {
                 return get("/actions/removeFromContinueWatching", "PUT", { ratingKey: key(id) }, true);
             },
-            timeline: function (item, position, state, session) {
+            timeline: function (item, position, state, session, playQueue) {
                 if (["playing", "paused", "stopped", "buffering"].indexOf(state) === -1 ||
                         !isNonNegativeInteger(position)) {
                     return Promise.reject(new Error("Invalid playback timeline."));
                 }
-                return get("/:/timeline", "POST", {
+                var query = {
                     ratingKey: key(item.ratingKey), key: "/library/metadata/" + key(item.ratingKey),
                     identifier: "com.plexapp.plugins.library", time: position,
                     duration: item.duration || 0, state: state, session: session
-                }, true);
+                };
+                if (playQueue && /^[1-9][0-9]*$/.test(String(playQueue.id)) &&
+                        /^[1-9][0-9]*$/.test(String(playQueue.itemId))) {
+                    query.playQueueID = String(playQueue.id);
+                    query.playQueueItemID = String(playQueue.itemId);
+                }
+                return get("/:/timeline", "POST", query, true);
+            },
+            // An ephemeral server-side queue (no watch-state change) so the server's dashboard
+            // and Up Next agree with this client, as the LG client does for every video start.
+            createVideoPlayQueue: function (machineId, ratingKey) {
+                if (!/^[0-9A-Za-z_-]{1,80}$/.test(String(machineId || ""))) {
+                    return Promise.reject(new Error("The server identity is invalid."));
+                }
+                return get("/playQueues", "POST", {
+                    type: "video", continuous: 1, shuffle: 0, repeat: 0,
+                    uri: "server://" + machineId + "/com.plexapp.plugins.library/library/metadata/" + key(ratingKey)
+                }).then(function (container) {
+                    var id = String(container.playQueueID || "");
+                    var selected = String(container.playQueueSelectedItemID || "");
+                    if (!/^[1-9][0-9]*$/.test(id) || !/^[1-9][0-9]*$/.test(selected)) {
+                        throw new Error("Plex returned an invalid play queue.");
+                    }
+                    return { id: id, itemId: selected, items: listFrom(container, "Metadata") };
+                });
             },
             stopTranscode: function (session, kind) {
                 if (kind && ["video", "music"].indexOf(kind) === -1) { return Promise.reject(new Error("Invalid transcode kind.")); }

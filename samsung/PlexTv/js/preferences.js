@@ -7,15 +7,18 @@
     var key = "plx-tizen-preferences";
     function validate(value) {
         if (!value || ["720", "1080"].indexOf(value.quality) === -1 ||
-                ["en", "es", "be"].indexOf(value.language) === -1 || typeof value.autoNext !== "boolean") {
+                ["en", "es", "be"].indexOf(value.language) === -1 || typeof value.autoNext !== "boolean" ||
+                (value.continueAction !== undefined && ["details", "play"].indexOf(value.continueAction) === -1)) {
             throw new Error("Saved preferences are invalid. Reset app preferences in Settings.");
         }
-        return { quality: value.quality, language: value.language, autoNext: value.autoNext };
+        // Preferences saved before continueAction existed load with the safe default.
+        return { quality: value.quality, language: value.language, autoNext: value.autoNext,
+            continueAction: value.continueAction || "details" };
     }
     return {
         load: function (storage) {
             var value = storage.getItem(key);
-            if (!value) { return { quality: "1080", language: "en", autoNext: false }; }
+            if (!value) { return { quality: "1080", language: "en", autoNext: false, continueAction: "details" }; }
             try { return validate(JSON.parse(value)); }
             catch (error) { throw new Error("Saved preferences are invalid. Reset app preferences in Settings."); }
         },
