@@ -2272,8 +2272,9 @@
         playerClient = client;
         playerSettings = {
             offset: offset || 0, mediaIndex: mediaIndex || 0, quality: preferences.quality,
-            audioId: trackOptions && trackOptions.audioId || 0,
-            subtitleId: trackOptions && trackOptions.subtitleId || 0
+            audioId: trackOptions ? trackOptions.audioId : undefined,
+            subtitleId: trackOptions ? trackOptions.subtitleId : undefined,
+            overlaySubtitle: !!(trackOptions && trackOptions.cues)
         };
         externalCues = trackOptions && trackOptions.cues || null;
         document.body.className = "playing";
@@ -2461,6 +2462,7 @@
         menu.appendChild(element("h2", "", translate("Audio and subtitles")));
         var audioGroup = group(menu, translate("Audio"), "track-group");
         var subtitleGroup = group(menu, translate("Subtitles"), "track-group");
+        var current = player.selection();
         function reload(audioId, subtitleId) {
             var item = playerItem;
             var client = playerClient;
@@ -2473,14 +2475,13 @@
         (player.part().Stream || []).forEach(function (stream) {
             if (stream.streamType === 2) {
                 var audioChoice = button(audioGroup, stream.displayTitle || stream.language || stream.codec || String(stream.id), function () {
-                    reload(stream.id, playerSettings.subtitleId);
+                    reload(stream.id, externalCues ? 0 : current.subtitleId);
                 });
-                audioChoice.setAttribute("aria-pressed", String(playerSettings.audioId ?
-                    String(playerSettings.audioId) === String(stream.id) : !!stream.selected));
+                audioChoice.setAttribute("aria-pressed", String(String(current.audioId) === String(stream.id)));
             } else if (stream.streamType === 3) {
                 var subtitleChoice = button(subtitleGroup, stream.displayTitle || stream.language || stream.codec || String(stream.id),
-                    function () { reload(playerSettings.audioId, stream.id); });
-                subtitleChoice.setAttribute("aria-pressed", String(String(playerSettings.subtitleId) === String(stream.id)));
+                    function () { reload(current.audioId, stream.id); });
+                subtitleChoice.setAttribute("aria-pressed", String(!externalCues && String(current.subtitleId) === String(stream.id)));
                 if (stream.key && ["srt", "subrip", "webvtt"].indexOf(stream.codec) !== -1) {
                     button(subtitleGroup, "Text overlay / " + (stream.displayTitle || stream.language || stream.id), function () {
                         var selectedPlayer = player;
@@ -2492,17 +2493,17 @@
                             var client = playerClient;
                             var position = player.snapshot().position;
                             var version = playerSettings.mediaIndex;
-                            var audioId = playerSettings.audioId;
+                            var audioId = current.audioId;
                             stopPlayer(function () {
-                                startPlayer(item, client, position, version, { audioId: audioId, cues: cues });
+                                startPlayer(item, client, position, version, { audioId: audioId, subtitleId: stream.id, cues: cues });
                             });
                         }).catch(showPlayerError);
                     });
                 }
             }
         });
-        button(subtitleGroup, "Subtitles off", function () { reload(playerSettings.audioId, 0); })
-            .setAttribute("aria-pressed", String(!playerSettings.subtitleId && !externalCues));
+        button(subtitleGroup, "Subtitles off", function () { reload(current.audioId, 0); })
+            .setAttribute("aria-pressed", String(!current.subtitleId && !externalCues));
         var appearance = group(menu, translate("Text overlay appearance"), "track-group");
         appearance.appendChild(element("p", "help-text", translate("These settings apply only to the app-rendered SRT/WebVTT text overlay, not device-native or burned subtitles.")));
         function cycleAppearance(title, preferenceKey, values, labelForValue) {

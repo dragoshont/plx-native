@@ -5,6 +5,28 @@
 }(this, function () {
     "use strict";
 
+    function trackId(value) {
+        return /^[0-9]+$/.test(String(value)) ? Number(value) : 0;
+    }
+
+    // Unset audio/subtitle ids follow PMS `Stream.selected`, which already applies the account's
+    // language preferences and any earlier pick. Only an explicit choice (Off included) is
+    // written back with PUT /library/parts, matching the LG client.
+    function resolveTracks(part, options) {
+        var explicit = options.audioId !== undefined || options.subtitleId !== undefined;
+        if (explicit) {
+            return { audioId: trackId(options.audioId), subtitleId: trackId(options.subtitleId), explicit: true };
+        }
+        var audioId = 0;
+        var subtitleId = 0;
+        (part.Stream || []).forEach(function (stream) {
+            if (!stream.selected) { return; }
+            if (Number(stream.streamType) === 2 && !audioId) { audioId = trackId(stream.id); }
+            if (Number(stream.streamType) === 3 && !subtitleId) { subtitleId = trackId(stream.id); }
+        });
+        return { audioId: audioId, subtitleId: subtitleId, explicit: false };
+    }
+
     function plan(item, options) {
         options = options || {};
         var mediaIndex = options.mediaIndex || 0;
@@ -14,11 +36,14 @@
             throw new Error("This item has no playable media version.");
         }
         var multipart = media.Part.length > 1;
+        var tracks = resolveTracks(part, options);
+        // A text subtitle the app renders itself stays selected on PMS but is never burned in.
+        var burn = tracks.subtitleId && !options.overlaySubtitle ? tracks.subtitleId : 0;
         var profile = options.profile;
         var kind = item.type === "track" ? "music" : "video";
         var direct = kind === "video" && !multipart && profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
             profile.video.indexOf(media.videoCodec) !== -1 && profile.audio.indexOf(media.audioCodec) !== -1 &&
-            media.width <= profile.maxWidth && media.height <= profile.maxHeight && !options.subtitleId;
+            media.width <= profile.maxWidth && media.height <= profile.maxHeight && !burn;
         var session = "tizen-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
         var query = {
             path: "/library/metadata/" + item.ratingKey, mediaIndex: mediaIndex, partIndex: multipart ? -1 : 0,
@@ -28,8 +53,8 @@
             videoResolution: options.quality === "720" ? "1280x720" : "1920x1080",
             videoBitrate: options.quality === "720" ? 4000 : 8000,
             videoQuality: 100, audioCodec: "aac", videoCodec: "h264",
-            audioStreamID: options.audioId || 0, subtitleStreamID: options.subtitleId || 0,
-            subtitles: options.subtitleId ? "burn" : "none",
+            audioStreamID: tracks.audioId, subtitleStreamID: burn,
+            subtitles: burn ? "burn" : "none",
             "X-Plex-Client-Profile-Name": "Generic",
             "X-Plex-Client-Profile-Extra": "add-transcode-target(type=videoProfile&context=streaming&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)"
         };
@@ -44,7 +69,7 @@
             query["X-Plex-Client-Profile-Extra"] =
                 "add-transcode-target(type=musicProfile&context=streaming&protocol=http&container=mp3&audioCodec=mp3)";
         }
-        return { direct: !!direct, part: part, query: query, session: session, kind: kind };
+        return { direct: !!direct, part: part, query: query, session: session, kind: kind, tracks: tracks };
     }
 
     function create(options) {
@@ -124,7 +149,8 @@
                 starting = true;
                 return Promise.resolve().then(function () {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
-                    return client.selectStreams(selection.part.id, settings.audioId || 0, settings.subtitleId || 0);
+                    if (!selection.tracks.explicit) { return null; }
+                    return client.selectStreams(selection.part.id, selection.tracks.audioId, selection.tracks.subtitleId);
                 }).then(function () {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
                     return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", selection.query);
@@ -171,6 +197,10 @@
             },
             snapshot: function () { return adapter.snapshot(); },
             part: function () { return selection.part; },
+            selection: function () {
+                return { audioId: selection.tracks.audioId, subtitleId: selection.tracks.subtitleId,
+                    explicit: selection.tracks.explicit };
+            },
             mode: function () { return selection.direct ? "direct" : "transcode"; },
             quality: function () {
                 return { source: sourceMedia, stream: selection.direct ? sourceMedia : streamMedia,

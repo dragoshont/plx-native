@@ -93,7 +93,8 @@ async function run() {
         else if (url.pathname === "/library/parts/20") {
             assert.strictEqual(options.method, "PUT");
             assert.strictEqual(url.searchParams.get("allParts"), "1");
-            assert.strictEqual(url.searchParams.get("subtitleStreamID"), "0");
+            assert.strictEqual(url.searchParams.get("subtitleStreamID"), "42",
+                "Only the user's explicit text-overlay pick is recorded");
             assert(!url.searchParams.has("audioStreamID"), "Preserve default audio when no audio switch is requested");
             container = {};
         }
@@ -440,6 +441,8 @@ async function run() {
         assert.strictEqual(position, 20000);
         click("Close menu");
         click("More");
+        assert(!requests.some(function (request) { return request.method === "PUT" && /^\/library\/parts\//.test(request.path); }),
+            "Starting playback with no track choice must not overwrite the PMS stream selection");
         click("Audio and subtitles");
         click("Text size: medium");
         assert(window.document.querySelector(".player-menu").textContent.includes("Text size: large"),
@@ -450,6 +453,11 @@ async function run() {
         assert(subtitleOverlay.classList.contains("subtitle-size-large"),
             subtitleOverlay.className + " | " + window.document.getElementById("status").textContent);
         assert(subtitleOverlay.classList.contains("subtitle-position-low"));
+        var picks = requests.filter(function (request) { return request.method === "PUT" && /^\/library\/parts\//.test(request.path); });
+        assert.strictEqual(picks.length, 1, "Choosing the text overlay records that one explicit pick on PMS");
+        assert.notStrictEqual(picks[0].query.get("subtitleStreamID"), "0", "An overlay pick must not be written as Subtitles off");
+        var overlayDecision = requests.filter(function (request) { return /decision$/.test(request.path); }).pop();
+        assert.strictEqual(overlayDecision.query.get("subtitles"), "none", "An app-rendered text subtitle must never also be burned in");
         listener.oncurrentplaytime(1000);
         assert.strictEqual(subtitleOverlay.textContent, "Synthetic caption",
             "The owned external text renderer applies the selected cue at the playback position");

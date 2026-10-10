@@ -70,8 +70,33 @@ async function run() {
     await session.start();
     assert.strictEqual(session.quality().source.width, 1920, "Original source quality must be separate from streaming quality");
     assert.strictEqual(session.quality().stream, null, "A requested transcode limit is not measured output quality");
-    assert.deepStrictEqual(test.calls[0], ["streams", "20", 0, 0],
-        "Server stream selection must precede negotiation; query params alone do not select audio/burned captions");
+    assert(!test.calls.some(function (call) { return call[0] === "streams"; }),
+        "A default start must not PUT a stream selection: it would overwrite the account's language choice on PMS");
+    var preferred = JSON.parse(JSON.stringify(item));
+    preferred.Media[0].Part[0].Stream = [
+        { id: 31, streamType: 2, languageCode: "eng" },
+        { id: 32, streamType: 2, languageCode: "fra", selected: true },
+        { id: 41, streamType: 3, languageCode: "eng", selected: true }
+    ];
+    var preferredPlan = playback.plan(preferred, {});
+    assert.strictEqual(preferredPlan.query.audioStreamID, 32, "The server-selected audio (account language preference) must be kept");
+    assert.strictEqual(preferredPlan.query.subtitleStreamID, 41, "The server-selected subtitle (e.g. forced/foreign) must stay on");
+    assert.strictEqual(preferredPlan.query.subtitles, "burn");
+    var preferredRig = rig();
+    var preferredSession = playback.create({ client: preferredRig.client, adapter: preferredRig.adapter, item: preferred });
+    await preferredSession.start();
+    assert(!preferredRig.calls.some(function (call) { return call[0] === "streams"; }));
+    assert.deepStrictEqual(preferredSession.selection(), { audioId: 32, subtitleId: 41, explicit: false });
+    await preferredSession.stop();
+    var explicitRig = rig();
+    var explicitSession = playback.create({ client: explicitRig.client, adapter: explicitRig.adapter, item: preferred,
+        settings: { audioId: 31, subtitleId: 0 } });
+    await explicitSession.start();
+    assert.deepStrictEqual(explicitRig.calls[0], ["streams", "20", 31, 0],
+        "An explicit pick (including Off) must be selected server-side before negotiation");
+    assert.strictEqual(explicitRig.calls[1][1].subtitleStreamID, 0);
+    assert.strictEqual(explicitRig.calls[1][1].subtitles, "none");
+    await explicitSession.stop();
     await session.pause();
     assert(test.calls.some(function (call) { return call[0] === "timeline" && call[1] === 5000 && call[2] === "paused"; }));
     await session.seek(15000);
@@ -121,7 +146,7 @@ async function run() {
     await session.stop();
     test = rig();
     test.client.selectStreams = function () { return Promise.reject(new Error("PMS refused stream selection")); };
-    session = playback.create({ client: test.client, adapter: test.adapter, item: item });
+    session = playback.create({ client: test.client, adapter: test.adapter, item: item, settings: { audioId: 0, subtitleId: 0 } });
     await assert.rejects(session.start(), /refused stream selection/);
     assert(!test.calls.some(function (call) { return call[0] === "decision" || call[0] === "open" || call[0] === "timeline"; }),
         "Failed stream selection must not silently play the wrong track");
