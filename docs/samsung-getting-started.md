@@ -83,7 +83,7 @@ Gotchas observed on a 2017 set from a Mac (2026-10-09):
 2. Show `navigator.userAgent`, `window.innerWidth`/`innerHeight`, and the result of
    `webapis.productinfo.isUdPanelSupported()`.
 3. Build, sign with the certificate profile, install to the TV, run it:
-   `tizen package -t wgt -s <profile> -- <dir>`, `tizen install -n <file>.wgt -s <target>`,
+   `tizen package -t wgt -s <profile> -- <dir>/.buildResult`, `tizen install -n <file>.wgt -s <target>`,
    `tizen run -p <package>.<app> -s <target>`.
    - The package ID in `config.xml` must be exactly 10 letters or digits.
    - `tizen package` names the file after the app's `<name>`; rename it if that contains spaces.
@@ -133,9 +133,11 @@ on `PATH`; on Windows use the equivalent SDK tools and a copied source folder.
 3. Build and sign the copy with your existing Samsung certificate profile:
    ```sh
    tizen build-web -- /path/to/PlexTv
-   tizen package -t wgt -s YOUR_PROFILE -- /path/to/PlexTv
+   tizen package -t wgt -s YOUR_PROFILE -- /path/to/PlexTv/.buildResult
    ```
-   The SDK prints the signed `.wgt` path; use that exact file, not an earlier build. On macOS,
+   Package the SDK's `.buildResult` output, not the source directory; otherwise build output
+   can be duplicated inside the widget. The SDK prints the signed `.wgt` path; use that exact
+   file, not an earlier build. On macOS,
    `shasum -a 256 /path/to/app.wgt` records its checksum (PowerShell: `Get-FileHash -Algorithm SHA256`).
 4. Connect and install:
    ```sh
