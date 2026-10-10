@@ -5,6 +5,18 @@ The separate Samsung client has a broad source/host baseline; developer installa
 Neither implies that its playback, account lifecycle and runtime constraints match the LG app.
 LG remains unchanged. Plex Media Server remains the library/watch-state authority.
 
+## Current deployment receipt
+
+On 2026-10-10, source `5b84f02f` was packaged with the existing Samsung developer certificate,
+installed over `PlxTizenDv.PlexTv` and launched on the owner's previously identified 2017
+UE55MU6172 (recorded firmware `T-KTMDEUC-1410.1`; not re-read during this deployment).
+Samsung's install and launch commands reported success.
+Signed package SHA-256: `a4ba3275e7993ca146f73aee3193b3330dbb159cced2324ba8c8a46c6060ec32`.
+The relay was used only for installation/launch; no remote navigation, playback or household
+Plex mutation was performed by the agent. This is an install/launch receipt, not panel or
+native-playback acceptance. Host suites, strict ES5 parsing and unsigned source build passed
+on the committed source before packaging.
+
 This is the release gate for **LG movie/show capability parity**, not a promise to finish the
 official Plex service ecosystem by copying LG. Music, photos, DVR, live tuning and licensed
 catalogue streaming are tracked separately in the [product backlog](samsung-tizen-client-spec.md#10-unfinished-product-backlog).
