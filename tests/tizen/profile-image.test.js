@@ -45,12 +45,16 @@ async function run() {
     finalUrl = "https://assets.plex.tv/avatars/synthetic-id_9.png?size=1";
     assert((await client.image("https://plex.tv/users/synthetic/avatar?c=1")).size > 0,
         "An avatar filename with a single extension is accepted");
+    // Device-observed final shape on f8456522: '<id>.' — a trailing dot and no extension.
+    finalUrl = "https://assets.plex.tv/avatars/synthetic-id_9.?size=1";
+    assert((await client.image("https://plex.tv/users/synthetic/avatar?c=1")).size > 0,
+        "The observed trailing-dot avatar filename is accepted");
     for (var target of [
         "", "https://other.invalid/avatars/synthetic", "http://assets.plex.tv/avatars/synthetic",
         "https://assets.plex.tv.other.invalid/avatars/synthetic", "https://assets.plex.tv/api/v2/user",
         "https://assets.plex.tv/avatars/../users", "https://user@assets.plex.tv/avatars/synthetic",
         "https://plex.tv/api/v2/user", "https://assets.plex.tv/avatars/.png",
-        "https://assets.plex.tv/avatars/a..png", "https://assets.plex.tv/avatars/a.png.js",
+        "https://assets.plex.tv/avatars/a..png", "https://assets.plex.tv/avatars/a..", "https://assets.plex.tv/avatars/.", "https://assets.plex.tv/avatars/a.png.js",
         "https://assets.plex.tv/avatars/a.png/x", "https://assets.plex.tv/avatars/a.png%2F..%2Fx"
     ]) {
         finalUrl = target;
