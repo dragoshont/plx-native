@@ -38,7 +38,7 @@ icons with retained accessible names; other controls keep visible labels.
 
 | Family | Composition |
 |---|---|
-| Sign-in and account recovery | Existing paired short code/QR and explicit consent/retry controls; automatic expiry renewal |
+| Sign-in and account recovery | Paired short code/QR with retry and automatic expiry renewal; optional saved sign-in is managed in Settings |
 | Profiles and PIN | Centred identities with circular initials; protected-profile marker; separate numeric PIN entry |
 | Servers and favourites | Structured selection rows, then grouped account/navigation actions |
 | Home | Full-bleed feature, persistent Home/favourite-library/Search capsule, separate Account menu, explicit play/info/cycle controls and poster shelves |
