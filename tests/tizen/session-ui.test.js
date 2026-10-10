@@ -50,7 +50,7 @@ function harness(saved, failure) {
                     return Promise.resolve("synthetic-profile-token");
                 },
                 getServers: function () {
-                    if (failure === "server-denial") {
+                    if (failure === "server-denial" || failure === "happy" || failure === "save") {
                         return Promise.resolve([{ id: "synthetic-server", name: "Synthetic", token: "synthetic-server-token",
                             connections: [{ uri: "https://server.synthetic.invalid" }] }]);
                     }
@@ -60,7 +60,11 @@ function harness(saved, failure) {
         },
         selectServer: function () {
             return Promise.resolve({ client: {
-                getSections: function () { return Promise.reject({ status: 403, scope: "server", message: "Server access denied" }); },
+                getSections: function () {
+                    return failure === "server-denial" ?
+                        Promise.reject({ status: 403, scope: "server", message: "Server access denied" }) :
+                        Promise.resolve([{ key: "1", type: "movie", title: "Movies" }]);
+                },
                 getHomeHubs: function () { return Promise.resolve([]); }
             } });
         }
@@ -97,21 +101,41 @@ async function run() {
     assert(denied.text().includes("Server access denied"));
     denied.dom.window.close();
     var app = harness("");
-    assert.strictEqual(app.dom.window.document.querySelector(".remember-checkbox").checked, false);
+    assert.strictEqual(app.dom.window.document.querySelector(".remember-checkbox"), null,
+        "The primary link/QR screen has no credential-storage checkbox");
+    assert(!app.text().includes("unencrypted"), "Credential-storage disclosure belongs in Settings, not primary sign-in");
     app.approve();
     app.click("Get a new code");
     await settle();
     assert.strictEqual(session.load(app.storage), "");
     app.dom.window.close();
 
-    app = harness("");
-    app.dom.window.document.querySelector(".remember-checkbox").checked = true;
+    app = harness("", "happy");
     app.approve();
     app.click("Get a new code");
     await settle();
-    assert.strictEqual(session.load(app.storage), "synthetic-account-token");
+    assert.strictEqual(session.load(app.storage), "", "A new link remains session-only until the Settings choice is enabled");
+    app.click("Use linked account");
+    await settle();
+    app.click("Synthetic (shared)");
+    await settle();
+    app.click("Settings");
+    await settle();
+    var storageChoice = function () {
+        return Array.from(app.dom.window.document.querySelectorAll("button")).find(function (node) {
+            return /^Stay signed in on this TV:/.test(node.textContent);
+        });
+    };
+    assert.strictEqual(storageChoice().textContent, "Stay signed in on this TV: Off");
+    assert.strictEqual(storageChoice().getAttribute("aria-pressed"), "false");
+    storageChoice().click();
+    assert.strictEqual(session.load(app.storage), "synthetic-account-token", "Settings stores only after explicit consent");
+    assert.strictEqual(storageChoice().textContent, "Stay signed in on this TV: On");
+    storageChoice().click();
+    assert.strictEqual(session.load(app.storage), "", "Turning the Settings choice off removes the saved token without signing out");
     app.click("Sign out");
     assert.strictEqual(session.load(app.storage), "");
+    app.dom.window.close();
     app.dom.window.close();
 
     app = harness("synthetic-account-token");
@@ -128,11 +152,17 @@ async function run() {
     app.dom.window.close();
 
     app = harness("", "save");
-    app.dom.window.document.querySelector(".remember-checkbox").checked = true;
     app.approve();
     app.click("Get a new code");
     await settle();
-    assert(app.text().includes("session could not be saved"), "A next-screen status must not erase the storage warning");
+    app.click("Use linked account");
+    await settle();
+    app.click("Synthetic (shared)");
+    await settle();
+    app.click("Settings");
+    await settle();
+    storageChoice().click();
+    assert(app.text().includes("Could not update saved sign-in"), "A storage failure leaves account sign-in functional and reports the error");
     app.dom.window.close();
 
     app = harness("synthetic-account-token", "delete");

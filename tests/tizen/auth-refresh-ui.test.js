@@ -75,11 +75,11 @@ async function run() {
     ui = boot("slow");
     try {
         await settle();
-        ui.window.document.querySelector(".remember-checkbox").checked = true;
+        assert.strictEqual(ui.window.document.querySelector(".remember-checkbox"), null,
+            "PIN renewal must not add a credential-storage choice to primary sign-in");
         ui.fire(60000);
         await settle();
         assert.strictEqual(ui.starts(), 2, "Expiry must renew even while the previous poll is stalled");
-        assert(ui.window.document.querySelector(".remember-checkbox").checked, "Keep remember-me consent");
         ui.resolveOld();
         await settle();
         assert.strictEqual(ui.window.document.querySelector(".auth-code").textContent, "CODE2",

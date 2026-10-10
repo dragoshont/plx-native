@@ -658,6 +658,18 @@
                     "X-Plex-Container-Start": start || 0, "X-Plex-Container-Size": 50
                 });
             },
+            getFirstEpisode: function (id) {
+                return get("/library/metadata/" + key(id) + "/allLeaves", "GET", {
+                    "X-Plex-Container-Start": 0, "X-Plex-Container-Size": 50
+                }).then(function (container) {
+                    var episodes = listFrom(container, "Metadata");
+                    if (!episodes.length || episodes[0].type !== "episode") {
+                        throw new Error("This show has no available episodes.");
+                    }
+                    key(episodes[0].ratingKey);
+                    return episodes[0];
+                });
+            },
             findGuid: function (section, guid) {
                 if (!/^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(String(guid || ""))) {
                     return Promise.reject(new Error("Invalid Plex catalogue GUID."));

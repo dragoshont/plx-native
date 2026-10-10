@@ -135,21 +135,6 @@ button:disabled {
     background: #ffffff;
 }
 
-.remember-option {
-    display: block;
-    margin: 28px 0;
-    font-size: 24px;
-    line-height: 1.5;
-}
-
-.remember-checkbox {
-    display: inline-block;
-    width: 32px;
-    height: 32px;
-    margin: 0 0 0 16px;
-    vertical-align: middle;
-}
-
 .video-plane {
     display: none;
     position: fixed;
@@ -267,6 +252,33 @@ body.playing {
 .subtitle-text:empty {
     display: none;
 }
+
+.subtitle-text.subtitle-size-small { font-size: 28px; }
+.subtitle-text.subtitle-size-medium { font-size: 38px; }
+.subtitle-text.subtitle-size-large { font-size: 50px; }
+.subtitle-text.subtitle-position-middle { top: 45%; bottom: auto; }
+.subtitle-text.subtitle-position-high { top: 18%; bottom: auto; }
+.subtitle-text.subtitle-color-yellow { color: #ffe66b; }
+
+.file-info-panel {
+    position: fixed;
+    z-index: 5;
+    top: 6%;
+    right: 5%;
+    bottom: 6%;
+    width: 760px;
+    max-width: 88vw;
+    overflow-y: auto;
+    padding: 28px 36px;
+    background: rgba(24, 24, 27, 0.98);
+    border: 2px solid #85858b;
+}
+
+.file-info-panel[hidden] { display: none; }
+.file-info-panel h2 { margin: 0 0 20px; font-size: 32px; }
+.file-info-row { margin: 12px 0; font-size: 22px; line-height: 1.35; }
+.file-info-label { color: #b8bfcc; }
+.file-info-value { overflow-wrap: anywhere; }
 
 .photo-display {
     display: block;
@@ -560,17 +572,6 @@ input:focus {
 .auth-actions button {
     margin: 0 8px;
     text-align: center;
-}
-
-.remember-option {
-    margin: 24px 0 8px;
-    color: #cdd3dd;
-}
-
-.remember-note {
-    margin: 0 0 16px;
-    color: #9499a3;
-    font-size: 22px;
 }
 
 .advanced-panel {

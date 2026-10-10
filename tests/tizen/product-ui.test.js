@@ -9,7 +9,10 @@ var movie = {
     summary: "Synthetic metadata", Chapter: [{ startTimeOffset: 20000, tag: "Chapter one" }],
     Marker: [{ type: "intro", startTimeOffset: 0, endTimeOffset: 5000 }],
     Media: [{ container: "mp4", videoCodec: "h264", audioCodec: "aac", videoResolution: "1080",
-        Part: [{ id: "20", key: "/library/parts/20/file.mp4", Stream: [{ id: 1, streamType: 2, codec: "aac" }] }] }]
+        Part: [{ id: "20", key: "/library/parts/20/file.mp4", Stream: [
+            { id: 1, streamType: 2, codec: "aac" },
+            { id: 42, streamType: 3, codec: "srt", language: "English", key: "/library/streams/42" }
+        ] }] }]
 };
 var onDeck = Object.assign({}, movie, { ratingKey: "99", type: "episode", title: "Next episode", viewOffset: 20000 });
 async function run() {
@@ -17,6 +20,7 @@ async function run() {
         url: "https://app.synthetic.invalid", runScripts: "outside-only"
     });
     var window = dom.window;
+    window.TextDecoder = TextDecoder;
     var requests = [];
     var nativeCalls = [];
     var state = "NONE";
@@ -93,6 +97,12 @@ async function run() {
             assert(!url.searchParams.has("audioStreamID"), "Preserve default audio when no audio switch is requested");
             container = {};
         }
+        else if (url.pathname === "/library/streams/42") {
+            var subtitleBytes = Buffer.from("1\n00:00:01,000 --> 00:00:02,500\nSynthetic caption");
+            return Promise.resolve({ ok: true, status: 200, body: new ReadableStream({
+                start: function (controller) { controller.enqueue(new Uint8Array(subtitleBytes)); controller.close(); }
+            }) });
+        }
         else if (url.pathname === "/:/scrobble" || url.pathname === "/:/unscrobble") {
             assert.strictEqual(options.method, "GET");
             assert.strictEqual(url.searchParams.get("key"), "10");
@@ -111,7 +121,8 @@ async function run() {
             json: function () { return Promise.resolve({ MediaContainer: container }); }
         });
     };
-    ["js/plex-api.js", "js/avplay.js", "js/playback.js", "js/subtitles.js", "js/preferences.js", "js/session.js", "js/i18n.js", "main.js"].forEach(function (file) {
+    ["js/plex-api.js", "js/avplay.js", "js/playback.js", "js/subtitles.js", "js/preferences.js",
+        "js/session.js", "js/item-menu.js", "js/file-info.js", "js/i18n.js", "main.js"].forEach(function (file) {
         window.eval(fs.readFileSync(path.join(app, file), "utf8"));
     });
     function click(text) {
@@ -185,6 +196,13 @@ async function run() {
         assert.strictEqual(window.document.activeElement.textContent, "Transcode quality: 720p", "Choice pages restore parent focus");
         click("Transcode quality: 720p");
         click("1080p server transcode");
+        var skipInterval = Array.from(window.document.querySelectorAll(".settings-menu button")).find(function (node) {
+            return node.textContent === "Skip interval: 10 seconds";
+        });
+        skipInterval.focus();
+        skipInterval.click();
+        click("15 seconds");
+        assert.strictEqual(window.document.activeElement.textContent, "Skip interval: 15 seconds");
         var autoNext = Array.from(window.document.querySelectorAll(".settings-menu button")).find(function (node) {
             return node.textContent === "Auto-play next episode: Off";
         });
@@ -254,6 +272,14 @@ async function run() {
         assert(window.document.querySelector(".detail-synopsis").classList.contains("expanded"));
         click("Read less");
         assert.strictEqual(requests.filter(function (request) { return request.path === "/:/timeline"; }).length, 0);
+        click("More");
+        click("File information");
+        var fileInfo = window.document.querySelector(".file-info-panel");
+        assert(fileInfo && !fileInfo.hidden, "The detail inspector opens as a separate read-only panel");
+        assert(fileInfo.textContent.includes("Version 1 / Container: mp4"));
+        assert(!fileInfo.textContent.includes("Size:"), "Unreported file size must be omitted rather than called zero");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 27, bubbles: true }));
+        assert(fileInfo.hidden, "Back closes the inspector without leaving item details");
         var mutations = function () {
             return requests.filter(function (request) {
                 return ["/:/scrobble", "/:/unscrobble", "/actions/removeFromContinueWatching"].indexOf(request.path) !== -1;
@@ -336,9 +362,13 @@ async function run() {
         await settle();
         assert.strictEqual(state, "PAUSED");
         assert.strictEqual(hudTimers.size, 0, "Paused playback must not hide its controls");
-        click("Forward 30 seconds");
+        click("Forward 15 seconds");
         await settle();
-        assert.strictEqual(position, 42000);
+        assert.strictEqual(position, 27000);
+        await new Promise(function (resolve) { window.setTimeout(resolve, 200); });
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 417, bubbles: true }));
+        await settle();
+        assert.strictEqual(position, 42000, "The remote fast-forward key uses the saved 15-second interval");
         click("More");
         click("Chapters and markers");
         assert.strictEqual(hudTimers.size, 0, "An open menu must suspend HUD hiding");
@@ -346,6 +376,20 @@ async function run() {
         await settle();
         assert.strictEqual(position, 20000);
         click("Close menu");
+        click("More");
+        click("Audio and subtitles");
+        click("Text size: medium");
+        assert(window.document.querySelector(".player-menu").textContent.includes("Text size: large"),
+            "Caption style controls update the persisted selection");
+        click("Text overlay / English");
+        await settle();
+        var subtitleOverlay = window.document.getElementById("subtitle-text");
+        assert(subtitleOverlay.classList.contains("subtitle-size-large"),
+            subtitleOverlay.className + " | " + window.document.getElementById("status").textContent);
+        assert(subtitleOverlay.classList.contains("subtitle-position-low"));
+        listener.oncurrentplaytime(1000);
+        assert.strictEqual(subtitleOverlay.textContent, "Synthetic caption",
+            "The owned external text renderer applies the selected cue at the playback position");
         click("More");
         click("Stop and return to details");
         await settle();
@@ -379,7 +423,9 @@ async function run() {
         assert.strictEqual(position, 20000);
         assert(requests.some(function (request) { return request.path === "/library/metadata/99"; }),
             "Show playback must resolve the episode identity, never play or update the show itself");
-        console.log("Tizen host DOM product journey: 250-item browse/search/details/playback/progress passed");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 413, bubbles: true }));
+        await settle();
+        console.log("Tizen host DOM product journey: browse, subtitle settings, inspector, skip, show playback passed");
     } finally { dom.window.close(); }
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

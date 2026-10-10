@@ -49,11 +49,83 @@ async function run() {
     var firstIds = ids(menu.rows(resumed, { deck: true }));
     assert(["watched", "unwatched", "remove"].indexOf(firstIds[0]) === -1, "A write is never the default row");
     assert.deepStrictEqual(ids(menu.rows({ ratingKey: "7", type: "show", leafCount: 4, viewedLeafCount: 2 })),
-        ["watched", "unwatched"]);
+        ["play", "watched", "unwatched"]);
+    assert.deepStrictEqual(ids(menu.rows({ ratingKey: "8", type: "season", leafCount: 8, viewedLeafCount: 0 })),
+        ["play", "watched"]);
+    assert.strictEqual(menu.rows({ ratingKey: "7", type: "show", OnDeck: { Metadata: [
+        { ratingKey: "50", type: "episode", viewOffset: 9000 }
+    ] } })[0].label, "Resume", "The menu label reflects the server-selected episode's resume state");
     assert.deepStrictEqual(ids(menu.rows({ ratingKey: "8", type: "track" })), []);
+    var onDeck = { ratingKey: "50", type: "episode", viewOffset: 9000 };
+    var showTarget = await menu.playTarget({
+        ratingKey: "7", type: "show", OnDeck: { Metadata: [onDeck] }
+    }, {
+        getFirstEpisode: function () { assert.fail("A valid on-deck episode should win"); }
+    });
+    assert.strictEqual(showTarget, onDeck, "Show Play uses the server-selected on-deck episode");
+    showTarget = await menu.playTarget({ ratingKey: "7", type: "show" }, {
+        getFirstEpisode: function (id) {
+            assert.strictEqual(id, "7");
+            return Promise.resolve({ ratingKey: "51", type: "episode" });
+        }
+    });
+    assert.strictEqual(showTarget.ratingKey, "51", "A show without OnDeck resolves to its first episode");
+    var seasonTarget = await menu.playTarget({ ratingKey: "8", type: "season" }, {
+        getChildren: function (id, start) {
+            assert.strictEqual(id, "8");
+            assert.strictEqual(start, 0);
+            return Promise.resolve({ Metadata: [{ ratingKey: "52", type: "episode" }] });
+        }
+    });
+    assert.strictEqual(seasonTarget.ratingKey, "52", "A season resolves to its first episode");
+    await assert.rejects(menu.playTarget({ ratingKey: "9", type: "season" }, {
+        getChildren: function () { return Promise.resolve({ Metadata: [] }); }
+    }), /no available episodes/i);
+    await assert.rejects(menu.playTarget({ ratingKey: "bad", type: "show" }, {
+        getFirstEpisode: function () { assert.fail("Invalid identity must not request Plex"); }
+    }), /identifier/i);
+    var trailer = menu.trailerFor({ type: "movie", Extras: { Metadata: [
+        { ratingKey: "99", type: "clip", subtype: "behindTheScenes", extraType: 5 },
+        { ratingKey: "100", type: "clip", subtype: "trailer", Media: [{ Part: [{ key: "/library/parts/1" }] }] }
+    ] } });
+    assert.strictEqual(trailer.ratingKey, "100", "Only a playable trailer extra is eligible");
+    assert.strictEqual(menu.trailerFor({ type: "episode", Extras: { Metadata: [trailer] } }), null,
+        "Episode extras do not qualify as movie/show trailer shortcuts");
+    assert.strictEqual(menu.trailerFor({ type: "show", Extras: { Metadata: [
+        { ratingKey: "101", type: "clip", extraType: 1, Media: [{ Part: [{ key: "/library/parts/1" }] }] }
+    ] } }).ratingKey, "101", "PMS trailer extraType is accepted when subtype is absent");
+    assert.strictEqual(menu.trailerFor({ type: "movie", Extras: { Metadata: [
+        { ratingKey: "102", type: "clip", subtype: "trailer", Media: [{ Part: [{ key: "/../../private" }] }] }
+    ] } }), null, "Unsafe PMS trailer part paths are not accepted");
+    await assert.rejects(menu.playTarget({ ratingKey: "7", type: "show" }, {
+        getFirstEpisode: function () { return Promise.resolve({ ratingKey: "103", type: "show" }); }
+    }), /playable episode/i);
     assert(menu.isDeckHub({ hubIdentifier: "home.continue" }));
     assert(menu.isDeckHub({ context: "hub.home.ondeck" }));
     assert(!menu.isDeckHub({ hubIdentifier: "home.movies.recent" }));
+
+    var firstEpisode;
+    var episodeCalls = [];
+    var episodeClient = api.createClient({
+        baseUrl: "https://pms.synthetic.invalid", token: "synthetic-server-token",
+        fetch: function (url) {
+            var parsed = new URL(url);
+            episodeCalls.push(parsed);
+            return Promise.resolve({ ok: true, status: 200, json: function () {
+                return Promise.resolve({ MediaContainer: { Metadata: [firstEpisode] } });
+            } });
+        }
+    });
+    firstEpisode = { ratingKey: "101", type: "episode" };
+    assert.strictEqual((await episodeClient.getFirstEpisode("10")).ratingKey, "101");
+    assert.strictEqual(episodeCalls[0].pathname, "/library/metadata/10/allLeaves");
+    assert.strictEqual(episodeCalls[0].searchParams.get("X-Plex-Container-Start"), "0");
+    assert.strictEqual(episodeCalls[0].searchParams.get("X-Plex-Container-Size"), "50");
+    firstEpisode = { ratingKey: "102", type: "season" };
+    await assert.rejects(episodeClient.getFirstEpisode("10"), /episode/i);
+    var beforeInvalidEpisode = episodeCalls.length;
+    assert.throws(function () { episodeClient.getFirstEpisode("../10"); }, /identifier/i);
+    assert.strictEqual(episodeCalls.length, beforeInvalidEpisode, "Invalid show IDs must not reach PMS");
 
     var calls = [];
     var client = api.createClient({

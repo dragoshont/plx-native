@@ -16,7 +16,12 @@
         var type = item.type;
         var leaf = leaves.indexOf(type) !== -1;
         var list = [];
-        if (leaf) { list.push({ id: "play", label: item.viewOffset ? "Resume" : "Play" }); }
+        if (leaf || type === "show" || type === "season") {
+            var onDeck = item.OnDeck && item.OnDeck.Metadata;
+            if (Array.isArray(onDeck)) { onDeck = onDeck[0]; }
+            list.push({ id: "play", label: item.viewOffset || (type === "show" && onDeck && onDeck.viewOffset) ?
+                "Resume" : "Play" });
+        }
         // OK on an ordinary card, or on a Continue Watching card in "details" mode, already opens
         // the page; the row is only useful when OK plays.
         if (options.deck && options.continueAction === "play") { list.push({ id: "details", label: "Go to details" }); }
@@ -40,5 +45,65 @@
         return id.indexOf("continue") !== -1 || id.indexOf("ondeck") !== -1;
     }
 
-    return { rows: rows, isDeckHub: isDeckHub };
+    function validRatingKey(value) {
+        return /^[0-9]+$/.test(String(value || ""));
+    }
+
+    function playableEpisode(item) {
+        return item && item.type === "episode" && validRatingKey(item.ratingKey);
+    }
+
+    function playTarget(item, client) {
+        if (!item || !validRatingKey(item.ratingKey)) {
+            return Promise.reject(new Error("Plex returned an invalid media identifier."));
+        }
+        if (item.type === "show") {
+            var onDeck = item.OnDeck && item.OnDeck.Metadata;
+            if (Array.isArray(onDeck)) { onDeck = onDeck[0]; }
+            if (playableEpisode(onDeck)) { return Promise.resolve(onDeck); }
+            if (!client || typeof client.getFirstEpisode !== "function") {
+                return Promise.reject(new Error("The first episode of this show could not be loaded."));
+            }
+            return client.getFirstEpisode(item.ratingKey).then(function (episode) {
+                if (!playableEpisode(episode)) { throw new Error("Plex did not return a playable episode."); }
+                return episode;
+            });
+        }
+        if (item.type === "season") {
+            if (!client || typeof client.getChildren !== "function") {
+                return Promise.reject(new Error("Episodes in this season could not be loaded."));
+            }
+            return client.getChildren(item.ratingKey, 0).then(function (container) {
+                var episodes = container && container.Metadata;
+                if (!Array.isArray(episodes)) { throw new Error("Plex returned an invalid episode list."); }
+                for (var i = 0; i < episodes.length; i += 1) {
+                    if (playableEpisode(episodes[i])) { return episodes[i]; }
+                }
+                throw new Error("This season has no available episodes.");
+            });
+        }
+        return Promise.resolve(item);
+    }
+
+    function trailerFor(item) {
+        if (!item || (item.type !== "movie" && item.type !== "show")) { return null; }
+        var extras = item.Extras && item.Extras.Metadata;
+        if (!Array.isArray(extras)) { return null; }
+        for (var i = 0; i < extras.length; i += 1) {
+            var extra = extras[i];
+            var media = extra && extra.Media && extra.Media[0];
+            var part = media && media.Part && media.Part[0];
+            var partKey = part && part.key;
+            var isTrailer = extra && extra.type === "clip" &&
+                (extra.subtype === "trailer" || Number(extra.extraType) === 1);
+            if (isTrailer && validRatingKey(extra.ratingKey) && typeof partKey === "string" &&
+                    partKey.charAt(0) === "/" && partKey.charAt(1) !== "/" &&
+                    !/[\\?#\r\n]/.test(partKey) && partKey.indexOf("..") === -1) {
+                return extra;
+            }
+        }
+        return null;
+    }
+
+    return { rows: rows, isDeckHub: isDeckHub, playTarget: playTarget, trailerFor: trailerFor };
 }));

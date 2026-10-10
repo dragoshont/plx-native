@@ -32,8 +32,9 @@ server-side audio/subtitle selection before negotiation and asks PMS to join mul
 ES5 parsing and an unsigned Samsung source build are separate gates.
 The sign-in PIN and its QR renew automatically on local or Plex-reported expiry, including
 when a poll stalls. Failed PIN acquisition retries after five seconds with a visible error;
-denial still requires an explicit retry. Renewal retains remember-me consent, and stale polls
-and timers cannot complete an older pairing. Backgrounding or leaving pairing cancels renewal.
+denial still requires an explicit retry. PIN renewal is independent of credential-storage choice,
+which is kept in Settings rather than the link/QR screen; stale polls and timers cannot complete an
+older pairing. Backgrounding or leaving pairing cancels renewal.
 Samsung menu styling follows the LG implementation's capsule navigation and icon-bearing form
 rows (`rust-modules/ui/src/widgets.rs`'s `TabStrip` and `rust-modules/ui/src/theme.rs`'s control
 roles), rather than reusing its renderer. Home destinations appear above the shelves; settings
@@ -99,7 +100,7 @@ official-Plex parity.
 | Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
 | Up Next/quality/versions | Source implementation with opt-in auto-next; multipart titles request a joined PMS transcode (`partIndex=-1`), never direct-play just the first file | Long sessions, interrupted transitions and actual server/native multipart joins, resume and completion |
 | Settings/languages | Non-secret preferences, English/Spanish/Belarusian catalogs, static app-copy coverage and named placeholders | Dynamic errors/copy coverage and physical-TV text fit |
-| Credential persistence | Default memory-only; explicit unchecked remember-me consent stores plaintext account token | TV storage/relaunch/deletion behavior and final threat-model signoff |
+| Credential persistence | Default memory-only; explicit opt-in in Settings stores the account token unencrypted | TV storage/relaunch/deletion behavior and final threat-model signoff |
 | Lifecycle/input | Background stop, explicit foreground resume, cancelled view reads and coalesced progress queue; synthetic journeys | Physical remote repeats/holds, process-exit reconciliation, suspend/wake and The Frame Art Mode |
 | Official Plex ecosystem | Music/photos, guide discovery, DVR scheduling/management and Watchlist read/mutations have host implementations | Live tuning/consumer lifecycle, licensed catalogue playback, server acceptance and remaining parity |
 | Distribution/support | Unsigned source build; earlier independent probe packages | Authorized signing/install, current-app model register and separate Store/legal decision |
@@ -365,10 +366,10 @@ Periodic progress keeps one in-flight request and one coalesced pending sample; 
 state takes priority, avoiding an unbounded queue during a slow/offline session.
 
 Samsung documents [Web Storage](https://developer.samsung.com/smarttv/develop/guides/data-handling/using-web-storage.html),
-not encryption at rest. Remember-me is disabled by default and explicitly explains unencrypted
-token storage and shared-TV risk. Only the original account credential is saved; protected Home
-profiles must still be selected and PIN-authorized. Sign-out and expiry recovery attempt deletion,
-and a deletion failure requires the user to clear app data rather than claiming a secure sign-out.
+not encryption at rest. Sign-in remains session-only by default; the optional Settings choice
+explicitly stores the original Plex account token unencrypted on this TV. Protected Home profiles
+must still be selected and PIN-authorized. Sign-out and expiry recovery attempt deletion, and a
+deletion failure requires the user to clear app data rather than claiming a secure sign-out.
 No telemetry/crash upload transport is installed.
 
 ## 7. Verification contract and test register
@@ -495,10 +496,12 @@ Each row compares source behaviour; Samsung evidence is host-only.
 | Alternate sources across servers (`/library/all?guid=…`) | **Added:** "Other servers" on movie/show detail, which excludes the current server and labels each copy with server, library and resolution. OK opens that server's detail page; the playing copy is never swapped |
 | Favorite libraries onboarding (`screens/src/onboard.rs` first-run step, then Settings) | **Added:** `js/favorites.js`. First visit to each server offers the step; Skip writes nothing and at least one library stays selected; hidden libraries also drop their Home shelves. Sign-in is the existing plex.tv PIN link and profile picker |
 
-The follow-up [source parity review](samsung-upstream-readiness.md#follow-up-feature-parity-review)
-also identifies missing caption customization/search, audio enhancements, account track
-preferences, configurable skip intervals and detailed file inspection. These are source gaps,
-not merely device tests waiting to be run.
+The [source parity review](samsung-upstream-readiness.md#follow-up-feature-parity-review) tracks
+the remaining movie/show differences. Host code now provides show/season card-menu episode
+routing, a metadata-qualified trailer shortcut, preferences for the app-rendered SRT/WebVTT
+overlay, a configurable seek interval, and a read-only PMS file/track inspector. Subtitle
+provider search, account track policies and audio enhancements remain source gaps; none of these
+host changes certifies Samsung native playback, subtitle composition or model support.
 
 ### Remaining work by dependency
 
@@ -569,7 +572,7 @@ Work directly through the dependency-ready items rather than waiting for a nativ
 - [ ] Verify English/Spanish/Belarusian text fit, accessibility and couch legibility on actual display sizes.
 - [x] Stop playback while hidden, cancel auto-next, reload details on foreground without auto-play, and coalesce slow progress writes; synthetic lifecycle/queue regressions exercised.
 - [ ] Verify graceful exit/process-kill and interrupted-session reconciliation on Samsung.
-- [ ] Verify remember-me relaunch/deletion on TV, protected-profile PIN gates and storage-error recovery.
+- [ ] Verify the Settings sign-in storage choice across relaunch/deletion, protected-profile PIN gates and storage-error recovery on TV.
 - [ ] Test The Frame Art Mode, wake/standby and restore separately before claiming support.
 
 ### Expanded official-Plex features

@@ -19,7 +19,6 @@
     var authExpiryTimer = null;
     var authGeneration = 0;
     var accountToken = "";
-    var rememberControl = null;
     var accountClient = null;
     var servers = [];
     var libraryFilters = {};
@@ -50,7 +49,9 @@
     var viewClients = [];
     var suspendedView = null;
     var foregroundRecovery = null;
-    var preferences = { quality: "1080", autoNext: false, language: "en", continueAction: "details" };
+    var preferences = { quality: "1080", autoNext: false, language: "en", continueAction: "details",
+        skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low", subtitleColor: "white",
+        subtitleDelayMs: 0 };
     var preferenceError = "";
     var pendingRestore = null;
     if (window.PlexPreferences) {
@@ -399,13 +400,8 @@
             } else if (result.status === "linked") {
                 accountToken = result.token;
                 stopAuthorization();
-                var warning = "";
-                if (rememberControl && rememberControl.checked && window.PlexSession) {
-                    try { window.PlexSession.remember(window.localStorage, accountToken, true); }
-                    catch (error) { warning = "Plex linked, but the session could not be saved. It remains memory-only."; }
-                }
                 accountClient = window.PlexApi.createAccountClient({ token: accountToken });
-                openProfiles(warning);
+                openProfiles();
             } else if (result.status === "expired") {
                 beginAuthorization(info.parentNode);
             } else {
@@ -676,7 +672,6 @@
         section.appendChild(authInfo);
 
         var actions = element("div", "auth-actions");
-        var remember = null;
         var signIn = element("button", "secondary-button", translate("Get a new code"));
         signIn.type = "button";
         signIn.addEventListener("click", function () { beginAuthorization(authInfo); });
@@ -685,17 +680,6 @@
         advancedToggle.type = "button";
         actions.appendChild(advancedToggle);
         section.appendChild(actions);
-
-        if (window.PlexSession) {
-            var rememberLabel = element("label", "remember-option", translate("Stay signed in on this TV"));
-            remember = element("input", "remember-checkbox");
-            remember.type = "checkbox";
-            remember.checked = false;
-            rememberLabel.appendChild(remember);
-            section.appendChild(rememberLabel);
-            section.appendChild(element("p", "remember-note",
-                translate("Your sign-in is stored unencrypted on this TV. Leave this off on a shared TV.")));
-        }
 
         var advanced = element("div", "advanced-panel");
         advanced.hidden = true;
@@ -735,7 +719,6 @@
             section.appendChild(element("p", "inline-error", message));
         }
         screen.appendChild(section);
-        rememberControl = remember;
         beginAuthorization(authInfo, true);
         focusFirst();
     }
@@ -761,7 +744,11 @@
     function playFromCard(item, client, resume) {
         setStatus("Loading details...");
         var generation = viewGeneration;
-        client.getMetadata(item.ratingKey).then(function (metadata) {
+        window.PlexItemMenu.playTarget(item, client).then(function (target) {
+            if (generation !== viewGeneration || player) { return null; }
+            return client.getMetadata(target.ratingKey);
+        }).then(function (metadata) {
+            if (!metadata) { return; }
             if (generation !== viewGeneration || player) { return; }
             startPlayer(metadata, client, resume ? metadata.viewOffset || 0 : 0);
         }).catch(function (error) {
@@ -1539,6 +1526,37 @@
         main.appendChild(actions);
         var more = element("div", "detail-more detail-overflow");
         more.hidden = true;
+        var fileInfoRows = window.PlexFileInfo ? window.PlexFileInfo.rows(item) : [];
+        var fileInfo = null;
+        if (fileInfoRows.length) {
+            fileInfo = element("section", "file-info-panel");
+            fileInfo.hidden = true;
+            fileInfo.setAttribute("role", "dialog");
+            fileInfo.setAttribute("aria-modal", "true");
+            fileInfo.setAttribute("aria-label", translate("File information"));
+            fileInfo.appendChild(element("h2", "", translate("File information")));
+            fileInfoRows.forEach(function (row) {
+                var fact = element("p", "file-info-row");
+                var context = translate("Version {number}", { number: row.version });
+                if (row.part) { context += " / " + translate("Part {number}", { number: row.part }); }
+                if (row.trackType) {
+                    context += " / " + translate(row.trackType) + " " + row.track;
+                }
+                fact.appendChild(element("span", "file-info-label", context + " / " + translate(row.label) + ": "));
+                fact.appendChild(element("span", "file-info-value", row.value));
+                fileInfo.appendChild(fact);
+            });
+            var closeFileInfo = button(fileInfo, "Close menu", function () {
+                fileInfo.hidden = true;
+                moreButton.focus();
+            });
+            detailAction(more, "File information", "info", function () {
+                fileInfo.hidden = false;
+                more.hidden = true;
+                moreButton.setAttribute("aria-expanded", "false");
+                closeFileInfo.focus();
+            });
+        }
         var onDeck = item.OnDeck && item.OnDeck.Metadata;
         if (Array.isArray(onDeck)) { onDeck = onDeck[0]; }
         if (item.type === "show" && onDeck && onDeck.type === "episode" && onDeck.ratingKey) {
@@ -1594,6 +1612,10 @@
         if (["movie", "episode", "show", "season"].indexOf(item.type) !== -1) {
             detailAction(more, "Mark watched", "watched", function () { confirmWatchAction(item, client, "watched"); });
             detailAction(more, "Mark unwatched", "unwatched", function () { confirmWatchAction(item, client, "unwatched"); });
+        }
+        var trailer = window.PlexItemMenu && window.PlexItemMenu.trailerFor(item);
+        if (trailer) {
+            detailAction(more, "Play trailer", "play", function () { playFromCard(trailer, client, false); });
         }
         var plexGuid = /^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(item.guid || "") ? item.guid :
             (item.Guid || []).filter(function (guid) { return /^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(guid.id || ""); })[0];
@@ -1654,6 +1676,7 @@
             hero.appendChild(people);
         }
         screen.appendChild(hero);
+        if (fileInfo) { screen.appendChild(fileInfo); }
 
         var credits = (item.Role || []).concat(item.Director || [], item.Writer || []).slice(0, 60);
         if (credits.length) {
@@ -2068,6 +2091,36 @@
             translate("Not reported by server");
     }
 
+    function applySubtitleAppearance(node) {
+        if (!node) { return; }
+        node.className = "subtitle-text";
+        if (!externalCues) { return; }
+        node.className += " subtitle-size-" + preferences.subtitleSize +
+            " subtitle-position-" + preferences.subtitlePosition +
+            " subtitle-color-" + preferences.subtitleColor;
+    }
+
+    function refreshSubtitleAppearance() {
+        applySubtitleAppearance(document.getElementById("subtitle-text"));
+    }
+
+    function preferenceChoice(parent, title, preferenceKey, values, labelForValue) {
+        var options = values.map(function (value) {
+            return { value: value, label: labelForValue(value) };
+        });
+        var selected = options.filter(function (option) { return option.value === preferences[preferenceKey]; })[0];
+        button(parent, translate("{setting}: {value}", {
+            setting: translate(title), value: selected ? translate(selected.label) : ""
+        }), function () {
+            settingsChoices(title, options.map(function (option) {
+                return { value: option.value, label: translate(option.label) };
+            }), preferences[preferenceKey], function (value) {
+                preferences[preferenceKey] = value;
+                if (savePreferences()) { backView(); }
+            });
+        }, false, "settings");
+    }
+
     function openPlaybackOptions() {
         if (!player) { return; }
         cancelHudTimer();
@@ -2144,14 +2197,17 @@
         hud.appendChild(progress);
         var subtitle = element("p", "subtitle-text");
         subtitle.id = "subtitle-text";
+        applySubtitleAppearance(subtitle);
         screen.appendChild(subtitle);
         var controls = element("div", "playback-controls");
-        var rewind = button(controls, "Back 10 seconds", function () { seekPlayer(-10000); }, false, "rewind");
-        rewind.setAttribute("data-seconds", "10");
+        var rewind = button(controls, translate("Back {seconds} seconds", { seconds: preferences.skipInterval }),
+            function () { seekPlayer(-preferences.skipInterval * 1000); }, false, "rewind");
+        rewind.setAttribute("data-seconds", String(preferences.skipInterval));
         var pauseControl = button(controls, "Pause / Play", togglePlayer, false, "pause");
         pauseControl.setAttribute("aria-label", translate("Pause / Play"));
-        var forward = button(controls, "Forward 30 seconds", function () { seekPlayer(30000); }, false, "forward");
-        forward.setAttribute("data-seconds", "30");
+        var forward = button(controls, translate("Forward {seconds} seconds", { seconds: preferences.skipInterval }),
+            function () { seekPlayer(preferences.skipInterval * 1000); }, false, "forward");
+        forward.setAttribute("data-seconds", String(preferences.skipInterval));
         button(controls, "More", openPlaybackOptions, false, "settings");
         hud.appendChild(controls);
         screen.appendChild(hud);
@@ -2168,7 +2224,11 @@
                         progress.setAttribute("aria-valuenow", String(Math.round(percent)));
                         if (progressFill.style) { progressFill.style.width = percent + "%"; }
                         if (externalCues) {
-                            document.getElementById("subtitle-text").textContent = window.PlexSubtitles.at(externalCues, event.position);
+                            var externalSubtitle = document.getElementById("subtitle-text");
+                            if (externalSubtitle) {
+                                externalSubtitle.textContent = window.PlexSubtitles.at(externalCues,
+                                    event.position - preferences.subtitleDelayMs);
+                            }
                         }
                     } else if (event.type === "subtitle") {
                         if (externalCues) { return; }
@@ -2348,6 +2408,25 @@
         });
         button(subtitleGroup, "Subtitles off", function () { reload(playerSettings.audioId, 0); })
             .setAttribute("aria-pressed", String(!playerSettings.subtitleId && !externalCues));
+        var appearance = group(menu, translate("Text overlay appearance"), "track-group");
+        appearance.appendChild(element("p", "help-text", translate("These settings apply only to the app-rendered SRT/WebVTT text overlay, not device-native or burned subtitles.")));
+        function cycleAppearance(title, preferenceKey, values, labelForValue) {
+            var current = values.indexOf(preferences[preferenceKey]);
+            button(appearance, translate("{setting}: {value}", {
+                setting: translate(title), value: translate(labelForValue(preferences[preferenceKey]))
+            }), function () {
+                preferences[preferenceKey] = values[(current + 1) % values.length];
+                if (savePreferences()) {
+                    refreshSubtitleAppearance();
+                    openTracks();
+                }
+            }, false, "settings");
+        }
+        cycleAppearance("Text size", "subtitleSize", ["small", "medium", "large"], function (value) { return value; });
+        cycleAppearance("Text position", "subtitlePosition", ["low", "middle", "high"], function (value) { return value; });
+        cycleAppearance("Text color", "subtitleColor", ["white", "yellow"], function (value) { return value; });
+        cycleAppearance("Subtitle delay", "subtitleDelayMs", [-2000, -1000, -500, 0, 500, 1000, 2000],
+            function (value) { return (value > 0 ? "+" : "") + value + " ms"; });
         var nativeTracks = element("div", "native-tracks");
         nativeTracks.hidden = true;
         try {
@@ -2484,6 +2563,8 @@
                 if (savePreferences()) { backView(); }
             });
         }, false, "settings");
+        preferenceChoice(playbackSettings, "Skip interval", "skipInterval", [5, 10, 15, 30, 60],
+            function (seconds) { return seconds + " seconds"; });
         var autoNext = button(playbackSettings, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
             preferences.autoNext = !preferences.autoNext;
             if (savePreferences()) { openSettings(); }
@@ -2495,6 +2576,13 @@
             preferences.continueAction = preferences.continueAction === "play" ? "details" : "play";
             if (savePreferences()) { openSettings(); }
         }, false, "play");
+        var subtitleSettings = group(menu, translate("Text overlay appearance"), "settings-group");
+        subtitleSettings.appendChild(element("p", "help-text", translate("These settings apply only to the app-rendered SRT/WebVTT text overlay, not device-native or burned subtitles.")));
+        preferenceChoice(subtitleSettings, "Text size", "subtitleSize", ["small", "medium", "large"], function (value) { return value; });
+        preferenceChoice(subtitleSettings, "Text position", "subtitlePosition", ["low", "middle", "high"], function (value) { return value; });
+        preferenceChoice(subtitleSettings, "Text color", "subtitleColor", ["white", "yellow"], function (value) { return value; });
+        preferenceChoice(subtitleSettings, "Subtitle delay", "subtitleDelayMs", [-2000, -1000, -500, 0, 500, 1000, 2000],
+            function (value) { return (value > 0 ? "+" : "") + value + " ms"; });
         if (currentClient && currentServerId) {
             var librarySettings = group(menu, translate("Libraries"), "settings-group");
             button(librarySettings, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
@@ -2510,6 +2598,31 @@
             });
         }, false, "language");
         var privacy = group(menu, translate("Privacy and data"), "settings-group");
+        var storageWarning = "";
+        if (accountToken && window.PlexSession) {
+            var savedAccount = "";
+            try { savedAccount = window.PlexSession.load(window.localStorage); }
+            catch (error) { storageWarning = error.message; }
+            var savedSignIn = savedAccount === accountToken;
+            var savedLabel = translate("Stay signed in on this TV") + ": " +
+                translate(savedSignIn ? "On" : "Off");
+            var saveSignIn = button(privacy, savedLabel, function () {
+                var shouldSave = saveSignIn.getAttribute("aria-pressed") !== "true";
+                try {
+                    if (shouldSave) { window.PlexSession.remember(window.localStorage, accountToken, true); }
+                    else { window.PlexSession.forget(window.localStorage); }
+                    saveSignIn.setAttribute("aria-pressed", String(shouldSave));
+                    saveSignIn.textContent = translate("Stay signed in on this TV") + ": " +
+                        translate(shouldSave ? "On" : "Off");
+                    setStatus("");
+                } catch (error) {
+                    setStatus("Could not update saved sign-in. Check app storage permissions.", true);
+                }
+            }, true);
+            saveSignIn.setAttribute("aria-pressed", String(savedSignIn));
+            privacy.appendChild(element("p", "help-text",
+                translate("Saved Plex credentials are stored unencrypted on this TV.")));
+        }
         button(privacy, "Reset preferences", function () {
             try {
                 window.PlexPreferences.reset(window.localStorage);
@@ -2524,7 +2637,7 @@
                 viewGeneration += 1;
                 clear(screen);
                 page(translate("Diagnostics"), "diagnostics");
-                screen.appendChild(element("p", "help-text", translate("Account credentials are session-only unless you explicitly enabled unencrypted remember-me. No analytics or crash uploads are enabled.")));
+                screen.appendChild(element("p", "help-text", translate("Account credentials are session-only unless you opt in to unencrypted storage in Settings. No analytics or crash uploads are enabled.")));
                 screen.appendChild(element("p", "help-text",
                     "AVPlay: " + (window.webapis && window.webapis.avplay ? "available (formats unverified)" : "unavailable") +
                     ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
@@ -2535,7 +2648,7 @@
         button(privacy, "Sign out", signOut);
         button(privacy, "Back", backView);
         restoreView = openSettings;
-        setStatus("");
+        setStatus(storageWarning, !!storageWarning);
         focusFirst();
         var controls = screen.querySelectorAll("button");
         if (focusedSetting >= 0 && controls[focusedSetting]) { controls[focusedSetting].focus(); }
@@ -2583,7 +2696,9 @@
             }
         }
         var menu = document.getElementById("player-menu");
-        var controls = Array.prototype.slice.call((menu || screen).querySelectorAll("button, input, select")).filter(function (node) {
+        var fileInfo = screen.querySelector(".file-info-panel");
+        var focusSurface = fileInfo && !fileInfo.hidden ? fileInfo : menu || screen;
+        var controls = Array.prototype.slice.call(focusSurface.querySelectorAll("button, input, select")).filter(function (node) {
             return !node.disabled && !insideHidden(node);
         });
         var index = controls.indexOf(active);
@@ -2659,6 +2774,13 @@
                 screen.querySelector(".account-control").focus();
                 return;
             }
+            var fileInfo = screen.querySelector(".file-info-panel");
+            if (fileInfo && !fileInfo.hidden) {
+                fileInfo.hidden = true;
+                var detailMore = screen.querySelector('[aria-label="More"]');
+                if (detailMore) { detailMore.focus(); }
+                return;
+            }
             var overflow = screen.querySelector(".detail-overflow");
             if (overflow && !overflow.hidden) {
                 overflow.hidden = true;
@@ -2675,7 +2797,9 @@
             if (Date.now() - lastAction < 150) { return; }
             lastAction = Date.now();
             if (key === 413) { stopPlayer(); }
-            else if (key === 417 || key === 412) { seekPlayer(key === 417 ? 30000 : -10000); }
+            else if (key === 417 || key === 412) {
+                seekPlayer(key === 417 ? preferences.skipInterval * 1000 : -preferences.skipInterval * 1000);
+            }
             else if (key === 415 && player.snapshot().state !== "paused") { return; }
             else if (key === 19 && player.snapshot().state !== "playing") { return; }
             else { togglePlayer(); }
