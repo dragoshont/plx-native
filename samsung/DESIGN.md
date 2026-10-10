@@ -4,6 +4,24 @@ This describes the built Samsung Web UI, not the LG renderer or a Samsung suppor
 The owner-pinned direction is Apple-like simplicity, with PlxNative's LG screens as the visual
 reference. The viewing scene is a dark living room, several metres from the panel, using a remote.
 
+## Owner-selected reference
+
+The LG/webOS **application screens in the looping demo on [plxnative.com](https://plxnative.com/#feel)**
+are the primary visual reference, not the website's landing-page styling or the LG launcher.
+The owner explicitly selected this loop after reviewing the Samsung redesign.
+It shows artwork spanning the screen, compact centred Home/Movies/TV Shows/Search navigation,
+a separate profile control, title artwork with restrained metadata, a clear Continue/Resume action
+and quieter secondary actions. The poster shelf meets the hero rather than starting below an
+isolated feature panel. In the shelf view, focused artwork grows and its title/remaining time
+become prominent without a heavy rectangular border around the whole card.
+
+Use those compositions as the Samsung target; do not treat the current boxed Home hero and
+bottom-of-page utilities as accepted equivalents. The source describes the loop as frame-by-frame
+webOS simulator output from an openly licensed library. It is visual evidence, not independently
+observed LG hardware behavior or proof that Samsung rendering/playback matches it.
+The loop covers Home, a movie detail page and library navigation; it does not establish the
+appearance or behavior of every settings, episode or playback menu.
+
 ## Visual language
 
 Near-black `#101012` ground, neutral `#222224` surfaces, white `#f2f2f7` foreground/focus,
