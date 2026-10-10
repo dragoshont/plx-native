@@ -429,9 +429,11 @@ input:focus {
 }
 
 .auth-plate {
-    width: 300px;
-    height: 300px;
+    /* border-box: 300px QR + 30px quiet zone on each side. */
+    width: 360px;
+    height: 360px;
     padding: 30px;
+    overflow: hidden;
     border-radius: 24px;
     background: #f7fafc;
 }
