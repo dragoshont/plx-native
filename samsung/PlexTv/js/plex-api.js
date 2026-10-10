@@ -451,6 +451,9 @@
                 client = createClient({ baseUrl: connection.uri, token: server.token, fetch: options.fetch });
             } catch (error) { return probe(); }
             if (options.onClient && options.onClient(client) === false) { return Promise.reject(requestCancelled()); }
+            if (options.onAttempt) {
+                options.onAttempt({ index: index, total: server.connections.length, relay: connection.relay === true });
+            }
             return client.identity().then(function (identity) {
                 if (identity.machineIdentifier !== server.id) {
                     var mismatch = new Error("Server identity mismatch. Connection refused.");

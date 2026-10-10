@@ -95,6 +95,7 @@
 
     function backView() {
         if (player) { stopPlayer(); return; }
+        if (cancelServerConnection) { cancelServerConnection(); return; }
         var previous = navigation.pop();
         if (!previous) {
             if (currentClient) { loadHome(false); }
@@ -568,7 +569,9 @@
         return !storageError;
     }
 
+    var cancelServerConnection = null;
     function openServers(warning) {
+        cancelServerConnection = null;
         navigation = [];
         restoreView = null;
         var generation = ++viewGeneration;
@@ -592,8 +595,24 @@
                     (unavailable ? " — unavailable" : relayOnly ? " — relay" : ""), function () {
                     var selection = ++viewGeneration;
                     currentClient = null;
+                    Array.prototype.forEach.call(serverList.querySelectorAll(".server-choice"), function (choice) {
+                        choice.disabled = true;
+                    });
+                    var cancelButton = button(screen, "Cancel connection", function () {
+                        if (selection !== viewGeneration) { return; }
+                        openServers();
+                    });
+                    cancelServerConnection = function () { cancelButton.click(); };
+                    viewCleanup = function () { cancelServerConnection = null; };
+                    cancelButton.focus();
                     setStatus("Connecting securely; trying relay if needed...");
-                    window.PlexApi.selectServer(server, { onClient: function (client) {
+                    window.PlexApi.selectServer(server, { onAttempt: function (attempt) {
+                        if (selection !== viewGeneration) { return; }
+                        setStatus(translate("Trying secure connection {index} of {total} ({kind})…", {
+                            index: attempt.index, total: attempt.total,
+                            kind: translate(attempt.relay ? "Relay" : "Direct")
+                        }));
+                    }, onClient: function (client) {
                         if (selection !== viewGeneration) { return false; }
                         viewClients.push(client);
                         return true;
@@ -605,7 +624,13 @@
                         if (needsFavoritesOnboarding()) { openFavorites(true); } else { loadHome(false); }
                     }).catch(function (error) {
                         if (selection !== viewGeneration) { return; }
+                        cancelServerConnection = null;
+                        if (cancelButton.parentNode) { cancelButton.parentNode.removeChild(cancelButton); }
+                        Array.prototype.forEach.call(serverList.querySelectorAll(".server-choice"), function (choice, index) {
+                            choice.disabled = !servers[index].token || !servers[index].connections.length;
+                        });
                         if (!recoverSession(error)) { setStatus(error.message, true); }
+                        focusFirst();
                     });
                 }, true);
                 serverButton.disabled = unavailable;

@@ -15,6 +15,8 @@ function harness(saved, failure, persistence) {
     var approved = false;
     var switches = 0;
     var expired = false;
+    var finishSelection;
+    var cancelledRequests = 0;
     var storage = {
         getItem: function (key) { return data[key] || null; },
         setItem: function (key, value) {
@@ -54,7 +56,7 @@ function harness(saved, failure, persistence) {
                     return Promise.resolve("synthetic-profile-token");
                 },
                 getServers: function () {
-                    if (failure === "server-denial" || failure === "happy" || failure === "save") {
+                    if (failure === "server-denial" || failure === "happy" || failure === "save" || failure === "pending") {
                         return Promise.resolve([{ id: "synthetic-server", name: "Synthetic", token: "synthetic-server-token",
                             connections: [{ uri: "https://server.synthetic.invalid" }] }]);
                     }
@@ -62,7 +64,12 @@ function harness(saved, failure, persistence) {
                 }
             };
         },
-        selectServer: function () {
+        selectServer: function (server, options) {
+            if (failure === "pending") {
+                options.onClient({ cancelRequests: function () { cancelledRequests += 1; } });
+                options.onAttempt({ index: 1, total: 2, relay: false });
+                return new Promise(function (resolve) { finishSelection = resolve; });
+            }
             return Promise.resolve({ client: {
                 getSections: function () {
                     return failure === "server-denial" ?
@@ -73,12 +80,19 @@ function harness(saved, failure, persistence) {
             } });
         }
     };
-    ["js/session.js", "main.js"].forEach(function (file) {
+    ["js/i18n.js", "js/session.js", "main.js"].forEach(function (file) {
         dom.window.eval(fs.readFileSync(path.join(app, file), "utf8"));
     });
     return {
         dom: dom, storage: storage, tokens: tokens,
         switches: function () { return switches; },
+        cancellations: function () { return cancelledRequests; },
+        finishSelection: function () {
+            finishSelection({ client: {
+                getSections: function () { assert.fail("Cancelled selection must not load Home"); },
+                getHomeHubs: function () { assert.fail("Cancelled selection must not load Home"); }
+            } });
+        },
         expire: function () { expired = true; },
         approve: function () { approved = true; },
         text: function () { return dom.window.document.body.textContent; },
@@ -111,6 +125,25 @@ async function run() {
     await settle();
     assert(denied.text().includes("Choose a server"));
     denied.dom.window.close();
+    var pending = harness("synthetic-account-token", "pending");
+    await settle();
+    pending.click("Use linked account");
+    await settle();
+    pending.click("Synthetic (shared)");
+    assert.strictEqual(pending.dom.window.document.activeElement.textContent, "Cancel connection");
+    assert(pending.text().includes("Trying secure connection 1 of 2"),
+        "Connection attempts must be visible without publishing private origins");
+    pending.dom.window.document.dispatchEvent(new pending.dom.window.KeyboardEvent("keydown", {
+        keyCode: 8, bubbles: true
+    }));
+    await settle();
+    assert(pending.text().includes("Choose a server"));
+    assert(!pending.text().includes("Cancel connection"));
+    assert.strictEqual(pending.cancellations(), 1, "Back must cancel registered connection clients");
+    pending.finishSelection();
+    await settle();
+    assert(pending.text().includes("Choose a server"), "Late connection success must not override cancellation");
+    pending.dom.window.close();
     var app = harness("");
     assert.strictEqual(app.dom.window.document.querySelector(".remember-checkbox"), null,
         "The primary link/QR screen has no credential-storage checkbox");

@@ -49,6 +49,37 @@ Shared APIs should be small, dependency-light and usable without PMS. Plex-speci
 handling and test data stay in the product directory. Shared tools accept app id, project root and
 target explicitly; they do not hardcode one app's path, certificate name, model, IP or server.
 
+### Required interactive inspection checkpoint
+
+The builder agent, skill and runtime must include an interactive inspection checkpoint before
+claiming native UI acceptance. Open the standalone real-TV canvas when a supported, authorized
+target is available; otherwise report the specific blocked or unsupported condition and continue
+host-verifiable work. Merely opening a desktop mock is not native acceptance. The standalone
+toolkit candidate is under implementation; this contract does not claim its installed release
+already provides the canvas.
+
+The initial feed may show one genuine capture every ten seconds. Show capture time, age, source,
+connection state and command latency; keep old frames visibly stale after a failure. Renderer
+paint layers are not full-panel images, continuous video, or proof of hardware-video output.
+Never fill an unavailable native pane with fabricated or emulator frames.
+
+Provide D-pad controls and focus-scoped shortcuts: arrow keys navigate, Space/Enter send OK, and
+Backspace sends TV Back rather than browser history. Editing metadata or text must not drive the
+TV. Inputs use the same bounded, authorized command path, with pending/error feedback and no
+held-key backlog. A command must not wait for the next periodic capture to dispatch. Coordinate
+clicks require proven current viewport/layer geometry; otherwise declare them unsupported.
+
+Optional device metadata includes model, year, OS version and firmware, with each value labelled
+observed, user-provided or unknown. Persist profiles by device identity, not transient canvas
+panel ID. Emulation requires explicit selection; comparisons label each source and its capture
+time independently. They do not establish frame-for-frame or second-for-second equivalence.
+
+Native inspection shares the existing exclusive Samsung device lease with every capture,
+deployment and navigation lane. A separate lock implementation is not mutual exclusion.
+Bind services to authenticated loopback endpoints, validate requests, and release snapshots,
+forwards, relays and ownership on stop, failure and session exit. Household account mutations
+remain product-specific, explicitly authorized actions, never a default builder scenario.
+
 ## 4. Standard project shape
 
 The canonical project template should eventually create a structure equivalent to:
