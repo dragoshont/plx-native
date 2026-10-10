@@ -48,6 +48,15 @@ The playback overlay uses a compact transport row and progress bar. Chapters, tr
 playback information, music-queue controls and Stop live under More rather than covering the
 video in two rows of always-visible buttons. It hides after five seconds of uninterrupted play,
 while subtitles remain independent and errors remain visible.
+The owner's screen photos exposed excessive focus borders, crowded Settings, mixed episode
+artwork and technical playback copy. The host-only follow-up removes outer button/poster focus
+borders, limits detail synopses to two lines, puts Home/library/Search destinations together and
+uses series posters on episode shelves when available. Settings exposes one quality/language
+value with separate choice pages; audio and subtitles have distinct groups and native tracks
+are secondary. Closing player menus returns focus to More. Original-source metadata, the
+PMS-reported stream and the requested transcode limit are now distinct; missing output metadata
+is not replaced with the chosen limit. Original direct play remains capability-gated and is not
+enabled by this UI work. These follow-up changes have not been installed or accepted on the TV.
 The installed emulator has not launched on this Apple-Silicon host. Developer-signed application
 installation/launch has been observed on the owner's Samsung; that is an install/launch smoke
 result, not a pass for every redesigned screen, codec, performance target or retail model.

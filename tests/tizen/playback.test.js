@@ -68,12 +68,27 @@ async function run() {
     var session = playback.create({ client: test.client, adapter: test.adapter, item: item, settings: { offset: 5000 } });
     assert.strictEqual(test.calls.length, 0, "Browsing/session construction must not mutate progress");
     await session.start();
+    assert.strictEqual(session.quality().source.width, 1920, "Original source quality must be separate from streaming quality");
+    assert.strictEqual(session.quality().stream, null, "A requested transcode limit is not measured output quality");
     assert.deepStrictEqual(test.calls[0], ["streams", "20", 0, 0],
         "Server stream selection must precede negotiation; query params alone do not select audio/burned captions");
     await session.pause();
     assert(test.calls.some(function (call) { return call[0] === "timeline" && call[1] === 5000 && call[2] === "paused"; }));
     await session.seek(15000);
     await session.stop();
+    var negotiated = rig();
+    negotiated.client.request = function () {
+        return Promise.resolve({ generalDecisionCode: 1001, Metadata: [{ Media: [{
+            width: 1280, height: 720, bitrate: 4000, videoCodec: "h264", Part: [{ decision: "transcode" }]
+        }] }] });
+    };
+    var measured = playback.create({ client: negotiated.client, adapter: negotiated.adapter, item: item,
+        settings: { quality: "1080" } });
+    await measured.start();
+    assert.strictEqual(measured.quality().source.height, 1080);
+    assert.strictEqual(measured.quality().stream.height, 720, "The PMS decision must not be replaced by the requested limit");
+    assert.strictEqual(measured.quality().limit, "1080");
+    await measured.stop();
     assert(test.calls.some(function (call) { return call[0] === "timeline" && call[1] === 15000 && call[2] === "stopped"; }));
     assert(test.calls.some(function (call) { return call[0] === "cleanup"; }));
     assert(test.calls.some(function (call) { return call[0] === "readback"; }));

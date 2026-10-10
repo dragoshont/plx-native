@@ -131,15 +131,29 @@ async function run() {
         await settle();
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 1);
         assert.strictEqual(nativeCalls.length, 0, "Home must not start playback");
+        assert(window.document.querySelector('.home-navigation button[aria-current="page"]'),
+            "Home must be a real selected destination alongside the libraries");
+        assert.strictEqual(window.document.querySelectorAll(".home-hero-description").length, 0,
+            "Home must prioritize browsing, not a large block of synopsis text");
         var navigation = window.document.querySelector(".home-navigation");
         assert(navigation, "Home navigation belongs above the shelves, not below them");
         assert(navigation.querySelector(".menu-icon-search"), "Search needs a visible icon");
-        assert(navigation.querySelector(".menu-icon-settings"), "Settings needs a visible icon");
+        assert(window.document.querySelector(".home-utilities .menu-icon-settings"), "Settings needs a visible icon");
         assert(window.document.querySelector(".library-button.menu-icon-library"), "Library choices need icons");
         click("Settings");
         assert(window.document.querySelector(".settings-menu"), "Settings uses a grouped menu surface");
-        assert(window.document.querySelector('.settings-menu button[aria-pressed="true"]'),
-            "Selected settings must be visible independently of focus");
+        assert(window.document.querySelector('.settings-menu button[aria-pressed]'),
+            "Toggle state must be visible independently of focus");
+        assert.strictEqual(Array.from(window.document.querySelectorAll(".settings-menu button")).filter(function (node) {
+            return node.textContent.indexOf("Transcode quality:") === 0;
+        }).length, 1, "Settings must show one quality value, not every alternative");
+        click("Transcode quality: 1080p");
+        assert.strictEqual(window.document.querySelector('button[aria-pressed="true"]').textContent, "1080p server transcode");
+        click("720p server transcode");
+        assert(window.document.querySelector(".settings-menu"), "Selecting quality must return to Settings");
+        assert.strictEqual(window.document.activeElement.textContent, "Transcode quality: 720p", "Choice pages restore parent focus");
+        click("Transcode quality: 720p");
+        click("1080p server transcode");
         var autoNext = Array.from(window.document.querySelectorAll(".settings-menu button")).find(function (node) {
             return node.textContent === "Auto-play next episode: Off";
         });

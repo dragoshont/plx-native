@@ -147,16 +147,24 @@
             });
         });
         node.className = "media-card";
-        node.setAttribute("data-shape", ["episode", "clip", "photo"].indexOf(item.type) !== -1 ? "landscape" :
+        var seriesPoster = options.shelf && item.type === "episode" && (item.grandparentThumb || item.parentThumb);
+        node.setAttribute("data-shape", !seriesPoster && ["episode", "clip", "photo"].indexOf(item.type) !== -1 ? "landscape" :
             ["artist", "album", "track"].indexOf(item.type) !== -1 ? "square" : "portrait");
         node.plexCard = { item: item, client: client, options: options };
         var image = element("img", "poster");
         image.alt = item.title || "Media";
         image.src = placeholderArt();
         node.appendChild(image);
-        node.appendChild(element("span", "card-title", item.title || item.tag || "Untitled"));
-        node.appendChild(element("span", "card-meta", [item.year, item.type,
-            item.viewCount ? "Watched" : item.viewOffset ? "In progress" : ""].filter(Boolean).join(" / ")));
+        node.appendChild(element("span", "card-title", seriesPoster ? item.grandparentTitle || item.title : item.title || item.tag || "Untitled"));
+        var episodeNumber = item.type === "episode" && item.parentIndex !== undefined && item.index !== undefined ?
+            "S" + item.parentIndex + " E" + item.index : "";
+        node.appendChild(element("span", "card-meta", item.type === "episode" ?
+            [episodeNumber, item.title].filter(Boolean).join(" · ") : String(item.year || "")));
+        if (item.viewCount) {
+            var watchedMark = element("span", "card-watched", "✓");
+            watchedMark.setAttribute("aria-label", translate("Watched"));
+            node.appendChild(watchedMark);
+        }
         if (item.viewOffset && item.duration) {
             var progress = element("span", "card-progress");
             var fill = element("span", "card-progress-fill");
@@ -165,7 +173,7 @@
             node.appendChild(progress);
         }
         var shape = node.getAttribute ? node.getAttribute("data-shape") : "portrait";
-        queueImage(image, client, item.thumb, shape === "landscape" ? { width: 480, height: 270 } :
+        queueImage(image, client, seriesPoster || item.thumb, shape === "landscape" ? { width: 480, height: 270 } :
             shape === "square" ? { width: 360, height: 360 } : { width: 240, height: 360 });
         return node;
     }
@@ -295,7 +303,7 @@
         if (pendingRestore) {
             var previous = pendingRestore;
             pendingRestore = null;
-            if (controls[previous.focus] && !controls[previous.focus].disabled) {
+            if (controls[previous.focus] && !controls[previous.focus].disabled && !insideHidden(controls[previous.focus])) {
                 controls[previous.focus].focus();
                 screen.scrollTop = previous.scroll || 0;
                 return;
@@ -872,13 +880,25 @@
         screen.className = "screen screen-home";
         var nav = element("nav", "home-navigation");
         nav.setAttribute("aria-label", translate("Home"));
+        button(nav, "Home", function () { loadHome(false); }, false, "library").setAttribute("aria-current", "page");
+        var favorites = favoriteKeys();
+        var browsable = sections.filter(function (section) {
+            return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
+        });
+        (window.PlexFavorites ? window.PlexFavorites.filter(browsable, favorites) : browsable).forEach(function (section) {
+            var choice = button(nav, section.title || "Untitled library", function () {
+                visit(function () { openSection(section); });
+            }, true, "library");
+            choice.className += " library-button";
+        });
         button(nav, "Search", function () { visit(openSearch); });
-        button(nav, "Settings", function () { visit(openSettings); });
-        button(nav, "Refresh", function () { loadHome(false); }, false, "refresh");
-        button(nav, "Live TV and DVR", function () { visit(openTelevision); });
-        if (accountClient) { button(nav, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
-        if (accountClient) { button(nav, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
-        button(nav, "Change server", function () {
+        var utilities = element("div", "home-utilities");
+        button(utilities, "Settings", function () { visit(openSettings); });
+        button(utilities, "Refresh", function () { loadHome(false); }, false, "refresh");
+        button(utilities, "Live TV and DVR", function () { visit(openTelevision); }, false, "television");
+        if (accountClient) { button(utilities, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
+        if (accountClient) { button(utilities, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
+        button(utilities, "Change server", function () {
             currentClient = null;
             currentServerId = "";
             if (accountClient) { openServers(); } else { addConnectForm(""); }
@@ -887,7 +907,6 @@
         var homeTitle = element("h2", "page-title home-title", translate("Home"));
         screen.appendChild(homeTitle);
         var featured = null;
-        var favorites = favoriteKeys();
         var visibleHubs = hubs.filter(function (hub) {
             return !favorites || hub.librarySectionID === undefined ||
                 favorites.indexOf(String(hub.librarySectionID)) !== -1;
@@ -908,7 +927,7 @@
             hero.appendChild(element("div", "home-hero-scrim"));
             var copy = element("div", "home-hero-copy");
             copy.appendChild(element("h3", "home-hero-title", featured.grandparentTitle || featured.title));
-            copy.appendChild(element("p", "home-hero-description", featured.summary || translate("No synopsis is available.")));
+            copy.appendChild(element("p", "home-hero-meta", [featured.year, featured.contentRating].filter(Boolean).join(" · ")));
             button(copy, "Open details", function () {
                 visit(function () { openDetail(featured.ratingKey, currentClient); });
             }, false, "library");
@@ -916,23 +935,12 @@
             screen.appendChild(hero);
         }
 
-        var sectionPanel = element("section", "content-panel");
-        addSectionHeading(sectionPanel, translate("Libraries"));
-        if (!sections.length) {
+        if (!browsable.length) {
+            var sectionPanel = element("section", "content-panel");
+            addSectionHeading(sectionPanel, translate("Libraries"));
             sectionPanel.appendChild(element("p", "empty-state", translate("No libraries were returned by this server.")));
+            screen.appendChild(sectionPanel);
         }
-        var browsable = sections.filter(function (section) {
-            return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
-        });
-        (window.PlexFavorites ? window.PlexFavorites.filter(browsable, favorites) : browsable).forEach(function (section) {
-            var button = element("button", "library-button menu-control menu-icon-library", section.title || "Untitled library");
-            button.type = "button";
-            button.addEventListener("click", function () {
-                visit(function () { openSection(section); });
-            });
-            sectionPanel.appendChild(button);
-        });
-        screen.appendChild(sectionPanel);
 
         var hubPanel = element("section", "content-panel");
         hubPanel.setAttribute("aria-label", translate("Plex shelves"));
@@ -947,13 +955,13 @@
             hubSection.appendChild(row);
             var metadata = Array.isArray(hub.Metadata) ? hub.Metadata : [];
             metadata.slice(0, 12).forEach(function (item) {
-                if (item.ratingKey) { card(row, item, currentClient, null, { deck: deck }); }
+                if (item.ratingKey) { card(row, item, currentClient, null, { deck: deck, shelf: true }); }
             });
             hubPanel.appendChild(hubSection);
         });
         screen.appendChild(hubPanel);
-        setStatus((usingRelay ? "Connected through Plex relay (bandwidth limited). " : "Connected. ") +
-            "Select a title for details. Hold OK on a card for more actions.");
+        screen.appendChild(utilities);
+        setStatus(usingRelay ? "Connected through Plex relay (bandwidth limited)." : "");
         focusFirst();
     }
 
@@ -1876,7 +1884,16 @@
         var menu = document.getElementById("player-menu");
         if (menu) { menu.parentNode.removeChild(menu); }
         showHud();
-        focusFirst();
+        var controls = screen.querySelectorAll(".playback-controls button");
+        if (controls.length) { controls[controls.length - 1].focus(); }
+    }
+
+    function qualityLabel(media) {
+        if (!media) { return translate("Not reported by server"); }
+        return [media.height ? media.height + "p" : media.videoResolution || "",
+            media.videoCodec || media.audioCodec || "",
+            media.bitrate ? (Number(media.bitrate) / 1000).toFixed(1) + " Mbps" : ""].filter(Boolean).join(" · ") ||
+            translate("Not reported by server");
     }
 
     function openPlaybackOptions() {
@@ -1894,10 +1911,11 @@
         information.hidden = true;
         button(menu, "Playback information", function () {
             information.hidden = false;
-            information.textContent = translate(player.mode() === "direct" ?
-                "Direct play with an explicitly evidenced capability profile." :
-                "Plex server transcode: HLS / H.264 + AAC.") +
-                (player.mode() === "direct" ? "" : " " + preferences.quality + "p.");
+            var quality = player.quality();
+            information.textContent = translate("Original source") + ": " + qualityLabel(quality.source) + ". " +
+                translate(quality.mode === "direct" ? "Direct play" : "Server transcode") + ". " +
+                translate("Server stream") + ": " + qualityLabel(quality.stream) + ". " +
+                (quality.mode === "direct" ? "" : translate("Transcode limit") + ": " + quality.limit + "p.");
         });
         menu.appendChild(information);
         if (playerItem.type === "track") {
@@ -1956,9 +1974,10 @@
         subtitle.id = "subtitle-text";
         screen.appendChild(subtitle);
         var controls = element("div", "playback-controls");
-        button(controls, "Back 10 seconds", function () { seekPlayer(-10000); }, false, "back");
-        button(controls, "Pause / Play", togglePlayer, false, "play");
-        button(controls, "Forward 30 seconds", function () { seekPlayer(30000); }, false, "play");
+        button(controls, "Back 10 seconds", function () { seekPlayer(-10000); }, false, "rewind");
+        var pauseControl = button(controls, "Pause / Play", togglePlayer, false, "pause");
+        pauseControl.setAttribute("aria-label", translate("Pause / Play"));
+        button(controls, "Forward 30 seconds", function () { seekPlayer(30000); }, false, "forward");
         button(controls, "More", openPlaybackOptions, false, "settings");
         hud.appendChild(controls);
         screen.appendChild(hud);
@@ -1987,9 +2006,11 @@
                         }
                     } else if (event.type === "buffering") {
                         hudBuffering = !!event.detail;
-                        setStatus(event.detail ? "Buffering..." : "Playback ready.");
+                        setStatus(event.detail ? "Buffering..." : "");
                         showHud();
                     } else if (event.type === "state") {
+                        pauseControl.className = pauseControl.className.replace(/menu-icon-(pause|play)/,
+                            event.state === "paused" ? "menu-icon-play" : "menu-icon-pause");
                         showHud();
                     } else if (event.type === "error") {
                         showPlayerError({ message: event.detail });
@@ -2109,6 +2130,8 @@
         var menu = element("section", "player-menu");
         menu.id = "player-menu";
         menu.appendChild(element("h2", "", translate("Audio and subtitles")));
+        var audioGroup = group(menu, translate("Audio"), "track-group");
+        var subtitleGroup = group(menu, translate("Subtitles"), "track-group");
         function reload(audioId, subtitleId) {
             var item = playerItem;
             var client = playerClient;
@@ -2120,14 +2143,17 @@
         }
         (player.part().Stream || []).forEach(function (stream) {
             if (stream.streamType === 2) {
-                button(menu, "Audio / " + (stream.displayTitle || stream.language || stream.codec || stream.id), function () {
+                var audioChoice = button(audioGroup, stream.displayTitle || stream.language || stream.codec || String(stream.id), function () {
                     reload(stream.id, playerSettings.subtitleId);
                 });
+                audioChoice.setAttribute("aria-pressed", String(playerSettings.audioId ?
+                    String(playerSettings.audioId) === String(stream.id) : !!stream.selected));
             } else if (stream.streamType === 3) {
-                button(menu, "Subtitle / " + (stream.displayTitle || stream.language || stream.codec || stream.id) +
-                    " (server-rendered)", function () { reload(playerSettings.audioId, stream.id); });
+                var subtitleChoice = button(subtitleGroup, stream.displayTitle || stream.language || stream.codec || String(stream.id),
+                    function () { reload(playerSettings.audioId, stream.id); });
+                subtitleChoice.setAttribute("aria-pressed", String(String(playerSettings.subtitleId) === String(stream.id)));
                 if (stream.key && ["srt", "subrip", "webvtt"].indexOf(stream.codec) !== -1) {
-                    button(menu, "Text overlay / " + (stream.displayTitle || stream.language || stream.id), function () {
+                    button(subtitleGroup, "Text overlay / " + (stream.displayTitle || stream.language || stream.id), function () {
                         var selectedPlayer = player;
                         setStatus("Loading text subtitles...");
                         playerClient.subtitleText(stream.id, stream.codec).then(function (text) {
@@ -2146,11 +2172,14 @@
                 }
             }
         });
-        button(menu, "Subtitles off", function () { reload(playerSettings.audioId, 0); });
+        button(subtitleGroup, "Subtitles off", function () { reload(playerSettings.audioId, 0); })
+            .setAttribute("aria-pressed", String(!playerSettings.subtitleId && !externalCues));
+        var nativeTracks = element("div", "native-tracks");
+        nativeTracks.hidden = true;
         try {
             player.tracks().forEach(function (track) {
                 if (track.type !== "AUDIO" && track.type !== "TEXT") { return; }
-                button(menu, "Samsung " + track.type + " track " + track.index, function () {
+                button(nativeTracks, "Samsung " + track.type + " track " + track.index, function () {
                     try {
                         player.selectTrack(track.type, track.index);
                         if (track.type === "TEXT") { player.subtitles(true); }
@@ -2159,6 +2188,13 @@
                 });
             });
         } catch (error) { menu.appendChild(element("p", "inline-error", error.message)); }
+        if (nativeTracks.querySelectorAll("button").length) {
+            button(menu, "Device tracks", function () {
+                nativeTracks.hidden = !nativeTracks.hidden;
+            }, false, "settings");
+            menu.appendChild(nativeTracks);
+        }
+        button(menu, "Playback options", openPlaybackOptions);
         button(menu, "Close menu", closePlayerMenu);
         screen.appendChild(menu);
         var control = menu.querySelectorAll("button")[0];
@@ -2173,6 +2209,7 @@
         var menu = element("section", "player-menu");
         menu.id = "player-menu";
         menu.appendChild(element("h2", "", translate("Quality and media version")));
+        menu.appendChild(element("p", "help-text", translate("Original source") + ": " + qualityLabel(player.quality().source)));
         function change(quality, version) {
             var item = playerItem;
             var client = playerClient;
@@ -2182,13 +2219,17 @@
             stopPlayer(function () { startPlayer(item, client, position, version, tracks); });
         }
         ["720", "1080"].forEach(function (quality) {
-            button(menu, quality + "p server transcode", function () { change(quality, playerSettings.mediaIndex); });
+            button(menu, quality + "p server transcode", function () { change(quality, playerSettings.mediaIndex); })
+                .setAttribute("aria-pressed", String(playerSettings.quality === quality));
         });
         (playerItem.Media || []).forEach(function (media, version) {
-            button(menu, "Version " + (version + 1) + " / " + (media.videoResolution || "") +
-                " " + (media.videoCodec || ""), function () { change(preferences.quality, version); });
+            if (playerItem.Media.length < 2) { return; }
+            button(menu, "Version " + (version + 1) + " / " + qualityLabel(media),
+                function () { change(preferences.quality, version); })
+                .setAttribute("aria-pressed", String(playerSettings.mediaIndex === version));
         });
-        menu.appendChild(element("p", "help-text", translate("Original quality needs an evidenced model capability profile. Unknown formats are not advertised as supported.")));
+        menu.appendChild(element("p", "help-text", translate("Original direct play is not available on this model profile.")));
+        button(menu, "Playback options", openPlaybackOptions);
         button(menu, "Close menu", closePlayerMenu);
         screen.appendChild(menu);
         menu.querySelectorAll("button")[0].focus();
@@ -2235,24 +2276,40 @@
         return null;
     }
 
+    function settingsChoices(title, values, current, choose) {
+        visit(function renderChoices() {
+            viewGeneration += 1;
+            clear(screen);
+            page(translate(title), "settings");
+            values.forEach(function (value) {
+                button(screen, value.label, function () { choose(value.value); }).setAttribute("aria-pressed",
+                    String(current === value.value));
+            });
+            button(screen, "Back", backView);
+            restoreView = renderChoices;
+            setStatus("");
+            focusFirst();
+        });
+    }
+
     function openSettings() {
         var focusedSetting = restoreView === openSettings ?
             Array.prototype.slice.call(screen.querySelectorAll("button")).indexOf(document.activeElement) : -1;
         viewGeneration += 1;
         clear(screen);
         page(translate("Settings"), "settings");
-        screen.appendChild(element("p", "help-text", translate("Account credentials are session-only unless you explicitly enabled unencrypted remember-me. No analytics or crash uploads are enabled.")));
         var menu = element("section", "settings-menu");
         menu.setAttribute("aria-label", translate("Settings"));
         screen.appendChild(menu);
         var playbackSettings = group(menu, translate("Playback"), "settings-group");
-        ["720", "1080"].forEach(function (quality) {
-            var choice = button(playbackSettings, "Transcode quality: " + quality + "p" + (preferences.quality === quality ? " (selected)" : ""), function () {
+        button(playbackSettings, "Transcode quality: " + preferences.quality + "p", function () {
+            settingsChoices("Transcode quality", ["720", "1080"].map(function (quality) {
+                return { value: quality, label: quality + "p server transcode" };
+            }), preferences.quality, function (quality) {
                 preferences.quality = quality;
-                if (savePreferences()) { openSettings(); }
+                if (savePreferences()) { backView(); }
             });
-            choice.setAttribute("aria-pressed", preferences.quality === quality ? "true" : "false");
-        });
+        }, false, "settings");
         var autoNext = button(playbackSettings, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
             preferences.autoNext = !preferences.autoNext;
             if (savePreferences()) { openSettings(); }
@@ -2264,19 +2321,20 @@
             preferences.continueAction = preferences.continueAction === "play" ? "details" : "play";
             if (savePreferences()) { openSettings(); }
         }, false, "play");
-        var librarySettings = group(menu, translate("Libraries"), "settings-group");
         if (currentClient && currentServerId) {
+            var librarySettings = group(menu, translate("Libraries"), "settings-group");
             button(librarySettings, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
         }
         var languages = group(menu, translate("Language"), "settings-group");
-        ["en", "es", "be"].forEach(function (language) {
-            var names = { en: "English", es: "Español", be: "Беларуская" };
-            var choice = button(languages, translate("Language") + ": " + names[language], function () {
+        var names = { en: "English", es: "Español", be: "Беларуская" };
+        button(languages, translate("Language") + ": " + names[preferences.language], function () {
+            settingsChoices("Language", ["en", "es", "be"].map(function (language) {
+                return { value: language, label: names[language] };
+            }), preferences.language, function (language) {
                 preferences.language = language;
-                if (savePreferences()) { openSettings(); }
-            }, false, "language");
-            choice.setAttribute("aria-pressed", preferences.language === language ? "true" : "false");
-        });
+                if (savePreferences()) { backView(); }
+            });
+        }, false, "language");
         var privacy = group(menu, translate("Privacy and data"), "settings-group");
         button(privacy, "Reset preferences", function () {
             try {
@@ -2292,6 +2350,7 @@
                 viewGeneration += 1;
                 clear(screen);
                 page(translate("Diagnostics"), "diagnostics");
+                screen.appendChild(element("p", "help-text", translate("Account credentials are session-only unless you explicitly enabled unencrypted remember-me. No analytics or crash uploads are enabled.")));
                 screen.appendChild(element("p", "help-text",
                     "AVPlay: " + (window.webapis && window.webapis.avplay ? "available (formats unverified)" : "unavailable") +
                     ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
@@ -2302,7 +2361,7 @@
         button(privacy, "Sign out", signOut);
         button(privacy, "Back", backView);
         restoreView = openSettings;
-        setStatus("Unknown codec capabilities use server transcoding, not guessed direct play.");
+        setStatus("");
         focusFirst();
         var controls = screen.querySelectorAll("button");
         if (focusedSetting >= 0 && controls[focusedSetting]) { controls[focusedSetting].focus(); }
@@ -2310,7 +2369,7 @@
 
     function insideHidden(node) {
         for (var current = node; current; current = current.parentNode) {
-            if (current.hidden === true) { return true; }
+            if (current !== document && current.hidden === true) { return true; }
         }
         return false;
     }

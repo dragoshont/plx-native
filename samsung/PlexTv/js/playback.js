@@ -53,6 +53,8 @@
         var item = options.item;
         var settings = options.settings || {};
         var selection = plan(item, settings);
+        var sourceMedia = item.Media[settings.mediaIndex || 0];
+        var streamMedia = null;
         var emit = options.onEvent || function () {};
         var interval = null;
         var started = false;
@@ -134,6 +136,7 @@
                     var selectedMedia = decision.Metadata && decision.Metadata[0] &&
                         decision.Metadata[0].Media && decision.Metadata[0].Media[0];
                     var selectedPart = selectedMedia && selectedMedia.Part && selectedMedia.Part[0];
+                    streamMedia = selectedMedia || null;
                     selection.direct = selection.direct && selectedPart && selectedPart.decision === "directplay";
                     var path = selection.direct ? selection.part.key : "/" + selection.kind +
                         "/:/transcode/universal/start." + (selection.kind === "music" ? "mp3" : "m3u8");
@@ -169,6 +172,10 @@
             snapshot: function () { return adapter.snapshot(); },
             part: function () { return selection.part; },
             mode: function () { return selection.direct ? "direct" : "transcode"; },
+            quality: function () {
+                return { source: sourceMedia, stream: selection.direct ? sourceMedia : streamMedia,
+                    mode: selection.direct ? "direct" : "transcode", limit: settings.quality === "720" ? "720" : "1080" };
+            },
             tracks: function () { return adapter.tracks(); },
             selectTrack: function (type, index) { adapter.selectTrack(type, index); },
             subtitles: function (enabled) { adapter.subtitles(enabled); },
