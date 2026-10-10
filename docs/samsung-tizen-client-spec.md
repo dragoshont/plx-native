@@ -541,10 +541,18 @@ playback and watch-state writes remain excluded.
 
 | ID | Issue and evidence | Fix / acceptance status |
 |---|---|---|
-| UX-01 | Owner reports missing profile photo. Source confirms initials-only profile picker and generic Account glyph. LG `plex/account.rs` supplies `thumb`; `session_profile_cache_tests.rs` uses a plex.tv user-avatar URL. | Candidate renders returned avatars in the picker and active Account control using bounded image loading; initials/glyph remain until decode succeeds. Regression failed before the fix and passes after. Native acceptance pending. |
+| UX-01 | Owner reports missing profile photo. Source confirms initials-only profile picker and generic Account glyph. LG `plex/account.rs` supplies `thumb`; `session_profile_cache_tests.rs` uses a plex.tv user-avatar URL. | Implemented in `29f8ab60`: returned avatars in the picker and active Account control use bounded image loading; initials/glyph remain until decode succeeds. Regression failed before the fix and passes after; decode-to-visible and credential/origin boundaries are exercised. Native acceptance pending. |
 | UX-02 | `openProfiles` inserts “Use this profile” even for an unprotected identity, adding a redundant confirmation. | Candidate switches an unprotected profile in one click; protected identities retain PIN validation and stale-result guards. Host journey passes; native acceptance pending. |
-| UX-03 | Account opens utilities on Home but jumps directly to Settings in a library (`browseHeader`). | Candidate uses the same Account panel on Home and libraries; Refresh stays in the selected destination. Native loop acceptance pending. |
+| UX-03 | Account opens utilities on Home but jumps directly to Settings in a library (`browseHeader`). | Implemented in `29f8ab60`: same Account panel on Home and libraries; Refresh stays in the selected destination. Host library Account/Back/focus journey passes. Native loop acceptance pending. |
 | CAP-01 | Full-panel capture/screencast unavailable on this firmware; genuine renderer-layer replay works. | Keep fresh layers and timing/step receipts. Do not label the recording full-panel or 60-fps LG-equivalent footage. Actual signed-in loop capture in progress. |
+
+Fix batch `29f8ab60` passed the committed-tree Samsung suite, strict ES5 parser, unsigned SDK
+build and quality gate. Its signed development package was verified byte-for-byte against the
+committed app assets, with only explicit application/package IDs added to the staged manifest.
+It has been handed to the sole device lane for checksum verification and installation;
+an install request is not an install receipt or native acceptance. Updating the memory-only
+signed-in app may require the owner to sign in again; no token is extracted or persisted to
+avoid that step.
 
 ### Player and protocol
 

@@ -42,6 +42,10 @@ async function run() {
         addEventListener: function () {}
     };
     var accountApi = {
+        image: function (path) {
+            assert.strictEqual(path, "https://plex.tv/users/synthetic/avatar?c=1");
+            return Promise.resolve(new Blob(["synthetic avatar"], { type: "image/png" }));
+        },
         getProfiles: function () { return Promise.resolve([
             { uuid: "synthetic-profile", title: "Synthetic Guest", protected: protectedProfile,
                 thumb: "https://plex.tv/users/synthetic/avatar?c=1" }
@@ -99,6 +103,12 @@ async function run() {
     var identity = screen.querySelectorAll().find(function (node) { return node.textContent === "Synthetic Guest"; });
     assert(identity.children.some(function (node) { return node.tag === "img" && node.className === "profile-avatar"; }),
         "Profiles must render their returned photo, retaining initials as a loading/error fallback");
+    var avatar = identity.children.find(function (node) { return node.tag === "img"; });
+    assert.strictEqual(identity.attributes["data-avatar"], undefined, "Initials remain while the photo loads");
+    assert.strictEqual(typeof avatar.onload, "function", "The photo must enter the bounded decode pipeline");
+    avatar.onload();
+    await settle();
+    assert.strictEqual(identity.attributes["data-avatar"], "true", "Decoded photos must become visible");
     click("Synthetic Guest");
     click("Use this profile");
     assert.strictEqual(switches, 0);
