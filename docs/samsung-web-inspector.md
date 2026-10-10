@@ -247,6 +247,50 @@ The viewer is genuinely live: a capture changes when the page repaints. It is
 not a frame-accurate recording of compositor animation, the video plane or
 the panel.
 
+## Guarded navigation
+
+`state` and `key` drive the app through the remote-key path for read-only
+UI walks. Neither takes an expression; the only page evaluation is the fixed
+`STATE` reader in `tools/tizen/inspector/nav.js`.
+
+```sh
+node tools/tizen/inspector.js state --endpoint http://127.0.0.1:PORT
+node tools/tizen/inspector.js key --endpoint http://127.0.0.1:PORT --key up|down|left|right|back|ok [--rating-key N]
+```
+
+`state` returns a sanitized focus summary:
+- the screen class, and whether a menu or player is open;
+- the Continue Watching action setting;
+- the active element's kind, box and row;
+- for a card, its type, numeric `ratingKey` and whether it is a deck card;
+- for a button, its label (at most 48 characters), whether it is a server or
+  profile choice, and whether it is disabled.
+
+Titles, names and URLs are never returned.
+
+Arrow keys and Back are refused only while a player is active. OK is pressed
+only when the focus is allowed and stays identical across two reads 250 ms
+apart. When OK is refused, the tool returns `refused` with a reason. It
+refuses:
+- any card unless `--rating-key` matches the focused card;
+- a card inside a menu;
+- a deck card of a playable type when Continue Watching is set to play;
+- a track card;
+- a profile choice (switching profile is a server request);
+- a disabled control;
+- a label matching the deny pattern (Play, Continue, Resume, trailer, watch
+  state, DVR, sign-in/out and similar), unless it is on the exact browse
+  allowlist;
+- a label that is on no allowlist, such as an error page's Retry.
+
+OK is allowed on:
+- exact browse labels such as Open details, Back, Home, Search and Settings;
+- library names in the Home navigation capsule;
+- a server choice, and "Use linked account", outside menus.
+
+The guard reduces the chance of a household write; it does not prove an app
+control is read-only. Read the source of any new label before allowlisting it.
+
 ## Retail result and source interpretation
 
 Observed on **Samsung UE55MU6172, Tizen 3.0**, 2026-10-11:

@@ -7,6 +7,7 @@ const { screenshot, screencastCapability, screencast } = require('./inspector/ca
 const { acquireLock, outputPath, saveScreenshot, saveFrames } = require('./inspector/lifecycle');
 const { layerCapture } = require('./inspector/layers');
 const { LiveView } = require('./inspector/live');
+const { KEYS, readState, press } = require('./inspector/nav');
 
 const HELP = `Samsung Web Inspector (Node >=22)
   node tools/tizen/inspector.js targets|probe|geometry --endpoint http://127.0.0.1:PORT
@@ -15,8 +16,11 @@ const HELP = `Samsung Web Inspector (Node >=22)
   node tools/tizen/inspector.js layers --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/layers
   node tools/tizen/inspector.js live --endpoint http://127.0.0.1:PORT --allow-private-pixels --duration-ms 300000 --interval-ms 1000
     (serves fresh separate layers from memory on a tokenised 127.0.0.1 URL printed to stderr; Ctrl-C stops)
+  node tools/tizen/inspector.js state --endpoint http://127.0.0.1:PORT
+  node tools/tizen/inspector.js key --endpoint http://127.0.0.1:PORT --key up|down|left|right|back|ok [--rating-key N]
+    (ok is refused unless the focused control is browse-only; a card needs its observed --rating-key)
 Options: --target-index N (required for multiple pages), --timeout-ms 15000 (100..15000).
-Read-only fixed probes; no arbitrary evaluation, keys, navigation or app launch.
+Fixed probes only; no arbitrary evaluation or app launch. Keys only through the guarded key command.
 Capture output is PRIVATE and is never a DOM reconstruction. See docs/samsung-web-inspector.md.
 `;
 
@@ -29,7 +33,7 @@ function integer(value, min, max) {
 
 function options(args) {
     const command = args[0];
-    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast', 'layers', 'live'].includes(command)) {
+    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast', 'layers', 'live', 'state', 'key'].includes(command)) {
         throw new InspectorError('invalid_command');
     }
     const values = {};
@@ -37,7 +41,7 @@ function options(args) {
         const name = args[i];
         if (Object.hasOwn(values, name)) throw new InspectorError('duplicate_option');
         if (name === '--allow-private-pixels') { values[name] = true; continue; }
-        if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms'].includes(name) ||
+        if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms', '--key', '--rating-key'].includes(name) ||
             i + 1 >= args.length || args[i + 1].startsWith('--')) throw new InspectorError('invalid_option');
         values[name] = args[++i];
     }
@@ -49,11 +53,15 @@ function options(args) {
     if ((!pixel && values['--allow-private-pixels']) || (!saves && values['--output']) ||
         (!['screencast', 'live'].includes(command) && values['--duration-ms']) ||
         (command !== 'screencast' && values['--max-frames']) ||
-        (command !== 'live' && values['--interval-ms'])) {
+        (command !== 'live' && values['--interval-ms']) ||
+        (command !== 'key' && (values['--key'] || values['--rating-key']))) {
         throw new InspectorError('inapplicable_option');
     }
+    if (command === 'key' && !Object.hasOwn(KEYS, values['--key'] || '')) throw new InspectorError('invalid_key');
+    if (values['--rating-key'] !== undefined && !/^\d{1,12}$/.test(values['--rating-key'])) throw new InspectorError('invalid_option');
     const live = command === 'live';
     return {
+        key: values['--key'], ratingKey: values['--rating-key'],
         command, endpoint: localEndpoint(values['--endpoint']),
         timeoutMs: integer(values['--timeout-ms'] || '15000', 100, 15000),
         targetIndex: values['--target-index'] === undefined ? undefined : integer(values['--target-index'], 0, 99),
@@ -100,6 +108,8 @@ async function run(config, lock = acquireLock, ready = view => process.stderr.wr
             client = await Client.connect(url, config.timeoutMs);
             if (interrupted) throw new InspectorError('interrupted');
             await client.rpc('Page.enable');
+            if (config.command === 'state') result = { status: 'inspected', version, state: await readState(client) };
+            if (config.command === 'key') result = { ...await press(client, config.key, { ratingKey: config.ratingKey }), version };
             if (config.command === 'geometry') result = { status: 'inspected', version, geometry: await geometry(client) };
             if (config.command === 'probe') result = { status: 'inspected', version,
                 geometry: await geometry(client), screencast: await screencastCapability(client),
@@ -145,7 +155,7 @@ async function main(args) {
     try {
         const result = await run(options(args));
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-        if (['unsupported', 'unavailable'].includes(result.status)) process.exitCode = 2;
+        if (['unsupported', 'unavailable', 'refused'].includes(result.status)) process.exitCode = 2;
     } catch (error) {
         const result = { status: 'error', reason: error instanceof InspectorError ? error.code : 'internal_error' };
         if (error instanceof InspectorError && error.method) result.method = error.method;
