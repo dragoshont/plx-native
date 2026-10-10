@@ -15,7 +15,8 @@
         }
         var multipart = media.Part.length > 1;
         var profile = options.profile;
-        var direct = !multipart && profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
+        var kind = item.type === "track" ? "music" : "video";
+        var direct = kind === "video" && !multipart && profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
             profile.video.indexOf(media.videoCodec) !== -1 && profile.audio.indexOf(media.audioCodec) !== -1 &&
             media.width <= profile.maxWidth && media.height <= profile.maxHeight && !options.subtitleId;
         var session = "tizen-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
@@ -32,7 +33,18 @@
             "X-Plex-Client-Profile-Name": "Generic",
             "X-Plex-Client-Profile-Extra": "add-transcode-target(type=videoProfile&context=streaming&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)"
         };
-        return { direct: !!direct, part: part, query: query, session: session };
+        if (kind === "music") {
+            query.protocol = "http";
+            query.audioCodec = "mp3";
+            query.audioBitrate = 192;
+            delete query.videoCodec;
+            delete query.videoBitrate;
+            delete query.videoResolution;
+            delete query.videoQuality;
+            query["X-Plex-Client-Profile-Extra"] =
+                "add-transcode-target(type=musicProfile&context=streaming&protocol=http&container=mp3&audioCodec=mp3)";
+        }
+        return { direct: !!direct, part: part, query: query, session: session, kind: kind };
     }
 
     function create(options) {
@@ -77,7 +89,7 @@
             }
             return stopped.then(function () {
                 if (!selection.direct && allocated) {
-                    return client.stopTranscode(selection.session).catch(function () {
+                    return client.stopTranscode(selection.session, selection.kind).catch(function () {
                         emit({ type: "cleanup-error", message: "Plex did not confirm transcode cleanup." });
                     });
                 }
@@ -98,7 +110,7 @@
                     return client.selectStreams(selection.part.id, settings.audioId || 0, settings.subtitleId || 0);
                 }).then(function () {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
-                    return client.request("/video/:/transcode/universal/decision", "GET", selection.query);
+                    return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", selection.query);
                 }).then(function (decision) {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
                     if (Number(decision.generalDecisionCode) >= 2000 || Number(decision.transcodeDecisionCode) >= 2000) {
@@ -108,7 +120,8 @@
                         decision.Metadata[0].Media && decision.Metadata[0].Media[0];
                     var selectedPart = selectedMedia && selectedMedia.Part && selectedMedia.Part[0];
                     selection.direct = selection.direct && selectedPart && selectedPart.decision === "directplay";
-                    var path = selection.direct ? selection.part.key : "/video/:/transcode/universal/start.m3u8";
+                    var path = selection.direct ? selection.part.key : "/" + selection.kind +
+                        "/:/transcode/universal/start." + (selection.kind === "music" ? "mp3" : "m3u8");
                     var url = client.streamUrl(path, selection.direct ? {} : selection.query);
                     allocated = true;
                     return adapter.open(url, settings.offset || 0);

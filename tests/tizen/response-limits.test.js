@@ -80,6 +80,27 @@ async function run() {
     fixture = rig({ ok: true, status: 200, text: function () { assert.fail("Unbounded legacy text() must not run"); } });
     await assert.rejects(fixture.client.getSections(), /runtime is not supported yet/);
     assert.strictEqual(fixture.timers.size, 0);
+    var aborted = 0;
+    fixture = rig({
+        ok: true, status: 200,
+        body: { getReader: function () { return {
+            read: function () { return new Promise(function () {}); },
+            cancel: function () { aborted += 1; return Promise.resolve(); }
+        }; } }
+    });
+    pending = fixture.client.getSections();
+    await settle();
+    fixture.client.cancelRequests();
+    await assert.rejects(pending, /cancelled/);
+    assert.strictEqual(aborted, 1, "Leaving a view must cancel its active response reader");
+    assert.strictEqual(fixture.timers.size, 0);
+
+    fixture = rig({ ok: true, status: 200, json: function () { return Promise.resolve({ MediaContainer: { Directory: [] } }); } });
+    pending = fixture.client.getSections();
+    fixture.client.cancelRequests();
+    await assert.rejects(pending, /cancelled|unreachable/);
+    assert.strictEqual((await fixture.client.getSections()).length, 0, "Cancellation must not permanently disable the client");
+
     console.log("Tizen full-body deadline and incremental response-size limits: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

@@ -33,6 +33,11 @@
     var playerClosing = false;
     var lastAction = 0;
     var externalCues = null;
+    var musicQueue = null;
+    var musicLoading = false;
+    var queueShuffle = false;
+    var queueRepeat = "off";
+    var viewCleanup = null;
     var preferences = { quality: "1080", autoNext: false, language: "en" };
     var preferenceError = "";
     var pendingRestore = null;
@@ -101,9 +106,14 @@
         }
     }
 
-    function card(parent, item, client) {
+    function card(parent, item, client, siblings) {
         var node = button(parent, "", function () {
-            visit(function () { openDetail(item.ratingKey, client); });
+            visit(function () {
+                if (item.type === "photo") {
+                    var photos = (siblings || [item]).filter(function (entry) { return entry.type === "photo"; });
+                    openPhotos(photos, Math.max(0, photos.indexOf(item)), client);
+                } else { openDetail(item.ratingKey, client); }
+            });
         });
         node.className = "media-card";
         var image = element("img", "poster");
@@ -137,6 +147,15 @@
     }
 
     function clear(node) {
+        if (node === screen && !player) {
+            if (currentClient && currentClient.cancelRequests) { currentClient.cancelRequests(); }
+            if (accountClient && accountClient.cancelRequests) { accountClient.cancelRequests(); }
+        }
+        if (node === screen && viewCleanup) {
+            var cleanup = viewCleanup;
+            viewCleanup = null;
+            cleanup();
+        }
         while (node.firstChild) {
             node.removeChild(node.firstChild);
         }
@@ -182,6 +201,7 @@
     }
 
     function stopAuthorization() {
+        if (authClient && authClient.cancelRequests) { authClient.cancelRequests(); }
         authGeneration += 1;
         if (authTimer !== null) {
             clearTimeout(authTimer);
@@ -548,7 +568,7 @@
             sectionPanel.appendChild(element("p", "empty-state", "No libraries were returned by this server."));
         }
         sections.filter(function (section) {
-            return section.type === "movie" || section.type === "show";
+            return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
         }).forEach(function (section) {
             var button = element("button", "library-button", section.title || "Untitled library");
             button.type = "button";
@@ -613,7 +633,7 @@
         var list = element("div", "item-list");
         list.id = "item-list";
         screen.appendChild(list);
-        currentItems.forEach(function (item) { card(list, item, currentClient); });
+        currentItems.forEach(function (item) { card(list, item, currentClient, currentItems); });
         var previousPage = button(screen, "Previous page", function () {
             var start = Math.max(0, currentOffset - currentItems.length - 50);
             openSection(section, { items: [], offset: start, filters: libraryFilters });
@@ -657,7 +677,7 @@
             var list = document.getElementById("item-list");
             clear(list);
             resetImages();
-            currentItems.forEach(function (item) { card(list, item, currentClient); });
+            currentItems.forEach(function (item) { card(list, item, currentClient, currentItems); });
             var loadMore = document.getElementById("load-more");
             loadMore.disabled = currentOffset >= page.totalSize || page.items.length === 0;
             if (loadMore.disabled && document.activeElement === loadMore) {
@@ -691,7 +711,7 @@
             var list = element("div", "item-list");
             screen.appendChild(list);
             if (!items.length) { list.appendChild(element("p", "empty-state", "No available items in this view.")); }
-            items.forEach(function (item) { if (item.ratingKey) { card(list, item, client); } });
+            items.forEach(function (item) { if (item.ratingKey) { card(list, item, client, items); } });
             var next = offset + (container.Metadata || []).length;
             if (container.totalSize > next && next > offset) {
                 button(screen, "Load more", function () { openListing(title, loader, client, next, items); });
@@ -727,7 +747,8 @@
         });
         button(screen, "Back", backView);
         setStatus("Loading this server's supported filters and sorts...");
-        currentClient.getBrowseMenus(section.key, section.type === "show" ? 2 : 1).then(function (container) {
+        currentClient.getBrowseMenus(section.key, section.type === "show" ? 2 : section.type === "artist" ? 8 :
+            section.type === "photo" ? 13 : 1).then(function (container) {
             if (generation !== viewGeneration) { return; }
             var types = container.Meta && container.Meta.Type || [];
             var type = types.filter(function (entry) { return entry.active; })[0] || types[0] || {};
@@ -846,7 +867,7 @@
                                         return;
                                     }
                                     var items = (hub.Metadata || []).filter(function (item) {
-                                        return ["movie", "show", "season", "episode", "collection"].indexOf(item.type) !== -1;
+                                        return ["movie", "show", "season", "episode", "collection", "artist", "album", "track", "photo", "photoalbum"].indexOf(item.type) !== -1;
                                     });
                                     if (!items.length) { return; }
                                     var shelf = element("section", "shelf");
@@ -869,7 +890,7 @@
                             if (finished === targets.length) {
                                 setStatus(failures ? "Some servers could not be searched. Retry or change server." :
                                     shown >= 200 ? "Showing 200 results. Refine your search for more." :
-                                        results.firstChild ? "Search complete." : "No matching movies or television found.", failures > 0);
+                                        results.firstChild ? "Search complete." : "No matching media found.", failures > 0);
                             } else { pump(); }
                         });
                     }(targets[index++]));
@@ -916,7 +937,7 @@
             item.duration ? Math.round(item.duration / 60000) + " min" : "",
             item.viewCount ? "Watched" : ""].filter(Boolean).join(" / ")));
         screen.appendChild(element("p", "synopsis", item.summary || "No synopsis is available."));
-        if (item.type === "movie" || item.type === "episode" || item.type === "clip") {
+        if (item.type === "movie" || item.type === "episode" || item.type === "clip" || item.type === "track") {
             if (item.viewOffset) {
                 button(screen, "Resume at " + timeLabel(item.viewOffset), function () { startPlayer(item, client, item.viewOffset); });
             }
@@ -926,8 +947,17 @@
                     " " + (media.videoCodec || ""), function () { startPlayer(item, client, 0, index); });
             });
         }
-        if (["show", "season", "collection"].indexOf(item.type) !== -1) {
-            button(screen, item.type === "show" ? "Seasons" : item.type === "season" ? "Episodes" : "Collection items", function () {
+        if (item.type === "album") {
+            button(screen, "Play album", function () { startAlbum(item, client, false); });
+            button(screen, "Shuffle album", function () { startAlbum(item, client, true); });
+        }
+        if (item.type === "photo") {
+            button(screen, "View photo", function () { visit(function () { openPhotos([item], 0, client); }); });
+        }
+        if (["show", "season", "collection", "artist", "album", "photoalbum"].indexOf(item.type) !== -1) {
+            button(screen, item.type === "show" ? "Seasons" : item.type === "season" ? "Episodes" :
+                item.type === "artist" ? "Albums" : item.type === "album" ? "Tracks" :
+                    item.type === "photoalbum" ? "Photos" : "Collection items", function () {
                 visit(function () {
                     openListing(item.title, function (offset) {
                         return item.type === "collection" ? client.getCollectionItems(item.ratingKey, offset) :
@@ -1085,8 +1115,69 @@
 
     function showPlayerError(error) { setStatus(error.message || "Playback failed. Stop and retry.", true); }
 
+    function openPhotos(items, index, client) {
+        viewGeneration += 1;
+        clear(screen);
+        resetImages();
+        restoreView = function () { openPhotos(items, index, client); };
+        try {
+            if (!window.URL || !window.URL.createObjectURL) { throw new Error("Photo display is unavailable in this runtime."); }
+            var viewer = window.PlexPhotos.create({
+                items: items, index: index, client: client, parent: screen, element: element,
+                button: button, status: setStatus, translate: translate, urls: window.URL, back: backView
+            });
+            viewCleanup = viewer.close;
+        } catch (error) { setStatus(error.message, true); button(screen, "Back", backView); }
+        focusFirst();
+    }
+
+    function startAlbum(item, client, shuffle) {
+        if (musicLoading || player || playerClosing) { return; }
+        musicLoading = true;
+        var generation = viewGeneration;
+        setStatus(translate("Loading music queue..."));
+        client.getTracks(item.ratingKey).then(function (tracks) {
+            if (generation !== viewGeneration || player) { return; }
+            musicQueue = window.PlexQueue.create(tracks);
+            queueShuffle = shuffle;
+            queueRepeat = "off";
+            musicQueue.shuffle(shuffle);
+            return client.getMetadata(musicQueue.current().ratingKey).then(function (track) {
+                if (generation === viewGeneration && !player) { startPlayer(track, client, 0); }
+            });
+        }).catch(function (error) {
+            if (generation === viewGeneration) { musicQueue = null; showPlayerError(error); }
+        }).then(function () { musicLoading = false; });
+    }
+
+    function skipMusic(delta, automatic) {
+        if (!player || !musicQueue || playerClosing || musicLoading) { return; }
+        musicLoading = true;
+        var client = playerClient;
+        var previous = playerItem;
+        stopPlayer(function () {
+            var next = delta < 0 ? musicQueue.previous() : musicQueue.next(automatic);
+            if (!next) {
+                musicQueue = null; musicLoading = false;
+                renderDetail(previous, client);
+                return;
+            }
+            renderDetail(next, client);
+            var generation = viewGeneration;
+            client.getMetadata(next.ratingKey).then(function (track) {
+                if (generation === viewGeneration && !player) { startPlayer(track, client, 0); }
+            }).catch(function (error) {
+                if (generation === viewGeneration) { musicQueue = null; showPlayerError(error); }
+            }).then(function () { musicLoading = false; });
+        }).then(function () { if (player) { musicLoading = false; } });
+    }
+
     function startPlayer(item, client, offset, mediaIndex, trackOptions) {
         if (player || playerClosing) { return; }
+        if (item.type === "track" && (!musicQueue || musicQueue.current().ratingKey !== item.ratingKey)) {
+            musicQueue = window.PlexQueue.create([item]);
+            queueShuffle = false; queueRepeat = "off";
+        } else if (item.type !== "track") { musicQueue = null; }
         viewGeneration += 1;
         resetImages();
         clear(screen);
@@ -1108,6 +1199,19 @@
         subtitle.id = "subtitle-text";
         screen.appendChild(subtitle);
         button(hud, "Pause / Play", togglePlayer);
+        if (item.type === "track") {
+            button(hud, "Previous track", function () { skipMusic(-1, false); });
+            button(hud, "Next track", function () { skipMusic(1, false); });
+            button(hud, "Shuffle / On or off", function () {
+                queueShuffle = musicQueue.shuffle(!queueShuffle);
+                setStatus(translate(queueShuffle ? "Shuffle on." : "Shuffle off."));
+            });
+            button(hud, "Repeat / Off, one, all", function () {
+                queueRepeat = queueRepeat === "off" ? "one" : queueRepeat === "one" ? "all" : "off";
+                musicQueue.repeat(queueRepeat);
+                setStatus(translate("Repeat") + ": " + translate(queueRepeat));
+            });
+        }
         button(hud, "Back 10 seconds", function () { seekPlayer(-10000); });
         button(hud, "Forward 30 seconds", function () { seekPlayer(30000); });
         button(hud, "Chapters and markers", openChapters);
@@ -1210,6 +1314,7 @@
             document.body.className = "";
             if (typeof after === "function") { after(); }
             else { renderDetail(item, client); }
+            if (typeof after !== "function") { musicQueue = null; }
         });
     }
 
@@ -1330,6 +1435,7 @@
     }
 
     function finishEpisode() {
+        if (playerItem.type === "track" && musicQueue) { skipMusic(1, true); return; }
         var item = playerItem;
         var client = playerClient;
         stopPlayer(function () {

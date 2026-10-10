@@ -47,5 +47,31 @@
   },
   "Language": { "es": "Idioma", "be": "Мова" },
   "Privacy": { "es": "Privacidad", "be": "Прыватнасць" },
-  "Diagnostics": { "es": "Diagnóstico", "be": "Дыягностыка" }
+  "Diagnostics": { "es": "Diagnóstico", "be": "Дыягностыка" },
+  "Albums": { "es": "Álbumes", "be": "Альбомы" },
+  "Tracks": { "es": "Pistas", "be": "Кампазіцыі" },
+  "Photos": { "es": "Fotos", "be": "Фатаграфіі" },
+  "Photo": { "es": "Foto", "be": "Фатаграфія" },
+  "Play album": { "es": "Reproducir álbum", "be": "Прайграць альбом" },
+  "Shuffle album": { "es": "Mezclar álbum", "be": "Перамешаць альбом" },
+  "Previous track": { "es": "Pista anterior", "be": "Папярэдняя кампазіцыя" },
+  "Next track": { "es": "Pista siguiente", "be": "Наступная кампазіцыя" },
+  "Shuffle / On or off": { "es": "Activar / Desactivar mezcla", "be": "Уключыць / Выключыць перамешванне" },
+  "Repeat / Off, one, all": { "es": "Repetir / No, una, todas", "be": "Паўтор / Выключаны, адна, усе" },
+  "Shuffle on.": { "es": "Mezcla activada.", "be": "Перамешванне ўключанае." },
+  "Shuffle off.": { "es": "Mezcla desactivada.", "be": "Перамешванне выключанае." },
+  "Loading music queue...": { "es": "Cargando la cola de música...", "be": "Загрузка музычнай чаргі..." },
+  "View photo": { "es": "Ver foto", "be": "Паказаць фатаграфію" },
+  "Previous photo": { "es": "Foto anterior", "be": "Папярэдняя фатаграфія" },
+  "Next photo": { "es": "Foto siguiente", "be": "Наступная фатаграфія" },
+  "Slideshow / Pause": { "es": "Presentación / Pausa", "be": "Слайд-шоу / Паўза" },
+  "Retry photo": { "es": "Reintentar foto", "be": "Паўтарыць загрузку фатаграфіі" },
+  "Loading photo...": { "es": "Cargando foto...", "be": "Загрузка фатаграфіі..." },
+  "Photos on this page": { "es": "Fotos de esta página", "be": "Фатаграфіі на гэтай старонцы" },
+  "Slideshow paused.": { "es": "Presentación en pausa.", "be": "Слайд-шоу прыпыненае." },
+  "Photo could not be decoded. Retry or choose another.": {
+    "es": "No se pudo decodificar la foto. Reintenta o elige otra.",
+    "be": "Не ўдалося дэкадаваць фатаграфію. Паўтарыце спробу або выберыце іншую."
+  },
+  "No matching media found.": { "es": "No se encontraron medios.", "be": "Адпаведныя медыя не знойдзеныя." }
 }

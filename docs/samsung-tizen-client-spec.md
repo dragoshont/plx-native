@@ -267,6 +267,16 @@ The HTTP path also requires response streaming (`body.getReader()`), UTF-8 decod
 That is a separate runtime gate, especially for the intended 2017 engine; the ES5 check alone
 does not establish this target. A bounded legacy-engine transport remains an implementation gap.
 
+Music libraries now navigate artists/albums/tracks and use the universal music transcoder with
+an HTTP MP3 request. Album queues are local, capped at 200 tracks, with shuffle and repeat
+off/one/all; they are not PMS PlayQueues. Photo libraries open a page-local viewer/slideshow,
+fetch server-resized images, enforce the response ceiling and a 15-second decode deadline, and
+release object URLs on replacement/back. Synthetic real-app journeys cover both features;
+MP3 delivery, photo formats and native output remain unobserved on Samsung hardware.
+Read requests owned by the current client can be cancelled on navigation; explicit mutations and
+playback cleanup are not cancelled by view replacement. Multi-server search/discovery ownership
+and legacy-engine transport still need completion.
+
 Samsung documents [Web Storage](https://developer.samsung.com/smarttv/develop/guides/data-handling/using-web-storage.html),
 not encryption at rest. Remember-me is disabled by default and explicitly explains unencrypted
 token storage and shared-TV risk. Only the original account credential is saved; protected Home
@@ -406,8 +416,10 @@ Each item starts with endpoint/schema/entitlement evidence and mock contracts, t
 runtime integration. A feature requiring an unavailable private service remains blocked with its
 evidence; it is not replaced by another media server.
 
-- [ ] Music libraries: artists/albums/tracks, metadata/artwork, queue, shuffle/repeat and audio player.
-- [ ] Photos: albums, full-screen viewer, slideshow, supported formats and resource bounds.
+- [x] Music host baseline: artists/albums/tracks, metadata/artwork, bounded local album queue, shuffle/repeat and audio player; synthetic UI/session contracts exercised.
+- [ ] Music completion: server PlayQueues, larger album queues, native MP3/transcode verification and interruption recovery.
+- [x] Photos host baseline: album navigation, page-local viewer/slideshow, decode timeout and object-URL cleanup; synthetic UI/resource contracts exercised without progress writes.
+- [ ] Photos completion: verify native supported formats, display/remote behavior and measured memory ceilings.
 - [ ] Live TV: tuner/lineup/EPG, channel tuning and entitlement/capability handling.
 - [ ] DVR: schedule/manage recordings and conflicts through approved account-write contracts.
 - [ ] Watchlist: account-backed read/add/remove, persistence and local-server availability resolution.

@@ -45,19 +45,54 @@
         throw new Error("PMS response is missing the " + field + " list.");
     }
 
-    function timedFetch(fetchRequest, url, options) {
+    function requestScope() {
+        return {
+            revision: 0, pending: [],
+            cancel: function () {
+                this.revision += 1;
+                var active = this.pending.slice();
+                this.pending = [];
+                active.forEach(function (cancel) { cancel(); });
+            }
+        };
+    }
+
+    function timedFetch(fetchRequest, url, options, scope) {
+        var revision = scope ? scope.revision : 0;
+        function cancelled() { return new Error("The request was cancelled."); }
+        function register(cancel) { if (scope) { scope.pending.push(cancel); } }
+        function unregister(cancel) {
+            if (scope) {
+                var index = scope.pending.indexOf(cancel);
+                if (index !== -1) { scope.pending.splice(index, 1); }
+            }
+        }
         return new Promise(function (resolve, reject) {
             var deadline = Date.now() + 15000;
             var controller = typeof AbortController === "function" ? new AbortController() : null;
             if (controller) { options.signal = controller.signal; }
-            var timeout = setTimeout(function () {
+            var settled = false;
+            function stop(error) {
+                if (settled) { return; }
+                settled = true;
+                clearTimeout(timeout);
+                unregister(cancel);
                 if (controller) { controller.abort(); }
-                reject(new Error("The request timed out. Check the network and retry."));
+                reject(error);
+            }
+            function cancel() { stop(cancelled()); }
+            register(cancel);
+            var timeout = setTimeout(function () {
+                stop(new Error("The request timed out. Check the network and retry."));
             }, 15000);
             Promise.resolve().then(function () {
+                if (settled || scope && scope.revision !== revision) { throw cancelled(); }
                 return fetchRequest(url, options);
             }).then(function (response) {
+                if (settled) { return; }
+                settled = true;
                 clearTimeout(timeout);
+                unregister(cancel);
                 if (!response) { resolve(response); return; }
                 function body(asBlob) {
                     return new Promise(function (resolveBody, rejectBody) {
@@ -70,6 +105,7 @@
                             if (done) { return; }
                             done = true;
                             clearTimeout(bodyTimer);
+                            unregister(cancelBody);
                             if (controller) { controller.abort(); }
                             if (reader) { reader.cancel().catch(function () {}); }
                             rejectBody(error);
@@ -78,10 +114,14 @@
                             if (done) { return; }
                             done = true;
                             clearTimeout(bodyTimer);
+                            unregister(cancelBody);
                             resolveBody(value);
                         }
                         var limit = 4 * 1024 * 1024;
+                        function cancelBody() { fail(cancelled()); }
+                        register(cancelBody);
                         try {
+                            if (scope && scope.revision !== revision) { throw cancelled(); }
                             var length = response.headers && response.headers.get("Content-Length");
                             if (length && Number(length) > limit) { throw new Error("Response exceeds the metadata/artwork limit."); }
                             if (response.body && typeof response.body.getReader === "function" &&
@@ -128,10 +168,7 @@
                     text: function () { return body(false); },
                     blob: function () { return body(true); }
                 });
-            }, function (error) {
-                clearTimeout(timeout);
-                reject(error);
-            });
+            }, stop);
         });
     }
 
@@ -155,11 +192,14 @@
         var token = String(options.token || "");
         var fetchRequest = options.fetch || (typeof fetch === "function" ? fetch : null);
         var identifier = options.clientIdentifier || clientId();
+        var scope = requestScope();
         if (!token || !fetchRequest) {
             throw new Error("A linked Plex session is required.");
         }
         function request(path, method, body) {
+            var revision = scope.revision;
             return Promise.resolve().then(function () {
+                if (method !== "POST" && revision !== scope.revision) { throw new Error("The request was cancelled."); }
                 return timedFetch(fetchRequest, "https://plex.tv" + path, {
                     method: method || "GET",
                     credentials: "omit",
@@ -172,9 +212,7 @@
                         "X-Plex-Product": "Plex Tizen"
                     },
                     body: body
-                });
-            }).catch(function () {
-                throw new Error("Plex is unreachable. Check your network and retry.");
+                }, method === "POST" ? null : scope);
             }).then(function (response) {
                 if (!response.ok) {
                     var error = new Error(response.status === 401 ?
@@ -195,7 +233,7 @@
                 tagKey + (suffix || ""), {
                     credentials: "omit", redirect: "error",
                     headers: { Accept: "application/json", "X-Plex-Token": token, "X-Plex-Client-Identifier": identifier }
-                }).then(function (response) {
+                }, scope).then(function (response) {
                     if (!response.ok) { throw new Error("Plex person information failed (HTTP " + response.status + ")."); }
                     return readJson(response);
                 }).then(function (payload) {
@@ -204,6 +242,7 @@
                 });
         }
         return {
+            cancelRequests: function () { scope.cancel(); },
             personProfile: function (tagKey) { return discover(tagKey); },
             personCredits: function (tagKey) {
                 return discover(tagKey, "/credits").then(function (container) {
@@ -305,6 +344,7 @@
         var now = options.now || Date.now;
         var clientIdentifier = String(options.clientIdentifier || clientId());
         var rootUrl = "https://plex.tv";
+        var scope = requestScope();
         if (!fetchRequest) {
             throw new Error("This runtime does not provide fetch.");
         }
@@ -313,7 +353,9 @@
         }
 
         function request(url, method) {
+            var revision = scope.revision;
             return Promise.resolve().then(function () {
+                if (revision !== scope.revision) { throw new Error("The request was cancelled."); }
                 return timedFetch(fetchRequest, url, {
                     method: method,
                     credentials: "omit",
@@ -325,7 +367,7 @@
                         "X-Plex-Version": "0.2.1",
                         "X-Plex-Platform": "Tizen"
                     }
-                });
+                }, scope);
             }).catch(function () {
                 throw new Error("Could not reach Plex. Check the network and try again.");
             }).then(function (response) {
@@ -352,6 +394,7 @@
         }
 
         return {
+            cancelRequests: function () { scope.cancel(); },
             startAuthorization: function () {
                 return request(rootUrl + "/api/v2/pins?strong=false", "POST").then(function (pin) {
                     var id = pin.id;
@@ -406,11 +449,13 @@
         var baseUrl = validateBaseUrl(options.baseUrl);
         var token = String(options.token || "");
         var fetchRequest = options.fetch || (typeof fetch === "function" ? fetch : null);
+        var scope = requestScope();
         if (!fetchRequest) {
             throw new Error("This runtime does not provide fetch.");
         }
 
         function get(path, method, query, allowEmpty) {
+            var revision = scope.revision;
             var headers = {
                 Accept: "application/json"
             };
@@ -430,12 +475,13 @@
                 }).join("&");
             }
             return Promise.resolve().then(function () {
+                if (!allowEmpty && revision !== scope.revision) { throw new Error("The request was cancelled."); }
                 return timedFetch(fetchRequest, target, {
                 method: method || "GET",
                 credentials: "omit",
                 redirect: "error",
                 headers: headers
-                });
+                }, allowEmpty ? null : scope);
             }).catch(function () {
                 throw new Error("The server is unreachable. Check your network and retry.");
             }).then(function (response) {
@@ -475,6 +521,7 @@
         }
 
         return {
+            cancelRequests: function () { scope.cancel(); },
             request: get,
             identity: function () { return get("/identity"); },
             getMetadata: function (id) {
@@ -490,6 +537,30 @@
                 return get("/library/metadata/" + key(id) + "/children", "GET", {
                     "X-Plex-Container-Start": start || 0, "X-Plex-Container-Size": 50
                 });
+            },
+            getTracks: function (id) {
+                var tracks = [];
+                function page(start) {
+                    return get("/library/metadata/" + key(id) + "/children", "GET", {
+                        "X-Plex-Container-Start": start, "X-Plex-Container-Size": 50
+                    }).then(function (container) {
+                        var items = listFrom(container, "Metadata");
+                        if (items.some(function (item) { return item.type !== "track"; })) {
+                            throw new Error("Choose an album containing tracks.");
+                        }
+                        tracks = tracks.concat(items);
+                        if (tracks.length > 200 || Number(container.totalSize) > 200) {
+                            throw new Error("This album exceeds the 200-track queue limit. Choose individual tracks.");
+                        }
+                        if (start + items.length < container.totalSize) {
+                            if (!items.length) { throw new Error("Plex returned an incomplete album."); }
+                            return page(start + items.length);
+                        }
+                        if (!tracks.length) { throw new Error("This album has no available tracks."); }
+                        return tracks;
+                    });
+                }
+                return page(0);
             },
             getCollectionItems: function (id, start) {
                 return get("/library/collections/" + key(id) + "/children", "GET", {
@@ -554,8 +625,21 @@
                 return timedFetch(fetchRequest, baseUrl + "/photo/:/transcode?width=240&height=360&minSize=1&url=" +
                     encodeURIComponent(path), {
                         credentials: "omit", redirect: "error", headers: { "X-Plex-Token": token }
-                    }).then(function (response) {
+                    }, scope).then(function (response) {
                     if (!response.ok) { throw new Error("Artwork is unavailable (HTTP " + response.status + ")."); }
+                    return response.blob();
+                });
+            },
+            photo: function (item) {
+                var part = item.Media && item.Media[0] && item.Media[0].Part && item.Media[0].Part[0];
+                var path = part && part.key || item.thumb;
+                try { localPath(path); }
+                catch (error) { return Promise.reject(error); }
+                return timedFetch(fetchRequest, baseUrl + "/photo/:/transcode?width=1920&height=1080&minSize=0&upscale=0&url=" +
+                    encodeURIComponent(path), {
+                        credentials: "omit", redirect: "error", headers: { "X-Plex-Token": token }
+                    }, scope).then(function (response) {
+                    if (!response.ok) { throw new Error("Photo is unavailable (HTTP " + response.status + ")."); }
                     return response.blob();
                 });
             },
@@ -576,7 +660,7 @@
                 return timedFetch(fetchRequest, baseUrl + "/library/streams/" + key(id) +
                     "?encoding=utf-8" + (codec === "webvtt" ? "" : "&format=srt"), {
                         credentials: "omit", redirect: "error", headers: { "X-Plex-Token": token }
-                    }).then(function (response) {
+                    }, scope).then(function (response) {
                     if (!response.ok) { throw new Error("Plex refused the subtitle (HTTP " + response.status + ")."); }
                     return response.text();
                 }).then(function (text) {
@@ -612,8 +696,9 @@
                     duration: item.duration || 0, state: state, session: session
                 }, true);
             },
-            stopTranscode: function (session) {
-                return get("/video/:/transcode/universal/stop", "GET", { session: session }, true);
+            stopTranscode: function (session, kind) {
+                if (kind && ["video", "music"].indexOf(kind) === -1) { return Promise.reject(new Error("Invalid transcode kind.")); }
+                return get("/" + (kind || "video") + "/:/transcode/universal/stop", "GET", { session: session }, true);
             },
             getSections: function () {
                 return get("/library/sections").then(function (container) {
