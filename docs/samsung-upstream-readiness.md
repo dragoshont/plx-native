@@ -5,7 +5,42 @@ The separate Samsung client has a broad source/host baseline; developer installa
 Neither implies that its playback, account lifecycle and runtime constraints match the LG app.
 LG remains unchanged. Plex Media Server remains the library/watch-state authority.
 
-## Current deployment receipt
+## Deployment and follow-up evidence
+
+The currently observed install is `9db91e36`, installed on 2026-10-11 after the baseline below.
+Its signed package SHA-256 is
+`622156b7ff3406de0cfcb9738e97f8c9c4a8a065c895fee8486e26580b265ef0`.
+Install and debug relaunch exited successfully; the post-install live viewer completed 59 cycles
+with one capture failure. This is installation/capture evidence, not native feature acceptance.
+
+The frozen pre-install baseline belongs to `7c6f7158`, not `9db91e36`: its producer's freeze
+metadata and checksums bind 18 genuine discrete renderer-paint captures to the pre-install run.
+The 33.4-second encoded replay stops at failed movie-detail loading, followed by a Home reload
+and server-unreachable error. It is not continuous video, not a complete LG-equivalent loop,
+and not second-for-second comparable to the LG film.
+
+After installation, every observed advertised PMS identity connection timed out without an
+HTTP status. The cause remains unproven; neither PMS/network failure nor a client regression can
+be ruled in from that evidence alone. A later native viewer produced genuine frames every ten
+seconds, with approximately 406–408 ms capture time on the static server-selection screen.
+That proves the capture route without proving Home reachability or interactive control.
+
+The follow-up source through `5b98b23b` saves sign-in automatically, preserves explicit Settings
+opt-out and old storage records, exposes Settings while PMS is unavailable, adds selected-profile
+Retry, and fixes first-populated-shelf Up and detail-loader focus. Server selection now reports
+attempt counts and offers focused Cancel/remote Back with stale-success protection. Host suites,
+strict ES5, the SDK build and quality gate passed on committed source. Old Chromium fetch socket
+abort remains unresolved; cancelling app results is not proof of cancelling the network socket.
+
+Its signed development update was checked byte-for-byte against the committed app assets,
+apart from explicit staged application/package IDs, and retains the installed author certificate.
+An artifact inventory also exposed duplicate nested `.buildResult` assets in the old packaging
+helper; the helper now packages SDK output directly, with a failing-then-passing regression.
+The clean candidate SHA-256 is
+`5889bb033cb46202e8375bfb2102be93d13540728b0ce96dffbb1b55347d88b9`.
+**Candidate installation and native login-retention/feature acceptance are still pending.**
+
+### Earlier sign-in-screen receipt
 
 On 2026-10-11, source `7c6f7158cb95ecffad955fc7ccac477d444c9bcf` was packaged with the existing Samsung developer certificate,
 installed over `PlxTizenDv.PlexTv` and launched on the owner's previously identified 2017
