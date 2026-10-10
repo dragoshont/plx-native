@@ -11,6 +11,7 @@ var movie = {
     Media: [{ container: "mp4", videoCodec: "h264", audioCodec: "aac", videoResolution: "1080",
         Part: [{ id: "20", key: "/library/parts/20/file.mp4", Stream: [{ id: 1, streamType: 2, codec: "aac" }] }] }]
 };
+var onDeck = Object.assign({}, movie, { ratingKey: "99", type: "episode", title: "Next episode", viewOffset: 20000 });
 async function run() {
     var dom = new JSDOM(fs.readFileSync(path.join(app, "index.html"), "utf8"), {
         url: "https://app.synthetic.invalid", runScripts: "outside-only"
@@ -74,6 +75,7 @@ async function run() {
                 }
             }
         } else if (url.pathname === "/library/metadata/10") { container = { Metadata: [movie] }; }
+        else if (url.pathname === "/library/metadata/99") { container = { Metadata: [onDeck] }; }
         else if (url.pathname === "/hubs/search") { container = { Hub: [{ title: "Movies", Metadata: [movie] }] }; }
         else if (url.pathname === "/video/:/transcode/universal/decision") { container = { generalDecisionCode: 1001 }; }
         else if (url.pathname === "/:/timeline" || url.pathname === "/video/:/transcode/universal/stop") { container = {}; }
@@ -152,11 +154,21 @@ async function run() {
         click("Movies");
         await settle();
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 50);
-        for (var page = 0; page < 4; page += 1) { click("Load more"); await settle(); }
+        assert(window.document.querySelector(".screen-library .page-toolbar"), "Browse tools belong to one navigation row");
+        var retainedCard = window.document.querySelectorAll(".media-card")[30];
+        retainedCard.focus();
+        click("Load more"); await settle();
+        assert.strictEqual(window.document.activeElement.plexCard.item.ratingKey, retainedCard.plexCard.item.ratingKey,
+            "Appending a page must preserve the focused title, not leave focus on the removed node");
+        for (var page = 0; page < 3; page += 1) { click("Load more"); await settle(); }
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 200, "Bound DOM and metadata retained after 250 items");
         click("Back to Home");
         await settle();
         click("Search");
+        var searches = requests.filter(function (request) { return request.path === "/hubs/search"; }).length;
+        click("Search"); await settle();
+        assert.strictEqual(requests.filter(function (request) { return request.path === "/hubs/search"; }).length, searches,
+            "Empty search must explain the missing title without requesting every library");
         window.document.querySelector('input[type="search"]').value = "Synthetic";
         click("Search");
         await settle();
@@ -272,6 +284,16 @@ async function run() {
         assert.strictEqual(window.localStorage.length, 2, "Only the device identifier and explicitly saved preferences are stored");
         assert(window.localStorage.getItem("plx-tizen-preferences"));
         assert.strictEqual(window.localStorage.getItem("plx-tizen-account"), null, "Preference changes must not persist account credentials");
+        movie.type = "show";
+        movie.OnDeck = { Metadata: onDeck };
+        click("Back"); await settle();
+        window.document.querySelector(".media-card").click(); await settle();
+        assert(Array.from(window.document.querySelectorAll("button")).some(function (node) { return node.textContent === "Resume"; }),
+            "A show's primary action must resume the server's on-deck episode, not force another season browse");
+        click("Resume"); await settle();
+        assert.strictEqual(position, 20000);
+        assert(requests.some(function (request) { return request.path === "/library/metadata/99"; }),
+            "Show playback must resolve the episode identity, never play or update the show itself");
         console.log("Tizen host DOM product journey: 250-item browse/search/details/playback/progress passed");
     } finally { dom.window.close(); }
 }

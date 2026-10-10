@@ -126,7 +126,11 @@ async function run() {
         click("Use linked account"); await settle();
         click("Synthetic PMS (owned)"); await settle();
         click("Watchlist"); await settle();
+        assert(window.document.querySelector(".screen-watchlist .catalogue-grid"), "Watchlist uses the shared poster grid");
+        assert(window.document.querySelector('.screen-watchlist .page-toolbar [aria-pressed="true"]'),
+            "Watchlist filters expose their selected state");
         click("Synthetic Watchlist movie"); await settle();
+        assert(window.document.querySelector(".screen-catalogue-detail .catalogue-poster"), "Catalogue details retain a cover and explicit availability actions");
         click("Remove from Watchlist"); await settle();
         click("Cancel"); await settle();
         assert(watchlisted, "Cancelled Watchlist changes must not write");
@@ -157,7 +161,9 @@ async function run() {
         }
         assert.strictEqual(window.document.querySelector(".screen h2").textContent, "Home");
         click("Music"); await settle();
+        assert.strictEqual(window.document.querySelector(".media-card").getAttribute("data-shape"), "square");
         window.document.querySelector(".media-card").click(); await settle();
+        assert(window.document.querySelector(".detail-cover"), "Music uses square artwork rather than a movie poster layout");
         click("Play album"); await settle();
         assert.strictEqual(state, "PLAYING");
         assert(window.document.body.textContent.includes("Track 1"));
@@ -174,6 +180,7 @@ async function run() {
         click("Back to Home"); await settle();
         click("Photos"); await settle();
         window.document.querySelector(".media-card").click(); await settle();
+        assert(window.document.querySelector(".screen-photos .photo-controls"), "Photo navigation is grouped below the image");
         var image = window.document.querySelector(".photo-display");
         assert(image.src.startsWith("blob:"));
         image.onload();
@@ -188,7 +195,9 @@ async function run() {
             "Viewing/slideshow photos must not write viewing progress");
         click("Back to Home"); await settle();
         click("Live TV and DVR"); await settle();
+        assert(window.document.querySelector(".screen-television .selection-list"), "Guide providers share selection-list layout");
         click("Synthetic guide"); await settle();
+        assert(window.document.querySelector(".screen-guide .title-tile"), "Guide programs have one image/title row each");
         click("Synthetic program"); await settle();
         assert(window.document.body.textContent.includes("Record / This Episode"));
         click("Channel schedule / Synthetic channel"); await settle();

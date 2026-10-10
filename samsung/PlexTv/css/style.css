@@ -1031,3 +1031,699 @@ input:focus {
 .detail-person:focus .detail-person-photo {
     border-color: #ffffff;
 }
+
+/* Samsung screen system: couch-readable gallery, neutral surfaces and white focus.
+   Flex and margin fallbacks are intentional for the legacy retail-TV engines. */
+html,
+body {
+    background: #101012;
+    color: #f2f2f7;
+}
+
+.app-shell {
+    padding: 32px 64px 24px;
+}
+
+.app-header {
+    min-height: 60px;
+}
+
+.app-header h1 {
+    font-size: 32px;
+    letter-spacing: 0;
+}
+
+.screen {
+    padding: 16px 8px 40px;
+}
+
+.screen > .page-title {
+    margin: 8px 0 32px;
+    font-size: 48px;
+    line-height: 1.15;
+    font-weight: 600;
+}
+
+.screen > h3,
+.group-title {
+    margin: 36px 0 16px;
+    font-size: 32px;
+    font-weight: 600;
+}
+
+.help-text,
+.empty-state,
+.inline-error,
+.detail-meta,
+.channel-row {
+    font-size: 24px;
+    line-height: 1.5;
+}
+
+.help-text,
+.synopsis {
+    max-width: 1120px;
+}
+
+.status {
+    flex-shrink: 0;
+    font-size: 24px;
+    line-height: 1.35;
+    color: #b8bfcc;
+}
+
+.status-error,
+.inline-error {
+    color: #ff9b9b;
+}
+
+.empty-state {
+    width: 100%;
+    margin: 36px 0;
+    padding: 32px 0;
+    color: #b8bfcc;
+}
+
+.page-toolbar,
+.page-actions,
+.photo-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0 0 28px;
+}
+
+.page-toolbar .menu-control,
+.page-actions .menu-control,
+.photo-controls .menu-control {
+    margin: 0 16px 16px 0;
+}
+
+.screen > .menu-control {
+    margin: 0 16px 20px 0;
+}
+
+.menu-control:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.menu-control:focus:hover,
+.menu-control:focus {
+    background: #f2f2f7;
+    color: #101012;
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+button:disabled {
+    opacity: 0.42;
+    transform: none;
+}
+
+.remote-input,
+.setting-row input,
+.setting-row select {
+    min-height: 72px;
+    width: 100%;
+    max-width: 1120px;
+    padding: 16px 24px;
+    border-radius: 16px;
+    border: 2px solid #4a4a50;
+    color: #f2f2f7;
+    background: #222224;
+    font: inherit;
+}
+
+input:focus,
+select:focus {
+    outline: 3px solid #f2f2f7;
+    outline-offset: 3px;
+}
+
+.screen-profiles,
+.screen-profile-pin,
+.screen-servers {
+    padding-top: 80px;
+    text-align: center;
+}
+
+.screen-profiles .page-title,
+.screen-servers .page-title {
+    font-size: 56px;
+}
+
+.identity-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 56px 0 48px;
+}
+
+.identity-choice {
+    position: relative;
+    width: 220px;
+    min-height: 260px;
+    margin: 0 24px 32px;
+    padding: 200px 8px 16px;
+    background: transparent;
+    font-size: 28px;
+    text-align: center;
+    overflow-wrap: break-word;
+}
+
+.identity-choice::before {
+    content: attr(data-initial);
+    position: absolute;
+    width: 168px;
+    height: 168px;
+    top: 8px;
+    left: 26px;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    background: #323236;
+    color: #f2f2f7;
+    font-size: 72px;
+    line-height: 160px;
+}
+
+.identity-choice[data-protected="true"]::after {
+    content: "";
+    position: absolute;
+    top: 142px;
+    right: 32px;
+    width: 28px;
+    height: 28px;
+    border: 4px solid #f2f2f7;
+    border-radius: 8px;
+    background: #323236;
+}
+
+.identity-choice:focus {
+    background: transparent;
+    color: #ffffff;
+}
+
+.identity-choice:focus::before {
+    border-color: #ffffff;
+}
+
+.screen-profiles .page-actions,
+.screen-servers .page-actions {
+    justify-content: center;
+}
+
+.screen-profile-pin .remote-input {
+    display: block;
+    max-width: 360px;
+    margin: 40px auto;
+    font-size: 48px;
+    letter-spacing: 16px;
+    text-align: center;
+}
+
+.server-list {
+    max-width: 1200px;
+    margin: 48px auto;
+    text-align: left;
+}
+
+.server-choice {
+    display: block;
+    width: 100%;
+    min-height: 112px;
+    margin: 0 0 16px;
+    border-radius: 20px;
+    font-size: 32px;
+}
+
+.selection-list,
+.screen-filter-values,
+.screen-lineups,
+.screen-recording-destination {
+    max-width: 1200px;
+}
+
+.selection-list .menu-control,
+.screen-filter-values > .menu-control,
+.screen-lineups > .menu-control,
+.screen-recording-destination > .menu-control {
+    display: block;
+    width: 100%;
+    margin: 0 0 12px;
+    border-radius: 16px;
+}
+
+.selection-list .menu-control[aria-pressed="true"] {
+    border-color: #b8bfcc;
+}
+
+.home-navigation {
+    width: auto;
+    max-width: 100%;
+    margin: 0 0 24px;
+    border-radius: 40px;
+    white-space: nowrap;
+    overflow-x: auto;
+}
+
+.home-navigation .menu-control {
+    min-height: 64px;
+    flex-shrink: 0;
+    padding-right: 24px;
+    font-size: 24px;
+}
+
+.screen-home .home-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.home-hero {
+    position: relative;
+    min-height: 400px;
+    margin: 0 0 40px;
+    overflow: hidden;
+    border-radius: 24px;
+    background: #222224;
+}
+
+.home-hero-art,
+.home-hero-scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.home-hero-art {
+    object-fit: cover;
+}
+
+.home-hero-scrim {
+    background: linear-gradient(90deg, rgba(10, 10, 12, 0.96), rgba(10, 10, 12, 0.75) 46%, rgba(10, 10, 12, 0.1));
+}
+
+.home-hero-copy {
+    position: relative;
+    max-width: 980px;
+    padding: 64px 48px 40px;
+}
+
+.home-hero-title {
+    margin: 0 0 20px;
+    font-size: 64px;
+    line-height: 1.1;
+    overflow-wrap: break-word;
+}
+
+.home-hero-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin: 0 0 28px;
+    font-size: 26px;
+    line-height: 1.45;
+}
+
+.section-heading,
+.shelf .hub-title,
+.shelf h3 {
+    margin: 20px 0 20px;
+    font-size: 32px;
+}
+
+.shelf-row {
+    display: flex;
+    overflow-x: auto;
+    padding: 8px 6px 24px;
+}
+
+.media-card {
+    position: relative;
+    width: 240px;
+    flex: 0 0 240px;
+    padding: 0;
+    margin: 0 24px 28px 0;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: #f2f2f7;
+}
+
+.poster {
+    width: 100%;
+    height: 350px;
+    border-radius: 16px;
+    background: #222224;
+}
+
+.media-card[data-shape="landscape"] {
+    width: 380px;
+    flex-basis: 380px;
+}
+
+.media-card[data-shape="landscape"] .poster {
+    height: 214px;
+}
+
+.media-card[data-shape="square"] .poster {
+    height: 240px;
+}
+
+.media-card:focus {
+    outline: 4px solid #ffffff;
+    outline-offset: 5px;
+    background: transparent;
+}
+
+.card-title {
+    font-size: 26px;
+    font-weight: 600;
+}
+
+.card-meta {
+    font-size: 24px;
+}
+
+.card-progress {
+    display: block;
+    height: 4px;
+    margin-top: 12px;
+    background: #4a4a50;
+}
+
+.card-progress-fill {
+    display: block;
+    height: 100%;
+    background: #f2f2f7;
+}
+
+.item-list,
+.catalogue-grid {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: none;
+    padding: 8px 6px 24px;
+}
+
+.item-list .media-card {
+    width: calc((100% - 144px) / 6);
+    flex-basis: calc((100% - 144px) / 6);
+}
+
+.item-list .media-card[data-shape="landscape"] {
+    width: calc((100% - 72px) / 3);
+    flex-basis: calc((100% - 72px) / 3);
+}
+
+.item-list .media-card[data-shape="square"] {
+    width: 240px;
+    flex-basis: 240px;
+}
+
+.screen-search .remote-input,
+.screen-catalogue-search .remote-input {
+    max-width: none;
+    margin-bottom: 24px;
+    font-size: 40px;
+}
+
+.people-results .menu-control {
+    margin: 0 16px 16px 0;
+}
+
+.alphabet-list {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 1200px;
+}
+
+.alphabet-list .menu-control {
+    min-width: 100px;
+    margin: 0 12px 16px 0;
+    padding: 16px 24px;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.alphabet-list .menu-control::before {
+    display: none;
+}
+
+.title-tile {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 144px;
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border: 2px solid transparent;
+    border-radius: 20px;
+    background: #222224;
+}
+
+.title-tile-art {
+    flex-shrink: 0;
+    width: 80px;
+    height: 120px;
+    margin-right: 24px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.title-tile-copy {
+    display: block;
+    min-width: 0;
+}
+
+.title-tile-title,
+.title-tile-caption {
+    display: block;
+    font-size: 26px;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+}
+
+.title-tile-caption {
+    margin-top: 8px;
+    color: #b8bfcc;
+    font-size: 24px;
+}
+
+.title-tile:focus {
+    border-color: #ffffff;
+    background: #323236;
+    color: #ffffff;
+}
+
+.catalogue-grid .title-tile {
+    display: block;
+    width: calc((100% - 144px) / 6);
+    margin: 0 24px 32px 0;
+    padding: 0;
+    background: transparent;
+}
+
+.catalogue-grid .title-tile-art {
+    width: 100%;
+    height: 350px;
+    margin: 0 0 12px;
+    border-radius: 16px;
+}
+
+.catalogue-poster {
+    float: left;
+    width: 280px;
+    margin: 0 40px 32px 0;
+    padding: 0;
+    background: transparent;
+}
+
+.catalogue-poster .title-tile-art {
+    width: 280px;
+    height: 420px;
+    margin: 0;
+}
+
+.catalogue-poster .title-tile-copy {
+    display: none;
+}
+
+.screen-catalogue-detail > h3 {
+    font-size: 56px;
+}
+
+.person-portrait {
+    float: left;
+    width: 260px;
+    height: 260px;
+    margin: 0 36px 36px 0;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #222224;
+}
+
+.credit-list {
+    clear: both;
+    max-width: 1400px;
+}
+
+.screen-person .synopsis {
+    min-height: 160px;
+}
+
+.detail-hero-with-cover .detail-main {
+    max-width: 1050px;
+}
+
+.detail-cover {
+    width: 360px;
+    height: 360px;
+    margin: 0 0 0 48px;
+    border-radius: 20px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.screen-confirmation,
+.screen-diagnostics {
+    max-width: 1300px;
+    margin: 80px auto 0;
+}
+
+.screen-confirmation .synopsis {
+    font-size: 40px;
+}
+
+.screen-confirmation .help-text,
+.screen-diagnostics .help-text {
+    margin: 28px 0 40px;
+}
+
+.settings-menu {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: none;
+    padding: 0;
+    background: transparent;
+}
+
+.settings-group {
+    width: calc(50% - 40px);
+    margin: 0 40px 40px 0;
+}
+
+.settings-group .group-title {
+    margin-top: 16px;
+}
+
+.settings-group .menu-control {
+    border-radius: 16px;
+    min-height: 80px;
+}
+
+.guide-list {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.guide-list .group-title {
+    width: 100%;
+}
+
+.guide-list .title-tile {
+    width: calc(50% - 24px);
+    margin-right: 24px;
+}
+
+.channel-row,
+.recording-row {
+    padding: 24px 0;
+    border-bottom: 1px solid #4a4a50;
+}
+
+.recording-row .group-title {
+    margin-top: 0;
+}
+
+.recording-row .menu-control {
+    margin: 0 16px 16px 0;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1300px;
+    min-height: 112px;
+    margin: 0 0 12px;
+    font-size: 28px;
+}
+
+.setting-row input,
+.setting-row select {
+    width: 50%;
+    margin-left: 32px;
+}
+
+.photo-display {
+    width: 100%;
+    height: 65vh;
+    object-fit: contain;
+    background: #101012;
+    border-radius: 16px;
+}
+
+.photo-title {
+    font-size: 40px;
+    margin: 0 0 20px;
+}
+
+.photo-controls {
+    justify-content: center;
+}
+
+.player-menu {
+    width: 700px;
+    padding: 32px;
+    background: #222224;
+}
+
+.player-menu h2 {
+    margin: 0 0 28px;
+    font-size: 40px;
+}
+
+.detail-person-role {
+    color: #b8bfcc;
+    font-size: 24px;
+}
+
+.detail-person {
+    font-size: 26px;
+}
+
+@media (max-width: 1400px) {
+    .app-shell { padding: 24px 40px; }
+    .home-hero { min-height: 400px; }
+    .home-hero-copy { padding: 48px 32px; max-width: 800px; }
+    .home-hero-title { font-size: 48px; }
+    .item-list .media-card,
+    .catalogue-grid .title-tile { width: calc((100% - 96px) / 4); flex-basis: calc((100% - 96px) / 4); }
+    .settings-group { width: 100%; margin-right: 0; }
+    .detail-cover { width: 240px; height: 240px; margin-left: 24px; }
+    .screen-profiles,
+    .screen-servers { padding-top: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button { transition: none; }
+    .auth-wait::before { animation: none; -webkit-animation: none; }
+}

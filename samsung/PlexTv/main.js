@@ -116,6 +116,12 @@
                     var url = window.URL.createObjectURL(blob);
                     imageUrls.push(url);
                     if (imageUrls.length > 60) { window.URL.revokeObjectURL(imageUrls.shift()); }
+                    job.node.onerror = function () {
+                        if (job.generation !== imageGeneration) { return; }
+                        job.node.onerror = null;
+                        job.node.alt = translate("Artwork unavailable");
+                        job.node.src = placeholderArt();
+                    };
                     job.node.src = url;
                     if (job.loaded) { job.loaded(); }
                 }).catch(function () {
@@ -141,17 +147,26 @@
             });
         });
         node.className = "media-card";
+        node.setAttribute("data-shape", ["episode", "clip", "photo"].indexOf(item.type) !== -1 ? "landscape" :
+            ["artist", "album", "track"].indexOf(item.type) !== -1 ? "square" : "portrait");
         node.plexCard = { item: item, client: client, options: options };
         var image = element("img", "poster");
         image.alt = item.title || "Media";
+        image.src = placeholderArt();
         node.appendChild(image);
         node.appendChild(element("span", "card-title", item.title || item.tag || "Untitled"));
         node.appendChild(element("span", "card-meta", [item.year, item.type,
             item.viewCount ? "Watched" : item.viewOffset ? "In progress" : ""].filter(Boolean).join(" / ")));
-        if (item.thumb && client.image && window.URL && window.URL.createObjectURL && imageQueue.length < 200) {
-            imageQueue.push({ client: client, path: item.thumb, node: image, generation: imageGeneration });
-            pumpImages();
+        if (item.viewOffset && item.duration) {
+            var progress = element("span", "card-progress");
+            var fill = element("span", "card-progress-fill");
+            if (fill.style) { fill.style.width = Math.min(100, Math.max(0, item.viewOffset * 100 / item.duration)) + "%"; }
+            progress.appendChild(fill);
+            node.appendChild(progress);
         }
+        var shape = node.getAttribute ? node.getAttribute("data-shape") : "portrait";
+        queueImage(image, client, item.thumb, shape === "landscape" ? { width: 480, height: 270 } :
+            shape === "square" ? { width: 360, height: 360 } : { width: 240, height: 360 });
         return node;
     }
 
@@ -200,7 +215,11 @@
             viewCleanup = null;
             cleanup();
         }
-        if (node === screen) { setDetailMode(false); }
+        if (node === screen) {
+            setDetailMode(false);
+            screen.className = "screen";
+            screen.scrollTop = 0;
+        }
         while (node.firstChild) {
             node.removeChild(node.firstChild);
         }
@@ -215,6 +234,54 @@
             node.textContent = text;
         }
         return node;
+    }
+
+    function page(title, kind) {
+        screen.className = "screen screen-" + kind;
+        screen.appendChild(element("h2", "page-title", title));
+    }
+
+    function group(parent, title, className) {
+        var section = element("section", className || "menu-group");
+        if (title) { section.appendChild(element("h3", "group-title", title)); }
+        parent.appendChild(section);
+        return section;
+    }
+
+    function placeholderArt() {
+        return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='360'%3E%3Crect width='240' height='360' fill='%23222224'/%3E%3Cpath d='M94 156v48l48-24z' fill='%23787880'/%3E%3C/svg%3E";
+    }
+
+    function titleTile(parent, item, action, client, caption) {
+        var node = button(parent, "", action);
+        node.className = "title-tile";
+        var art = element("img", "title-tile-art");
+        art.alt = "";
+        art.src = placeholderArt();
+        node.appendChild(art);
+        var copy = element("span", "title-tile-copy");
+        copy.appendChild(element("span", "title-tile-title", item.title || item.tag || translate("Untitled")));
+        if (caption) { copy.appendChild(element("span", "title-tile-caption", caption)); }
+        node.appendChild(copy);
+        if (client) { queueImage(art, client, item.thumb, { width: 240, height: 360 }); }
+        return node;
+    }
+
+    function revealControl(node) {
+        if (!node.getBoundingClientRect) { return; }
+        var parent = node.parentNode;
+        while (parent) {
+            if (parent === screen || /(?:shelf-row|home-navigation|player-menu)/.test(parent.className || "")) {
+                var item = node.getBoundingClientRect();
+                var bounds = parent.getBoundingClientRect();
+                if (item.left < bounds.left + 8) { parent.scrollLeft -= bounds.left + 8 - item.left; }
+                else if (item.right > bounds.right - 8) { parent.scrollLeft += item.right - bounds.right + 8; }
+                if (item.top < bounds.top + 8) { parent.scrollTop -= bounds.top + 8 - item.top; }
+                else if (item.bottom > bounds.bottom - 8) { parent.scrollTop += item.bottom - bounds.bottom + 8; }
+            }
+            if (parent === screen) { break; }
+            parent = parent.parentNode;
+        }
     }
 
     function setStatus(message, isError) {
@@ -315,6 +382,7 @@
             literal ? label : translate(label));
         node.type = "button";
         node.addEventListener("click", action);
+        node.addEventListener("focus", function () { revealControl(node); });
         parent.appendChild(node);
         return node;
     }
@@ -323,20 +391,22 @@
         stopAuthorization();
         var generation = ++viewGeneration;
         clear(screen);
-        screen.appendChild(element("h2", "", translate("Who is watching?")));
+        page(translate("Who is watching?"), "profiles");
         if (typeof warning === "string" && warning) { screen.appendChild(element("p", "inline-error", warning)); }
         setStatus("Loading Plex Home profiles...");
         accountClient.getProfiles().then(function (profiles) {
             if (generation !== viewGeneration) { return; }
+            var identities = group(screen, "", "identity-list");
             profiles.forEach(function (profile) {
-                button(screen, profile.title || profile.username || "Profile", function () {
+                var identity = button(identities, profile.title || profile.username || "Profile", function () {
                     var selection = ++viewGeneration;
                     clear(screen);
-                    screen.appendChild(element("h2", "", profile.title || "Profile"));
+                    page(profile.title || "Profile", "profile-pin");
                     var pin = element("input", "remote-input");
                     pin.type = "password";
                     pin.maxLength = 4;
-                    pin.setAttribute("aria-label", "Profile PIN");
+                    pin.setAttribute("inputmode", "numeric");
+                    pin.setAttribute("aria-label", translate("Profile PIN"));
                     if (profile.protected) { screen.appendChild(pin); }
                     button(screen, "Use this profile", function () {
                         if (profile.protected && !/^[0-9]{4}$/.test(pin.value)) {
@@ -371,9 +441,13 @@
                     button(screen, "Back to profiles", openProfiles);
                     focusFirst();
                 }, true);
+                identity.className = "identity-choice";
+                identity.setAttribute("data-initial", (profile.title || profile.username || "P").slice(0, 1).toUpperCase());
+                if (profile.protected) { identity.setAttribute("data-protected", "true"); }
             });
-            button(screen, "Use linked account", openServers);
-            button(screen, "Sign out", signOut);
+            var actions = group(screen, "", "page-actions");
+            button(actions, "Use linked account", openServers);
+            button(actions, "Sign out", signOut);
             setStatus("Select the Plex identity to use. Protected profiles require their PIN.");
             focusFirst();
         }).catch(function (error) {
@@ -414,7 +488,7 @@
         restoreView = null;
         var generation = ++viewGeneration;
         clear(screen);
-        screen.appendChild(element("h2", "", translate("Choose a server")));
+        page(translate("Choose a server"), "servers");
         if (typeof warning === "string" && warning) { screen.appendChild(element("p", "inline-error", warning)); }
         setStatus("Discovering your Plex Media Servers...");
         accountClient.getServers().then(function (result) {
@@ -423,12 +497,13 @@
             if (!servers.length) {
                 screen.appendChild(element("p", "empty-state", translate("No Plex servers are shared with this identity.")));
             }
+            var serverList = group(screen, "", "server-list");
             servers.forEach(function (server) {
                 var unavailable = !server.token || !server.connections.length;
                 var relayOnly = server.connections.length && server.connections.every(function (connection) {
                     return connection.relay === true;
                 });
-                var serverButton = button(screen, server.name + (server.owned ? " (owned)" : " (shared)") +
+                var serverButton = button(serverList, server.name + (server.owned ? " (owned)" : " (shared)") +
                     (unavailable ? " — unavailable" : relayOnly ? " — relay" : ""), function () {
                     var selection = ++viewGeneration;
                     currentClient = null;
@@ -449,13 +524,15 @@
                     });
                 }, true);
                 serverButton.disabled = unavailable;
+                serverButton.className += " server-choice";
             });
-            button(screen, "Change profile", function () {
+            var actions = group(screen, "", "page-actions");
+            button(actions, "Change profile", function () {
                 accountClient = window.PlexApi.createAccountClient({ token: accountToken });
                 openProfiles();
             });
-            button(screen, "Refresh servers", openServers);
-            button(screen, "Sign out", signOut);
+            button(actions, "Refresh servers", openServers);
+            button(actions, "Sign out", signOut);
             setStatus("Owned and shared servers use their own access grants. Only secure advertised origins are tried.");
             focusFirst();
         }).catch(function (error) {
@@ -532,6 +609,7 @@
         clear(screen);
         currentClient = null;
         currentSection = null;
+        screen.className = "screen screen-signin";
         var section = element("section", "connect-panel");
         section.appendChild(element("h2", "auth-title", translate("Sign in to Plex")));
 
@@ -693,7 +771,7 @@
         clear(screen);
         resetImages();
         restoreView = function () { openFavorites(firstRun); };
-        screen.appendChild(element("h2", "", translate("Favorite libraries")));
+        page(translate("Favorite libraries"), "favorites");
         setStatus("Loading libraries...");
         currentClient.getSections().then(function (sections) {
             if (generation !== viewGeneration) { return; }
@@ -714,9 +792,10 @@
                 if (!done) { return; }
                 done.disabled = !firstRun && chosen.slice().sort().join(",") === initial;
             }
+            var choices = group(screen, "", "selection-list");
             sections.forEach(function (section) {
                 var key = String(section.key);
-                var toggle = button(screen, "", function () {
+                var toggle = button(choices, "", function () {
                     var index = chosen.indexOf(key);
                     if (index !== -1) {
                         if (chosen.length === 1) { setStatus("Keep at least one library.", true); return; }
@@ -761,6 +840,7 @@
         var generation = ++viewGeneration;
         cancelViewRequests();
         itemsLoading = false;
+        setStatus("Loading...");
         Promise.all([
             currentClient.getSections(),
             currentClient.getHomeHubs()
@@ -775,6 +855,10 @@
                 addConnectForm(error.message);
             }
             setStatus(error.message, true);
+            if (!document.getElementById("home-retry")) {
+                button(screen, "Retry", function () { loadHome(showConnectOnError); }).id = "home-retry";
+            }
+            focusFirst();
         });
     }
 
@@ -785,10 +869,12 @@
         resetImages();
         restoreView = function () { loadHome(false); };
         currentSection = null;
+        screen.className = "screen screen-home";
         var nav = element("nav", "home-navigation");
         nav.setAttribute("aria-label", translate("Home"));
         button(nav, "Search", function () { visit(openSearch); });
         button(nav, "Settings", function () { visit(openSettings); });
+        button(nav, "Refresh", function () { loadHome(false); }, false, "refresh");
         button(nav, "Live TV and DVR", function () { visit(openTelevision); });
         if (accountClient) { button(nav, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
         if (accountClient) { button(nav, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
@@ -798,14 +884,43 @@
             if (accountClient) { openServers(); } else { addConnectForm(""); }
         });
         screen.appendChild(nav);
-        screen.appendChild(element("h2", "", translate("Home")));
+        var homeTitle = element("h2", "page-title home-title", translate("Home"));
+        screen.appendChild(homeTitle);
+        var featured = null;
+        var favorites = favoriteKeys();
+        var visibleHubs = hubs.filter(function (hub) {
+            return !favorites || hub.librarySectionID === undefined ||
+                favorites.indexOf(String(hub.librarySectionID)) !== -1;
+        });
+        visibleHubs.some(function (hub) {
+            featured = (hub.Metadata || []).filter(function (item) {
+                return item.ratingKey && ["movie", "show", "episode"].indexOf(item.type) !== -1;
+            })[0];
+            return !!featured;
+        });
+        if (featured) {
+            var hero = element("section", "home-hero");
+            var art = element("img", "home-hero-art");
+            art.alt = "";
+            hero.appendChild(art);
+            queueImage(art, currentClient, featured.art || featured.grandparentArt || featured.thumb,
+                { width: 1280, height: 720 }, 4 * 1024 * 1024, null, true);
+            hero.appendChild(element("div", "home-hero-scrim"));
+            var copy = element("div", "home-hero-copy");
+            copy.appendChild(element("h3", "home-hero-title", featured.grandparentTitle || featured.title));
+            copy.appendChild(element("p", "home-hero-description", featured.summary || translate("No synopsis is available.")));
+            button(copy, "Open details", function () {
+                visit(function () { openDetail(featured.ratingKey, currentClient); });
+            }, false, "library");
+            hero.appendChild(copy);
+            screen.appendChild(hero);
+        }
 
         var sectionPanel = element("section", "content-panel");
         addSectionHeading(sectionPanel, translate("Libraries"));
         if (!sections.length) {
             sectionPanel.appendChild(element("p", "empty-state", translate("No libraries were returned by this server.")));
         }
-        var favorites = favoriteKeys();
         var browsable = sections.filter(function (section) {
             return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
         });
@@ -820,20 +935,19 @@
         screen.appendChild(sectionPanel);
 
         var hubPanel = element("section", "content-panel");
-        addSectionHeading(hubPanel, "Plex shelves");
-        if (!hubs.length) {
+        hubPanel.setAttribute("aria-label", translate("Plex shelves"));
+        if (!visibleHubs.length) {
             hubPanel.appendChild(element("p", "empty-state", translate("No Home shelves were returned.")));
         }
-        hubs.filter(function (hub) {
-            return !favorites || hub.librarySectionID === undefined ||
-                favorites.indexOf(String(hub.librarySectionID)) !== -1;
-        }).forEach(function (hub) {
+        visibleHubs.forEach(function (hub) {
             var deck = !!(window.PlexItemMenu && window.PlexItemMenu.isDeckHub(hub));
             var hubSection = element("section", "shelf");
             hubSection.appendChild(element("h3", "hub-title", hub.title || "Plex shelf"));
+            var row = element("div", "shelf-row");
+            hubSection.appendChild(row);
             var metadata = Array.isArray(hub.Metadata) ? hub.Metadata : [];
             metadata.slice(0, 12).forEach(function (item) {
-                if (item.ratingKey) { card(hubSection, item, currentClient, null, { deck: deck }); }
+                if (item.ratingKey) { card(row, item, currentClient, null, { deck: deck }); }
             });
             hubPanel.appendChild(hubSection);
         });
@@ -856,10 +970,11 @@
             openSection(section, { items: currentItems.slice(), offset: currentOffset,
                 filters: JSON.parse(JSON.stringify(libraryFilters)) });
         };
-        screen.appendChild(element("h2", "", section.title || "Library"));
-        button(screen, "Sort and filters", function () { visit(function () { openBrowseOptions(section); }); });
-        button(screen, "A-Z", function () { visit(function () { openLetters(section); }); });
-        button(screen, "Collections", function () {
+        page(section.title || "Library", "library");
+        var toolbar = group(screen, "", "page-toolbar");
+        button(toolbar, "Sort and filters", function () { visit(function () { openBrowseOptions(section); }); });
+        button(toolbar, "A-Z", function () { visit(function () { openLetters(section); }); });
+        button(toolbar, "Collections", function () {
             visit(function () {
                 openListing("Collections", function () { return currentClient.getCollections(section.key); }, currentClient);
             });
@@ -901,9 +1016,18 @@
             currentOffset = page.offset + page.items.length;
             document.getElementById("previous-page").disabled = currentOffset <= currentItems.length;
             var list = document.getElementById("item-list");
+            var focused = document.activeElement;
+            var focusedKey = focused && focused.plexCard ? String(focused.plexCard.item.ratingKey) : null;
             clear(list);
             resetImages();
-            currentItems.forEach(function (item) { card(list, item, currentClient, currentItems); });
+            var restored = null;
+            currentItems.forEach(function (item) {
+                var control = card(list, item, currentClient, currentItems);
+                if (focusedKey === String(item.ratingKey)) { restored = control; }
+            });
+            if (focusedKey) {
+                (restored || list.querySelector("button") || document.getElementById("home-back")).focus();
+            }
             var loadMore = document.getElementById("load-more");
             loadMore.disabled = currentOffset >= page.totalSize || page.items.length === 0;
             if (loadMore.disabled && document.activeElement === loadMore) {
@@ -925,7 +1049,7 @@
         clear(screen);
         viewClients.push(client);
         resetImages();
-        screen.appendChild(element("h2", "", title));
+        page(title, "listing");
         setStatus("Loading...");
         offset = offset || 0;
         retained = retained || [];
@@ -960,15 +1084,16 @@
         restoreView = function () { openBrowseOptions(section); };
         var selected = JSON.parse(JSON.stringify(libraryFilters));
         clear(screen);
-        screen.appendChild(element("h2", "", translate("Sort and filters")));
-        button(screen, "All titles", function () { libraryFilters = {}; openSection(section); });
-        button(screen, "Unwatched", function () {
+        page(translate("Sort and filters"), "filters");
+        var quick = group(screen, "", "page-toolbar");
+        button(quick, "All titles", function () { libraryFilters = {}; openSection(section); });
+        button(quick, "Unwatched", function () {
             var filters = {};
             filters[section.type === "show" ? "unwatchedLeaves" : "unwatched"] = 1;
             openSection(section, { items: [], offset: 0, filters: filters });
             loadNextPage();
         });
-        button(screen, "Recently added", function () {
+        button(quick, "Recently added", function () {
             openSection(section, { items: [], offset: 0, filters: { sort: "addedAt:desc" } });
             loadNextPage();
         });
@@ -979,22 +1104,26 @@
             if (generation !== viewGeneration) { return; }
             var types = container.Meta && container.Meta.Type || [];
             var type = types.filter(function (entry) { return entry.active; })[0] || types[0] || {};
+            var sorting = group(screen, translate("Sort"), "selection-list");
             (type.Sort || []).forEach(function (sort) {
                 ["asc", "desc"].forEach(function (direction) {
-                    button(screen, (sort.title || sort.key) + " / " + direction, function () {
+                    var choice = button(sorting, (sort.title || sort.key) + " / " + direction, function () {
                         selected.sort = direction === "desc" && sort.descKey ? sort.descKey : sort.key + ":" + direction;
                         openSection(section, { items: [], offset: 0, filters: selected });
                         loadNextPage();
                     });
+                    var sortKey = direction === "desc" && sort.descKey ? sort.descKey : sort.key + ":" + direction;
+                    choice.setAttribute("aria-pressed", selected.sort === sortKey ? "true" : "false");
                 });
             });
+            var filtering = group(screen, translate("Filters"), "selection-list");
             (type.Filter || []).forEach(function (filter) {
                 if (!filter.key || !filter.filter) { return; }
-                button(screen, filter.title || filter.filter, function () {
+                button(filtering, filter.title || filter.filter, function () {
                     visit(function () {
                         var filterGeneration = ++viewGeneration;
                         clear(screen);
-                        screen.appendChild(element("h2", "", filter.title || "Filter"));
+                        page(filter.title || "Filter", "filter-values");
                         currentClient.getFilterValues(section.key, filter.key).then(function (values) {
                             if (filterGeneration !== viewGeneration) { return; }
                             (values.Directory || []).slice(0, 200).forEach(function (value) {
@@ -1026,15 +1155,16 @@
         var generation = ++viewGeneration;
         restoreView = function () { openLetters(section); };
         clear(screen);
-        screen.appendChild(element("h2", "", translate("Jump to a letter")));
+        page(translate("Jump to a letter"), "alphabet");
         button(screen, "Back", backView);
         setStatus("Loading the server's alphabet index...");
         currentClient.getLetters(section.key).then(function (container) {
             if (generation !== viewGeneration) { return; }
             var offset = 0;
+            var letters = group(screen, "", "alphabet-list");
             (container.Directory || []).forEach(function (letter) {
                 var start = offset;
-                button(screen, letter.title || letter.key, function () {
+                button(letters, letter.title || letter.key, function () {
                     openSection(section, { items: [], offset: start, filters: { sort: "titleSort:asc" } });
                     loadNextPage();
                 });
@@ -1051,7 +1181,7 @@
         var generation = ++viewGeneration;
         clear(screen);
         resetImages();
-        screen.appendChild(element("h2", "", translate("Search your servers")));
+        page(translate("Search your servers"), "search");
         var input = element("input", "remote-input");
         input.type = "search";
         input.maxLength = 200;
@@ -1061,6 +1191,7 @@
         var results = element("div", "search-results");
         function search() {
             var query = input.value.trim();
+            if (!query) { setStatus("Enter a title to search.", true); input.focus(); return; }
             var searchGeneration = ++viewGeneration;
             cancelViewRequests();
             clear(results);
@@ -1088,7 +1219,7 @@
                                 if (searchGeneration !== viewGeneration) { return; }
                                 (container.Hub || []).forEach(function (hub) {
                                     if (hub.type === "actor" || hub.type === "director") {
-                                        var people = element("section", "shelf");
+                                        var people = element("section", "people-results");
                                         people.appendChild(element("h3", "", hub.title || "Cast and crew"));
                                         (hub.Directory || []).slice(0, Math.max(0, Math.min(50, 200 - shown))).forEach(function (person) {
                                             button(people, person.tag || "Person", function () {
@@ -1105,8 +1236,10 @@
                                     if (!items.length) { return; }
                                     var shelf = element("section", "shelf");
                                     shelf.appendChild(element("h3", "", (server ? server.name + " / " : "") + hub.title));
+                                    var row = element("div", "shelf-row");
+                                    shelf.appendChild(row);
                                     items.slice(0, Math.max(0, Math.min(50, 200 - shown))).forEach(function (item) {
-                                        card(shelf, item, client); shown += 1;
+                                        card(row, item, client); shown += 1;
                                     });
                                     results.appendChild(shelf);
                                 });
@@ -1121,6 +1254,7 @@
                             finished += 1;
                             if (searchGeneration !== viewGeneration) { return; }
                             if (finished === targets.length) {
+                                if (!shown && !failures) { results.appendChild(element("p", "empty-state", translate("No matching media found."))); }
                                 setStatus(failures ? "Some servers could not be searched. Retry or change server." :
                                     shown >= 200 ? "Showing 200 results. Refine your search for more." :
                                         results.firstChild ? "Search complete." : "No matching media found.", failures > 0);
@@ -1197,6 +1331,7 @@
         resetImages();
         restoreView = function () { openDetail(item.ratingKey, client); };
         setDetailMode(true);
+        screen.className = "screen screen-detail";
         var playable = ["movie", "episode", "clip", "track"].indexOf(item.type) !== -1;
         var backdropPath = item.art || item.grandparentArt || item.parentArt ||
             (item.type === "episode" || item.type === "clip" ? item.thumb : "");
@@ -1213,6 +1348,14 @@
         var hero = element("section", "detail-hero");
         var main = element("div", "detail-main");
         hero.appendChild(main);
+        if (["artist", "album", "track", "photoalbum", "collection"].indexOf(item.type) !== -1) {
+            hero.className += " detail-hero-with-cover";
+            var cover = element("img", "detail-cover");
+            cover.alt = "";
+            cover.src = placeholderArt();
+            hero.appendChild(cover);
+            queueImage(cover, client, item.thumb, { width: 480, height: 480 });
+        }
         if (item.type === "episode" && item.grandparentTitle) {
             main.appendChild(element("p", "detail-eyebrow", item.grandparentTitle +
                 (item.parentIndex !== undefined && item.index !== undefined ? "  ·  S" + item.parentIndex + " E" + item.index : "")));
@@ -1246,6 +1389,17 @@
         var actions = element("div", "detail-actions");
         main.appendChild(actions);
         var more = element("div", "detail-more");
+        var onDeck = item.OnDeck && item.OnDeck.Metadata;
+        if (Array.isArray(onDeck)) { onDeck = onDeck[0]; }
+        if (item.type === "show" && onDeck && onDeck.type === "episode" && onDeck.ratingKey) {
+            var nextEpisode = onDeck;
+            detailAction(actions, nextEpisode.viewOffset ? "Resume" : "Play next episode", "play", function () {
+                playFromCard(nextEpisode, client, true);
+            }).className = "detail-pill detail-primary detail-pill-play";
+            if (nextEpisode.viewOffset) {
+                detailAction(actions, "Play from beginning", "restart", function () { playFromCard(nextEpisode, client, false); });
+            }
+        }
         if (playable) {
             var primary = detailAction(actions, item.viewOffset ? "Resume" : "Play", "play", function () {
                 startPlayer(item, client, item.viewOffset || 0);
@@ -1283,7 +1437,9 @@
                     }, client);
                 });
             });
-            if (item.type !== "album") { children.className = "detail-pill detail-primary detail-pill-list"; }
+            if (item.type !== "album" && !(item.type === "show" && nextEpisode)) {
+                children.className = "detail-pill detail-primary detail-pill-list";
+            }
         }
         if (["movie", "episode", "show", "season"].indexOf(item.type) !== -1) {
             detailAction(actions, "Mark watched", "watched", function () { confirmWatchAction(item, client, "watched"); });
@@ -1366,7 +1522,9 @@
         if (extras.length) {
             var shelf = element("section", "shelf detail-section");
             shelf.appendChild(element("h3", "detail-section-title", translate("Extras and trailers")));
-            extras.slice(0, 20).forEach(function (extra) { card(shelf, extra, client); });
+            var extrasRow = element("div", "shelf-row");
+            shelf.appendChild(extrasRow);
+            extras.slice(0, 20).forEach(function (extra) { card(extrasRow, extra, client); });
             screen.appendChild(shelf);
         }
         setStatus("Choose Play or Resume to start playback. Browsing does not update watch history.");
@@ -1379,7 +1537,7 @@
             clear(screen);
             var label = action === "remove" ? "Remove from Continue Watching" :
                 action === "watched" ? "Mark watched" : "Mark unwatched";
-            screen.appendChild(element("h2", "", label));
+            page(label, "confirmation");
             screen.appendChild(element("p", "synopsis", item.title || "Selected item"));
             screen.appendChild(element("p", "help-text", action === "remove" ?
                 "Hide this item from Continue Watching without clearing its resume position." :
@@ -1437,7 +1595,12 @@
         viewClients.push(client);
         resetImages();
         restoreView = function () { openPerson(person, client); };
-        screen.appendChild(element("h2", "", person.tag || "Person"));
+        page(person.tag || "Person", "person");
+        var portrait = element("img", "person-portrait");
+        portrait.alt = "";
+        portrait.src = placeholderArt();
+        screen.appendChild(portrait);
+        queueImage(portrait, client, person.thumb, { width: 360, height: 360 });
         if (person.role) { screen.appendChild(element("p", "detail-meta", person.role)); }
         button(screen, "Titles in this server", function () {
             visit(function () {
@@ -1468,7 +1631,9 @@
                 var held = 0;
                 groups.slice(0, 20).forEach(function (group) {
                     if (shown >= 200) { return; }
-                    screen.appendChild(element("h3", "", group.title || "Credits"));
+                    var credits = element("section", "credit-list");
+                    credits.appendChild(element("h3", "group-title", group.title || "Credits"));
+                    screen.appendChild(credits);
                     (group.Credit || []).slice(0, 200 - shown).forEach(function (credit) {
                         var title = credit.Metadata;
                         if (!title) { return; }
@@ -1477,13 +1642,13 @@
                         var ratingKey = local && window.PlexApi.matchCredit(local.index, title.ratingKey);
                         if (ratingKey) {
                             held += 1;
-                            button(screen, label + " / " + translate("In this library"), function () {
+                            titleTile(credits, { title: label + " / " + translate("In this library"), thumb: title.thumb }, function () {
                                 visit(function () { openDetail(ratingKey, client); });
-                            }, true);
+                            }, client);
                         } else {
-                            button(screen, label + " / " + translate("Search libraries"), function () {
+                            titleTile(credits, { title: label + " / " + translate("Search libraries"), thumb: title.thumb }, function () {
                                 visit(function () { openSearch(title.title); });
-                            }, true);
+                            }, client);
                         }
                         shown += 1;
                     });
@@ -1501,13 +1666,14 @@
 
     function showPlayerError(error) { setStatus(error.message || "Playback failed. Stop and retry.", true); }
 
-    function serviceView(title, restore) {
+    function serviceView(title, restore, kind) {
         var generation = ++viewGeneration;
         clear(screen);
         resetImages();
         restoreView = restore;
-        screen.appendChild(element("h2", "", translate(title)));
-        button(screen, "Back", backView);
+        page(translate(title), kind || "service");
+        var toolbar = group(screen, "", "page-toolbar");
+        button(toolbar, "Back", backView);
         setStatus("Loading...");
         focusFirst();
         return generation;
@@ -1518,7 +1684,8 @@
             client: function () { return currentClient; }, preferences: function () { return preferences; },
             screen: screen, view: serviceView, generation: function () { return viewGeneration; },
             element: element, button: button, translate: translate, visit: visit, back: backView,
-            status: setStatus, focus: focusFirst, confirm: confirmServiceWrite
+            status: setStatus, focus: focusFirst, confirm: confirmServiceWrite,
+            group: group, tile: titleTile
         }).open();
     }
 
@@ -1527,7 +1694,8 @@
             account: function () { return accountClient; }, screen: screen, view: serviceView,
             generation: function () { return viewGeneration; }, element: element, button: button,
             translate: translate, visit: visit, status: setStatus, focus: focusFirst, confirm: confirmServiceWrite,
-            find: findCatalogueItem
+            find: findCatalogueItem, group: group, tile: titleTile,
+            artwork: function () { return currentClient; }
         });
     }
 
@@ -1595,7 +1763,7 @@
 
     function confirmServiceWrite(title, write, refresh) {
         visit(function () {
-            var generation = serviceView(title, refresh);
+            var generation = serviceView(title, refresh, "confirmation");
             screen.appendChild(element("p", "help-text", translate("This changes your Plex account or server. Nothing changes until you confirm.")));
             var pending = false;
             var confirm = button(screen, "Confirm", function () {
@@ -1622,6 +1790,7 @@
         clear(screen);
         viewClients.push(client);
         resetImages();
+        screen.className = "screen screen-photos";
         restoreView = function () { openPhotos(items, index, client); };
         try {
             if (!window.URL || !window.URL.createObjectURL) { throw new Error("Photo display is unavailable in this runtime."); }
@@ -2071,41 +2240,45 @@
             Array.prototype.slice.call(screen.querySelectorAll("button")).indexOf(document.activeElement) : -1;
         viewGeneration += 1;
         clear(screen);
-        screen.appendChild(element("h2", "", translate("Settings")));
+        page(translate("Settings"), "settings");
         screen.appendChild(element("p", "help-text", translate("Account credentials are session-only unless you explicitly enabled unencrypted remember-me. No analytics or crash uploads are enabled.")));
         var menu = element("section", "settings-menu");
         menu.setAttribute("aria-label", translate("Settings"));
         screen.appendChild(menu);
+        var playbackSettings = group(menu, translate("Playback"), "settings-group");
         ["720", "1080"].forEach(function (quality) {
-            var choice = button(menu, "Transcode quality: " + quality + "p" + (preferences.quality === quality ? " (selected)" : ""), function () {
+            var choice = button(playbackSettings, "Transcode quality: " + quality + "p" + (preferences.quality === quality ? " (selected)" : ""), function () {
                 preferences.quality = quality;
                 if (savePreferences()) { openSettings(); }
             });
             choice.setAttribute("aria-pressed", preferences.quality === quality ? "true" : "false");
         });
-        var autoNext = button(menu, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
+        var autoNext = button(playbackSettings, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
             preferences.autoNext = !preferences.autoNext;
             if (savePreferences()) { openSettings(); }
         }, false, "play");
         autoNext.setAttribute("aria-pressed", preferences.autoNext ? "true" : "false");
-        button(menu, translate("Continue Watching: {state}", {
+        button(playbackSettings, translate("Continue Watching: {state}", {
             state: translate(preferences.continueAction === "play" ? "Play" : "Open details")
         }), function () {
             preferences.continueAction = preferences.continueAction === "play" ? "details" : "play";
             if (savePreferences()) { openSettings(); }
         }, false, "play");
+        var librarySettings = group(menu, translate("Libraries"), "settings-group");
         if (currentClient && currentServerId) {
-            button(menu, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
+            button(librarySettings, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
         }
+        var languages = group(menu, translate("Language"), "settings-group");
         ["en", "es", "be"].forEach(function (language) {
             var names = { en: "English", es: "Español", be: "Беларуская" };
-            var choice = button(menu, translate("Language") + ": " + names[language], function () {
+            var choice = button(languages, translate("Language") + ": " + names[language], function () {
                 preferences.language = language;
                 if (savePreferences()) { openSettings(); }
             }, false, "language");
             choice.setAttribute("aria-pressed", preferences.language === language ? "true" : "false");
         });
-        button(menu, "Reset preferences", function () {
+        var privacy = group(menu, translate("Privacy and data"), "settings-group");
+        button(privacy, "Reset preferences", function () {
             try {
                 window.PlexPreferences.reset(window.localStorage);
                 if (window.PlexFavorites) { window.PlexFavorites.reset(window.localStorage); }
@@ -2114,11 +2287,11 @@
                 openSettings();
             } catch (error) { setStatus("Could not reset preferences. Check app storage permissions.", true); }
         });
-        button(menu, "Diagnostics", function () {
+        button(privacy, "Diagnostics", function () {
             visit(function () {
                 viewGeneration += 1;
                 clear(screen);
-                screen.appendChild(element("h2", "", translate("Diagnostics")));
+                page(translate("Diagnostics"), "diagnostics");
                 screen.appendChild(element("p", "help-text",
                     "AVPlay: " + (window.webapis && window.webapis.avplay ? "available (formats unverified)" : "unavailable") +
                     ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
@@ -2126,8 +2299,8 @@
                 focusFirst();
             });
         });
-        button(menu, "Sign out", signOut);
-        button(menu, "Back", backView);
+        button(privacy, "Sign out", signOut);
+        button(privacy, "Back", backView);
         restoreView = openSettings;
         setStatus("Unknown codec capabilities use server transcoding, not guessed direct play.");
         focusFirst();

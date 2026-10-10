@@ -35,13 +35,22 @@ rows (`rust-modules/ui/src/widgets.rs`'s `TabStrip` and `rust-modules/ui/src/the
 roles), rather than reusing its renderer. Home destinations appear above the shelves; settings
 show selected values independently of focus and retain the focused row after preference changes.
 These behaviors have synthetic UI coverage; browser previews are not Samsung-panel evidence.
+The all-screen redesign now applies this same neutral, remote-first system to profiles/PIN,
+servers/favourites, Home, libraries/collections, search, every detail/media variant, people,
+Watchlist/catalogue, guide/DVR subviews, photos, settings/diagnostics and confirmations/states.
+`samsung/DESIGN.md` records the built layouts and legacy-engine constraints. Library paging
+restores the focused title by identity; empty searches do not query the server; Home's featured
+title obeys the same favourite-library filter as its shelves. The show primary action requests
+`includeOnDeck=1` and opens/resumes the server-selected episode, accepting either object or array
+`OnDeck.Metadata`; it never submits the show itself as a playable leaf. Without an on-deck episode,
+Seasons remains the navigation path.
 The playback overlay uses a compact transport row and progress bar. Chapters, tracks, quality,
 playback information, music-queue controls and Stop live under More rather than covering the
 video in two rows of always-visible buttons. It hides after five seconds of uninterrupted play,
 while subtitles remain independent and errors remain visible.
-The installed emulator has not launched on this Apple-Silicon host; earlier retail probes did not
-run this application. No current-product emulator, decoder, performance or retail-model pass is
-claimed.
+The installed emulator has not launched on this Apple-Silicon host. Developer-signed application
+installation/launch has been observed on the owner's Samsung; that is an install/launch smoke
+result, not a pass for every redesigned screen, codec, performance target or retail model.
 
 ## 1. Product outcome
 
@@ -459,6 +468,7 @@ Each row compares source behaviour; Samsung evidence is host-only.
 | Credit-to-local availability join (`person.rs` `guid_index`/`match_local` over `/library/people/{id}/media`, keyed by the GUID tail) | **Added:** `localCatalogueIndex`/`matchCredit`/`personLibraryIndex`. Held credits open the local item ("In this library"); others keep "Search libraries"; an unreadable or truncated index is reported, never shown as availability. `people.test.js` and `filmography-ui.test.js` (fails against the previous commit) |
 | Extras/trailers shelf, Play from beginning, Remove from Continue Watching, related items | Present |
 | Up Next via `/allLeaves` | Present (`nextEpisode`) |
+| Show hero uses the PMS-selected on-deck episode (`plex/library.rs::metadata`, `screens/detail/hero.rs`) | **Added:** `includeOnDeck=1`, object/array metadata handling and Play next episode/Resume/Restart actions tied to the episode's own ID. Regression exercises the episode lookup and 20000ms resume, not show playback. Season selection remains available; without an on-deck result, choose an episode from Seasons |
 | Item context menu on cards (`item_menu.rs`: go to item/show, mark watched, play, play from start, trailer, remove from deck) | **Added:** `js/item-menu.js`. Holding OK (600 ms), Tools or Info opens it; Play/Resume is always the first row and never a write; Cancel returns focus to the card. A short OK opens the card on key-up. `lg-parity.test.js`, `lg-parity-ui.test.js`. Physical Enter key-up delivery is unverified on a TV |
 | Continue Watching OK = Play vs Open details preference | **Added:** `continueAction` preference, default Open details, as on LG |
 | Video server PlayQueue (`timeline.rs` `create_play_queue`) | **Added:** `createVideoPlayQueue` POSTs `/playQueues` (`type=video`, continuous for episodes); timelines carry `playQueueID`/`playQueueItemID`. A queue failure falls back to plain playback. Creating a queue is a server write: fakes only until an authorized test profile exists |

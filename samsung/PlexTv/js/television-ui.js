@@ -3,14 +3,16 @@
     root.PlexTelevisionUi = {
         create: function (options) {
             function openTelevision() {
-                var generation = options.view("Live TV and DVR", openTelevision);
+                var generation = options.view("Live TV and DVR", openTelevision, "television");
                 var api = root.PlexTelevision.create(options.client());
-                options.button(options.screen, "Scheduled recordings", function () { options.visit(function () { openRecordings(false); }); });
-                options.button(options.screen, "Recording subscriptions", function () { options.visit(function () { openRecordings(true); }); });
+                var navigation = options.group(options.screen, "", "page-toolbar");
+                options.button(navigation, "Scheduled recordings", function () { options.visit(function () { openRecordings(false); }); });
+                options.button(navigation, "Recording subscriptions", function () { options.visit(function () { openRecordings(true); }); });
                 api.providers().then(function (providers) {
                     if (generation !== options.generation()) { return; }
+                    var guides = options.group(options.screen, options.translate("Live TV guide"), "selection-list");
                     providers.forEach(function (provider) {
-                        options.button(options.screen, provider.title || provider.identifier, function () {
+                        options.button(guides, provider.title || provider.identifier, function () {
                             options.visit(function () { openGuide(provider); });
                         });
                     });
@@ -21,18 +23,18 @@
             }
 
             function openGuide(provider) {
-                var generation = options.view("Live TV guide", function () { openGuide(provider); });
+                var generation = options.view("Live TV guide", function () { openGuide(provider); }, "guide");
                 var api = root.PlexTelevision.create(options.client());
                 api.browse("/" + provider.identifier + "/hubs/discover", 0).then(function (container) {
                     if (generation !== options.generation()) { return; }
                     var count = 0;
                     (container.Hub || []).slice(0, 20).forEach(function (hub) {
-                        options.screen.appendChild(options.element("h3", "", hub.title || "Programs"));
+                        var programs = options.group(options.screen, hub.title || "Programs", "guide-list");
                         (hub.Metadata || []).slice(0, 200 - count).forEach(function (program) {
                             count += 1;
-                            options.button(options.screen, program.title || "Program", function () {
+                            options.tile(programs, program, function () {
                                 options.visit(function () { openProgram(program, provider); });
-                            });
+                            }, options.client());
                         });
                     });
                     options.status(count ? "Choose a program to inspect recording options." : "No guide programs were returned.");
@@ -40,18 +42,18 @@
                 }).catch(function (error) { if (generation === options.generation()) { options.status(error.message, true); } });
                 options.button(options.screen, "Channel lineups", function () {
                     options.visit(function () {
-                        var own = options.view("Channel lineups", function () { openGuide(provider); });
+                        var own = options.view("Channel lineups", function () { openGuide(provider); }, "lineups");
                         api.dvrs().then(function (dvrs) {
                             if (own !== options.generation()) { return; }
                             dvrs.slice(0, 50).forEach(function (dvr) {
                                 if (!dvr.lineup) { return; }
                                 options.button(options.screen, dvr.lineup, function () {
                                     options.visit(function () {
-                                        var channelGeneration = options.view("Channels", function () { openGuide(provider); });
+                                        var channelGeneration = options.view("Channels", function () { openGuide(provider); }, "channels");
                                         api.channels(dvr.lineup).then(function (channels) {
                                             if (channelGeneration !== options.generation()) { return; }
                                             channels.slice(0, 200).forEach(function (channel) {
-                                                options.screen.appendChild(options.element("p", "", (channel.identifier || "") + " / " + (channel.callSign || "")));
+                                                options.screen.appendChild(options.element("p", "channel-row", (channel.identifier || "") + " / " + (channel.callSign || "")));
                                             });
                                             options.status("Channel list supplied by Plex. Live tuning requires a verified playback-session contract.");
                                         }).catch(function (error) {
@@ -67,7 +69,7 @@
             }
 
             function openProgram(program, provider) {
-                var generation = options.view("Program", function () { openProgram(program, provider); });
+                var generation = options.view("Program", function () { openProgram(program, provider); }, "program");
                 options.screen.appendChild(options.element("h3", "", program.grandparentTitle || program.title || "Program"));
                 options.screen.appendChild(options.element("p", "synopsis", program.summary || ""));
                 (program.Media || []).slice(0, 20).forEach(function (media) {
@@ -90,7 +92,7 @@
                     templates.slice(0, 20).forEach(function (template) {
                         options.button(options.screen, options.translate("Record / {title}", { title: template.title || options.translate("Program") }), function () {
                             options.visit(function () {
-                                var own = options.view("Schedule recording", function () { openProgram(program, provider); });
+                                var own = options.view("Schedule recording", function () { openProgram(program, provider); }, "recording-destination");
                                 options.client().getSections().then(function (sections) {
                                     if (own !== options.generation()) { return; }
                                     sections.filter(function (section) {
@@ -117,7 +119,7 @@
             function openChannel(provider, media, date) {
                 var now = new Date();
                 date = date || now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
-                var generation = options.view("Channel schedule", function () { openChannel(provider, media, date); });
+                var generation = options.view("Channel schedule", function () { openChannel(provider, media, date); }, "channel-schedule");
                 var input = options.element("input", "remote-input");
                 input.type = "date"; input.value = date;
                 input.setAttribute("aria-label", options.translate("Guide date"));
@@ -125,10 +127,11 @@
                 options.button(options.screen, "Load guide date", function () { openChannel(provider, media, input.value); });
                 root.PlexTelevision.create(options.client()).grid(provider, String(media.gridKey), date).then(function (programs) {
                     if (generation !== options.generation()) { return; }
+                    var list = options.group(options.screen, "", "guide-list");
                     programs.slice(0, 200).forEach(function (program) {
-                        options.button(options.screen, program.title || options.translate("Program"), function () {
+                        options.tile(list, program, function () {
                             options.visit(function () { openProgram(program, provider); });
-                        }, true);
+                        }, options.client());
                     });
                     options.status(programs.length ? "Guide times and programs are supplied by Plex." : "No guide programs were returned.");
                     options.focus();
@@ -140,21 +143,21 @@
 
             function openRecordings(subscriptions) {
                 var generation = options.view(subscriptions ? "Recording subscriptions" : "Scheduled recordings",
-                    function () { openRecordings(subscriptions); });
+                    function () { openRecordings(subscriptions); }, "recordings");
                 var api = root.PlexTelevision.create(options.client());
                 (subscriptions ? api.subscriptions() : api.scheduled()).then(function (items) {
                     if (generation !== options.generation()) { return; }
                     items.slice(0, 200).forEach(function (item) {
-                        options.screen.appendChild(options.element("h3", "", item.title || item.Metadata && item.Metadata.title || "Recording"));
-                        options.screen.appendChild(options.element("p", "", String(item.status || "")));
+                        var recording = options.group(options.screen, item.title || item.Metadata && item.Metadata.title || "Recording", "recording-row");
+                        recording.appendChild(options.element("p", "detail-meta", String(item.status || "")));
                         if (!subscriptions) { return; }
-                        options.button(options.screen, "Cancel recording subscription", function () {
+                        options.button(recording, "Cancel recording subscription", function () {
                             options.confirm("Cancel recording subscription", function () { return api.remove(item.key); },
                                 function () { openRecordings(true); });
                         });
-                        options.button(options.screen, "Recording preferences", function () {
+                        options.button(recording, "Recording preferences", function () {
                             options.visit(function () {
-                                options.view("Recording preferences", function () { openRecordings(true); });
+                                options.view("Recording preferences", function () { openRecordings(true); }, "recording-preferences");
                                 var fields = [];
                                 (item.Setting || []).filter(function (setting) { return !setting.hidden; }).slice(0, 50)
                                     .forEach(function (setting) {

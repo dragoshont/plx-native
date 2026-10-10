@@ -646,7 +646,7 @@
             identity: function () { return get("/identity"); },
             getMetadata: function (id) {
                 return get("/library/metadata/" + key(id), "GET", {
-                    includeChapters: 1, includeMarkers: 1, includeExtras: 1, includeRelated: 1
+                    includeChapters: 1, includeMarkers: 1, includeExtras: 1, includeRelated: 1, includeOnDeck: 1
                 }).then(function (container) {
                     var metadata = listFrom(container, "Metadata");
                     if (!metadata.length) { throw new Error("This item is no longer available."); }

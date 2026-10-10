@@ -61,7 +61,10 @@ function run() {
         assert.strictEqual(page.totalSize, 51);
         assert.strictEqual(calls[2].url,
             "http://localhost:32400/library/sections/1/all?X-Plex-Container-Start=0&X-Plex-Container-Size=50");
-        return Promise.resolve().then(function () {
+        return client.getMetadata("10").then(function () {
+            assert(new URL(calls[3].url).searchParams.get("includeOnDeck") === "1",
+                "Show detail must request the server-selected episode");
+        }).then(function () {
             return client.getSectionItems("../identity", 0, 50);
         }).then(function () {
             assert.fail("invalid section key should reject");

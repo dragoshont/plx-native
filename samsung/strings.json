@@ -1,4 +1,12 @@
 {
+  "Play next episode": { "es": "Reproducir siguiente episodio", "be": "Прайграць наступны эпізод" },
+  "Artwork unavailable": { "es": "Imagen no disponible", "be": "Выява недаступная" },
+  "Profile PIN": { "es": "PIN del perfil", "be": "PIN профілю" },
+  "Plex shelves": { "es": "Filas de Plex", "be": "Паліцы Plex" },
+  "Sort": { "es": "Orden", "be": "Парадак" },
+  "Filters": { "es": "Filtros", "be": "Фільтры" },
+  "Privacy and data": { "es": "Privacidad y datos", "be": "Прыватнасць і даныя" },
+  "Enter a title to search.": { "es": "Introduce un título para buscar.", "be": "Увядзіце назву для пошуку." },
   "More": { "es": "Más", "be": "Яшчэ" },
   "Playback options": { "es": "Opciones de reproducción", "be": "Параметры прайгравання" },
   "Plex server transcode: HLS / H.264 + AAC.": { "es": "Transcodificación del servidor Plex: HLS / H.264 + AAC.", "be": "Транскадаванне серверам Plex: HLS / H.264 + AAC." },

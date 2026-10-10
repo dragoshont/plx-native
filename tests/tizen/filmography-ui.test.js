@@ -11,6 +11,10 @@ function Node(tag, text) {
     this.value = "";
 }
 Node.prototype.appendChild = function (child) { this.children.push(child); return child; };
+Object.defineProperty(Node.prototype, "textContent", {
+    get: function () { return this.text || this.children.map(function (child) { return child.textContent; }).join(""); },
+    set: function (value) { this.text = value; }
+});
 Node.prototype.removeChild = function (child) { this.children.splice(this.children.indexOf(child), 1); };
 Object.defineProperty(Node.prototype, "firstChild", { get: function () { return this.children[0]; } });
 Node.prototype.addEventListener = function (name, callback) { this.events[name] = callback; };

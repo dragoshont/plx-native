@@ -18,7 +18,7 @@
             var url = "";
             var slideshow = false;
             var image = options.element("img", "photo-display");
-            var heading = options.element("h2", "");
+            var heading = options.element("h2", "photo-title");
             var parent = options.parent;
             parent.appendChild(heading);
             parent.appendChild(image);
@@ -75,15 +75,18 @@
                 index = (index + delta + items.length) % items.length;
                 load();
             }
-            options.button(parent, "Previous photo", function () { advance(-1); });
-            options.button(parent, "Next photo", function () { advance(1); });
-            options.button(parent, "Slideshow / Pause", function () {
+            var controls = options.element("section", "photo-controls");
+            parent.appendChild(controls);
+            options.button(controls, "Previous photo", function () { advance(-1); });
+            options.button(controls, "Next photo", function () { advance(1); });
+            var slideshowControl = options.button(controls, "Slideshow / Pause", function () {
                 slideshow = !slideshow;
+                if (slideshowControl) { slideshowControl.setAttribute("aria-pressed", slideshow ? "true" : "false"); }
                 if (slideshow) { load(); }
                 else { cancelTimer(); options.status(options.translate("Slideshow paused.")); }
             });
-            options.button(parent, "Retry photo", load);
-            options.button(parent, "Back", options.back);
+            options.button(controls, "Retry photo", load);
+            options.button(controls, "Back", options.back);
             load();
             return {
                 close: function () {
