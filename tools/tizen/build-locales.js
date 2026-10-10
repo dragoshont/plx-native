@@ -25,7 +25,13 @@ Object.keys(additions).forEach(function (source) {
 var output = "(function (root) {\n    \"use strict\";\n    var catalogs = " + JSON.stringify(catalogs) +
     ";\n    var language = \"en\";\n    root.PlexI18n = {\n" +
     "        setLanguage: function (value) { language = value === \"es\" || value === \"be\" ? value : \"en\"; },\n" +
-    "        text: function (value) { return catalogs[language] && catalogs[language][value] || value; }\n" +
+    "        has: function (value) { return language === \"en\" || Object.prototype.hasOwnProperty.call(catalogs[language], value); },\n" +
+    "        text: function (value, values) {\n" +
+    "            var text = catalogs[language] && catalogs[language][value] || value;\n" +
+    "            return text.replace(/\\{([A-Za-z0-9]+)\\}/g, function (match, key) {\n" +
+    "                return values && Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : match;\n" +
+    "            });\n" +
+    "        }\n" +
     "    };\n}(this));\n";
 var target = path.join(root, "samsung/PlexTv/js/i18n.js");
 if (process.argv[2] === "--write") { fs.writeFileSync(target, output); }

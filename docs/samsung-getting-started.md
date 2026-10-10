@@ -136,6 +136,40 @@ testing on a physical Samsung TV. A browser preview remains useful for UI work b
 replace the TV emulator or native AVPlay evidence. Keep the TV off during source research;
 turn it on only for a scheduled, authorized device session.
 
+### Windows x64 with AMD Ryzen
+
+Ryzen is a more promising host, but **x64 alone does not prove this emulator works**.
+The older Tizen Windows documentation describes Intel HAXM; HAXM is Intel-only and
+[retired](https://github.com/intel/haxm), so do not install it as a Ryzen fix.
+More recent Samsung guidance in
+[Samsung/Tizen.Issues#97](https://github.com/Samsung/Tizen.Issues/issues/97)
+(2026-06-09, verified from the public comments) says to enable **Windows Hypervisor Platform**
+in Windows Features and restart; it explicitly says the separate Hyper-V feature is not required.
+This is a supported troubleshooting lead, not an independently observed Ryzen launch.
+Check that AMD-V/SVM is enabled in firmware and record the exact Windows, SDK/extension and
+TV-image versions. Do not disable Windows security features based on an old HAXM recipe.
+
+After installing Node/npm and Tizen Studio/TV Extension with the owner's approval, the host
+contracts can run in PowerShell without an emulator or Plex credentials:
+
+```powershell
+npm ci --prefix tests/tizen --ignore-scripts
+if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
+node tools/tizen/build-locales.js
+if ($LASTEXITCODE -ne 0) { throw "Locale check failed" }
+Get-ChildItem tests/tizen -Filter *.test.js | Sort-Object Name | ForEach-Object {
+    node $_.FullName
+    if ($LASTEXITCODE -ne 0) { throw "Test failed: $($_.Name)" }
+}
+```
+
+These commands are portable Node test entry points; execution on Windows remains to be observed.
+Use the installed Windows Tizen CLI to perform an unsigned `build-web` into a uniquely named
+temporary directory, then create/launch the TV emulator and record readiness before installing
+an app. Signing and retail installation are separate authorized steps. If the installed emulator
+still requires HAXM, Linux/KVM on an AMD host is the documented AMD-V alternative; do not assume
+an ARM Windows VM or CrossOver supplies the missing backend.
+
 Credentials stay in memory unless a user explicitly selects **remember-me**. That option stores
 the account token **unencrypted** in Web Storage; leave it off on shared or untrusted TVs.
 Sign-out deletes the saved token; if deletion fails the app warns that its data must be cleared.

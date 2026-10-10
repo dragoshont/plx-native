@@ -38,6 +38,9 @@
     var queueShuffle = false;
     var queueRepeat = "off";
     var viewCleanup = null;
+    var viewClients = [];
+    var suspendedView = null;
+    var foregroundRecovery = null;
     var preferences = { quality: "1080", autoNext: false, language: "en" };
     var preferenceError = "";
     var pendingRestore = null;
@@ -47,8 +50,16 @@
             window.PlexI18n.setLanguage(preferences.language);
         } catch (error) { preferenceError = error.message; }
     }
+    if (typeof window.Promise !== "function" || typeof window.fetch !== "function" ||
+            typeof window.URL !== "function" || typeof window.Blob !== "function") {
+        status.textContent = "This browser lacks required network or media APIs. Use a supported Samsung runtime.";
+        status.className = "status status-error";
+        return;
+    }
+    var buildLabel = document.querySelector(".app-header p");
+    if (buildLabel) { buildLabel.textContent = translate("Samsung TV client development build"); }
 
-    function translate(text) { return window.PlexI18n ? window.PlexI18n.text(text) : text; }
+    function translate(text, values) { return window.PlexI18n ? window.PlexI18n.text(text, values) : text; }
 
     function savePreferences() {
         try {
@@ -146,10 +157,16 @@
         return false;
     }
 
+    function cancelViewRequests() {
+        viewClients.forEach(function (client) { client.cancelRequests(); });
+        viewClients = [];
+        if (currentClient && currentClient.cancelRequests) { currentClient.cancelRequests(); }
+        if (accountClient && accountClient.cancelRequests) { accountClient.cancelRequests(); }
+    }
+
     function clear(node) {
         if (node === screen && !player) {
-            if (currentClient && currentClient.cancelRequests) { currentClient.cancelRequests(); }
-            if (accountClient && accountClient.cancelRequests) { accountClient.cancelRequests(); }
+            cancelViewRequests();
         }
         if (node === screen && viewCleanup) {
             var cleanup = viewCleanup;
@@ -358,7 +375,7 @@
             if (generation !== viewGeneration) { return; }
             servers = result;
             if (!servers.length) {
-                screen.appendChild(element("p", "empty-state", "No Plex servers are shared with this identity."));
+                screen.appendChild(element("p", "empty-state", translate("No Plex servers are shared with this identity.")));
             }
             servers.forEach(function (server) {
                 var unavailable = !server.token || !server.connections.length;
@@ -370,7 +387,11 @@
                     var selection = ++viewGeneration;
                     currentClient = null;
                     setStatus("Connecting securely; trying relay if needed...");
-                    window.PlexApi.selectServer(server).then(function (selected) {
+                    window.PlexApi.selectServer(server, { onClient: function (client) {
+                        if (selection !== viewGeneration) { return false; }
+                        viewClients.push(client);
+                        return true;
+                    } }).then(function (selected) {
                         if (selection !== viewGeneration) { return; }
                         currentClient = selected.client;
                         usingRelay = selected.relay;
@@ -427,14 +448,14 @@
                 qr.height = 280;
                 info.appendChild(qr);
             }
-            info.appendChild(element("p", "help-text", "On a phone or computer, open Plex and enter this code:"));
+            info.appendChild(element("p", "help-text", translate("On a phone or computer, open Plex and enter this code:")));
             info.appendChild(element("strong", "auth-code", pin.code));
-            var link = element("a", "plex-link", "Open plex.tv/link");
+            var link = element("a", "plex-link", translate("Open plex.tv/link"));
             link.href = pin.linkUrl;
             link.target = "_blank";
             link.rel = "noopener";
             info.appendChild(link);
-            info.appendChild(element("p", "help-text", "This code expires in about five minutes."));
+            info.appendChild(element("p", "help-text", translate("This code expires in about five minutes.")));
             setStatus("Waiting for Plex sign-in. The code is temporary and is not saved.");
             pollAuthorization(generation, info);
         }).catch(function () {
@@ -454,15 +475,15 @@
         currentClient = null;
         currentSection = null;
         var section = element("section", "connect-panel");
-        section.appendChild(element("h2", "", "Sign in to Plex"));
+        section.appendChild(element("h2", "", translate("Sign in to Plex")));
         section.appendChild(element("p", "help-text",
-            "Sign in to Plex with a temporary device code, or connect directly to a test server."));
+            translate("Sign in to Plex with a temporary device code, or connect directly to a test server.")));
 
         var authPanel = element("div", "auth-panel");
-        authPanel.appendChild(element("h3", "", "Plex device sign-in"));
-        var authInfo = element("div", "auth-info", "No Plex account is linked.");
+        authPanel.appendChild(element("h3", "", translate("Plex device sign-in")));
+        var authInfo = element("div", "auth-info", translate("No Plex account is linked."));
         authPanel.appendChild(authInfo);
-        var signIn = element("button", "secondary-button", "Sign in to Plex");
+        var signIn = element("button", "secondary-button", translate("Sign in to Plex"));
         signIn.type = "button";
         signIn.addEventListener("click", function () {
             rememberAccount = remember && remember.checked;
@@ -472,7 +493,7 @@
         var remember = null;
         if (window.PlexSession) {
             var rememberLabel = element("label", "remember-option",
-                "Remember this account on this TV (optional). The token is stored unencrypted in this app's local storage. Do not enable on a shared or untrusted TV.");
+                translate("Remember this account on this TV (optional). The token is stored unencrypted in this app's local storage. Do not enable on a shared or untrusted TV."));
             remember = element("input", "remember-checkbox");
             remember.type = "checkbox";
             remember.checked = false;
@@ -483,7 +504,7 @@
         section.appendChild(authPanel);
 
         var form = element("form", "connect-form");
-        var serverLabel = element("label", "", "Server URL");
+        var serverLabel = element("label", "", translate("Server URL"));
         var serverInput = element("input", "remote-input");
         serverInput.type = "url";
         serverInput.name = "server";
@@ -491,14 +512,14 @@
         serverInput.autocomplete = "url";
         serverLabel.appendChild(serverInput);
 
-        var tokenLabel = element("label", "", "Server access token");
+        var tokenLabel = element("label", "", translate("Server access token"));
         var tokenInput = element("input", "remote-input");
         tokenInput.type = "password";
         tokenInput.name = "token";
         tokenInput.autocomplete = "off";
         tokenLabel.appendChild(tokenInput);
 
-        var submit = element("button", "primary-button", "Connect");
+        var submit = element("button", "primary-button", translate("Connect"));
         submit.type = "submit";
         form.appendChild(serverLabel);
         form.appendChild(tokenLabel);
@@ -535,6 +556,7 @@
 
     function loadHome(showConnectOnError) {
         var generation = ++viewGeneration;
+        cancelViewRequests();
         itemsLoading = false;
         Promise.all([
             currentClient.getSections(),
@@ -565,7 +587,7 @@
         var sectionPanel = element("section", "content-panel");
         addSectionHeading(sectionPanel, translate("Libraries"));
         if (!sections.length) {
-            sectionPanel.appendChild(element("p", "empty-state", "No libraries were returned by this server."));
+            sectionPanel.appendChild(element("p", "empty-state", translate("No libraries were returned by this server.")));
         }
         sections.filter(function (section) {
             return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
@@ -582,7 +604,7 @@
         var hubPanel = element("section", "content-panel");
         addSectionHeading(hubPanel, "Plex shelves");
         if (!hubs.length) {
-            hubPanel.appendChild(element("p", "empty-state", "No Home shelves were returned."));
+            hubPanel.appendChild(element("p", "empty-state", translate("No Home shelves were returned.")));
         }
         hubs.forEach(function (hub) {
             var hubSection = element("section", "shelf");
@@ -596,8 +618,11 @@
         screen.appendChild(hubPanel);
         button(screen, "Search", function () { visit(openSearch); });
         button(screen, "Settings", function () { visit(openSettings); });
+        button(screen, "Live TV and DVR", function () { visit(openTelevision); });
+        if (accountClient) { button(screen, "Watchlist", function () { visit(function () { catalogueUi().watchlist(); }); }); }
+        if (accountClient) { button(screen, "Plex catalogue", function () { visit(function () { catalogueUi().search(); }); }); }
 
-        var disconnect = element("button", "secondary-button", "Change server");
+        var disconnect = element("button", "secondary-button", translate("Change server"));
         disconnect.type = "button";
         disconnect.addEventListener("click", function () {
             currentClient = null;
@@ -641,12 +666,12 @@
         });
         previousPage.id = "previous-page";
         previousPage.disabled = currentOffset <= currentItems.length;
-        var loadMore = element("button", "secondary-button", "Load more");
+        var loadMore = element("button", "secondary-button", translate("Load more"));
         loadMore.type = "button";
         loadMore.id = "load-more";
         loadMore.addEventListener("click", loadNextPage);
         screen.appendChild(loadMore);
-        var back = element("button", "secondary-button", "Back to Home");
+        var back = element("button", "secondary-button", translate("Back to Home"));
         back.type = "button";
         back.id = "home-back";
         back.addEventListener("click", function () {
@@ -697,6 +722,7 @@
     function openListing(title, loader, client, offset, retained) {
         var generation = ++viewGeneration;
         clear(screen);
+        viewClients.push(client);
         resetImages();
         screen.appendChild(element("h2", "", title));
         setStatus("Loading...");
@@ -710,7 +736,7 @@
             };
             var list = element("div", "item-list");
             screen.appendChild(list);
-            if (!items.length) { list.appendChild(element("p", "empty-state", "No available items in this view.")); }
+            if (!items.length) { list.appendChild(element("p", "empty-state", translate("No available items in this view."))); }
             items.forEach(function (item) { if (item.ratingKey) { card(list, item, client, items); } });
             var next = offset + (container.Metadata || []).length;
             if (container.totalSize > next && next > offset) {
@@ -835,6 +861,7 @@
         function search() {
             var query = input.value.trim();
             var searchGeneration = ++viewGeneration;
+            cancelViewRequests();
             clear(results);
             resetImages();
             restoreView = function () { openSearch(query); };
@@ -849,8 +876,13 @@
                 while (active < 2 && index < targets.length) {
                     (function (server) {
                         active += 1;
-                        (server ? window.PlexApi.selectServer(server).then(function (selected) { return selected.client; }) :
+                        (server ? window.PlexApi.selectServer(server, { onClient: function (client) {
+                            if (searchGeneration !== viewGeneration) { return false; }
+                            viewClients.push(client);
+                            return true;
+                        } }).then(function (selected) { return selected.client; }) :
                             Promise.resolve(currentClient)).then(function (client) {
+                            if (searchGeneration !== viewGeneration) { return; }
                             return client.search(query).then(function (container) {
                                 if (searchGeneration !== viewGeneration) { return; }
                                 (container.Hub || []).forEach(function (hub) {
@@ -913,6 +945,7 @@
     function openDetail(id, client) {
         var generation = ++viewGeneration;
         clear(screen);
+        viewClients.push(client);
         resetImages();
         button(screen, "Back", backView);
         setStatus("Loading details...");
@@ -930,16 +963,17 @@
     function renderDetail(item, client) {
         viewGeneration += 1;
         clear(screen);
+        viewClients.push(client);
         resetImages();
         restoreView = function () { openDetail(item.ratingKey, client); };
         screen.appendChild(element("h2", "", item.title || "Details"));
         screen.appendChild(element("p", "detail-meta", [item.year, item.contentRating,
-            item.duration ? Math.round(item.duration / 60000) + " min" : "",
-            item.viewCount ? "Watched" : ""].filter(Boolean).join(" / ")));
+            item.duration ? translate("{minutes} min", { minutes: Math.round(item.duration / 60000) }) : "",
+            item.viewCount ? translate("Watched") : ""].filter(Boolean).join(" / ")));
         screen.appendChild(element("p", "synopsis", item.summary || "No synopsis is available."));
         if (item.type === "movie" || item.type === "episode" || item.type === "clip" || item.type === "track") {
             if (item.viewOffset) {
-                button(screen, "Resume at " + timeLabel(item.viewOffset), function () { startPlayer(item, client, item.viewOffset); });
+                button(screen, translate("Resume at {time}", { time: timeLabel(item.viewOffset) }), function () { startPlayer(item, client, item.viewOffset); });
             }
             button(screen, "Play from beginning", function () { startPlayer(item, client, 0); });
             (item.Media || []).forEach(function (media, index) {
@@ -973,6 +1007,16 @@
         if (["movie", "episode"].indexOf(item.type) !== -1) {
             button(screen, "Remove from Continue Watching", function () { confirmWatchAction(item, client, "remove"); });
         }
+        var plexGuid = /^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(item.guid || "") ? item.guid :
+            (item.Guid || []).filter(function (guid) { return /^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(guid.id || ""); })[0];
+        if (plexGuid && accountClient) {
+            var guid = typeof plexGuid === "string" ? plexGuid : plexGuid.id;
+            button(screen, "Add to Watchlist", function () {
+                var linked = accountClient;
+                confirmServiceWrite("Add to Watchlist", function () { return linked.setWatchlist(guid, true); },
+                    function () { openDetail(item.ratingKey, client); });
+            });
+        }
         (item.Role || []).concat(item.Director || [], item.Writer || []).slice(0, 60).forEach(function (person) {
             button(screen, (person.tag || "Cast") + (person.role ? " / " + person.role : ""), function () {
                 visit(function () {
@@ -983,7 +1027,7 @@
         var extras = item.Extras && item.Extras.Metadata || [];
         if (extras.length) {
             var shelf = element("section", "shelf");
-            shelf.appendChild(element("h3", "", "Extras and trailers"));
+            shelf.appendChild(element("h3", "", translate("Extras and trailers")));
             extras.slice(0, 20).forEach(function (extra) { card(shelf, extra, client); });
             screen.appendChild(shelf);
         }
@@ -1016,7 +1060,7 @@
                 action === "unwatched" ? "This clears watched status and the saved resume position on Plex." :
                     "This changes watched status on Plex."));
             if (item.type === "show" || item.type === "season") {
-                screen.appendChild(element("p", "help-text", "This changes every episode in this show or season."));
+                screen.appendChild(element("p", "help-text", translate("This changes every episode in this show or season.")));
             }
             var pending = false;
             var confirm = button(screen, "Confirm " + label.toLowerCase(), function () {
@@ -1064,6 +1108,7 @@
     function openPerson(person, client) {
         var generation = ++viewGeneration;
         clear(screen);
+        viewClients.push(client);
         resetImages();
         restoreView = function () { openPerson(person, client); };
         screen.appendChild(element("h2", "", person.tag || "Person"));
@@ -1115,9 +1160,113 @@
 
     function showPlayerError(error) { setStatus(error.message || "Playback failed. Stop and retry.", true); }
 
+    function serviceView(title, restore) {
+        var generation = ++viewGeneration;
+        clear(screen);
+        resetImages();
+        restoreView = restore;
+        screen.appendChild(element("h2", "", translate(title)));
+        button(screen, "Back", backView);
+        setStatus("Loading...");
+        focusFirst();
+        return generation;
+    }
+
+    function openTelevision() {
+        window.PlexTelevisionUi.create({
+            client: function () { return currentClient; }, preferences: function () { return preferences; },
+            screen: screen, view: serviceView, generation: function () { return viewGeneration; },
+            element: element, button: button, translate: translate, visit: visit, back: backView,
+            status: setStatus, focus: focusFirst, confirm: confirmServiceWrite
+        }).open();
+    }
+
+    function catalogueUi() {
+        return window.PlexCatalogueUi.create({
+            account: function () { return accountClient; }, screen: screen, view: serviceView,
+            generation: function () { return viewGeneration; }, element: element, button: button,
+            translate: translate, visit: visit, status: setStatus, focus: focusFirst, confirm: confirmServiceWrite,
+            find: findCatalogueItem
+        });
+    }
+
+    function findCatalogueItem(item) {
+        var generation = serviceView("Find in my libraries", function () { findCatalogueItem(item); });
+        var targets = servers.length ? servers.slice() : [null];
+        var index = 0, active = 0, finished = 0, shown = 0, failed = 0;
+        function pump() {
+            while (active < 2 && index < targets.length) {
+                (function (server) {
+                    active += 1;
+                    (server ? window.PlexApi.selectServer(server, { onClient: function (client) {
+                        if (generation !== viewGeneration) { return false; }
+                        viewClients.push(client); return true;
+                    } }).then(function (selected) { return selected.client; }) : Promise.resolve(currentClient))
+                        .then(function (client) {
+                            if (generation !== viewGeneration) { return; }
+                            return client.getSections().then(function (sections) {
+                                var matches = sections.filter(function (section) { return section.type === item.type; });
+                                var chain = Promise.resolve();
+                                matches.forEach(function (section) {
+                                    chain = chain.then(function () {
+                                        if (generation !== viewGeneration) { return; }
+                                        return client.findGuid(section.key, item.guid).then(function (items) {
+                                            if (generation !== viewGeneration) { return; }
+                                            items.slice(0, 200 - shown).forEach(function (match) {
+                                                card(screen, match, client); shown += 1;
+                                            });
+                                        });
+                                    });
+                                });
+                                return chain;
+                            });
+                        }).catch(function (error) {
+                            if (generation !== viewGeneration) { return; }
+                            failed += 1;
+                            screen.appendChild(element("p", "inline-error", error.message));
+                        }).then(function () {
+                            active -= 1; finished += 1;
+                            if (generation !== viewGeneration) { return; }
+                            if (finished === targets.length) {
+                                setStatus(failed ? "Some libraries could not be checked. Availability is incomplete." :
+                                    shown ? "Exact Plex GUID matches in your libraries." : "This title is not available in the checked libraries.");
+                                focusFirst();
+                            } else { pump(); }
+                        });
+                }(targets[index++]));
+            }
+        }
+        pump();
+    }
+
+    function confirmServiceWrite(title, write, refresh) {
+        visit(function () {
+            var generation = serviceView(title, refresh);
+            screen.appendChild(element("p", "help-text", translate("This changes your Plex account or server. Nothing changes until you confirm.")));
+            var pending = false;
+            var confirm = button(screen, "Confirm", function () {
+                if (pending || generation !== viewGeneration) { return; }
+                pending = true; confirm.disabled = true;
+                setStatus("Saving...");
+                Promise.resolve().then(write).then(function () {
+                    if (generation !== viewGeneration) { return; }
+                    setStatus("Plex accepted the change.");
+                    button(screen, "Refresh", refresh);
+                }).catch(function (error) {
+                    if (generation !== viewGeneration) { return; }
+                    setStatus(translate("The change was not confirmed. Check Plex before retrying.") + " " + error.message, true);
+                });
+            });
+            button(screen, "Cancel", backView);
+            setStatus("Review the change before confirming.");
+            focusFirst();
+        });
+    }
+
     function openPhotos(items, index, client) {
         viewGeneration += 1;
         clear(screen);
+        viewClients.push(client);
         resetImages();
         restoreView = function () { openPhotos(items, index, client); };
         try {
@@ -1192,7 +1341,7 @@
         document.body.className = "playing";
         var hud = element("section", "player-hud");
         hud.appendChild(element("h2", "", item.title || "Playing"));
-        var time = element("p", "playback-time", "Preparing playback...");
+        var time = element("p", "playback-time", translate("Preparing playback..."));
         time.id = "playback-time";
         hud.appendChild(time);
         var subtitle = element("p", "subtitle-text");
@@ -1428,7 +1577,7 @@
             button(menu, "Version " + (version + 1) + " / " + (media.videoResolution || "") +
                 " " + (media.videoCodec || ""), function () { change(preferences.quality, version); });
         });
-        menu.appendChild(element("p", "help-text", "Original quality needs an evidenced model capability profile. Unknown formats are not advertised as supported."));
+        menu.appendChild(element("p", "help-text", translate("Original quality needs an evidenced model capability profile. Unknown formats are not advertised as supported.")));
         button(menu, "Close menu", function () { menu.parentNode.removeChild(menu); focusFirst(); });
         screen.appendChild(menu);
         menu.querySelectorAll("button")[0].focus();
@@ -1447,7 +1596,7 @@
                     if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
                     openDetail(next.ratingKey, client);
                 });
-                if (preferences.autoNext) {
+                if (preferences.autoNext && !document.hidden) {
                     setStatus("Next episode starts in 10 seconds. Back cancels.");
                     nextTimer = setTimeout(function () {
                         nextTimer = null;
@@ -1471,7 +1620,7 @@
                 if (savePreferences()) { openSettings(); }
             });
         });
-        button(screen, "Auto-play next episode: " + (preferences.autoNext ? "On" : "Off"), function () {
+        button(screen, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
             preferences.autoNext = !preferences.autoNext;
             if (savePreferences()) { openSettings(); }
         });
@@ -1494,7 +1643,7 @@
             visit(function () {
                 viewGeneration += 1;
                 clear(screen);
-                screen.appendChild(element("h2", "", "Diagnostics"));
+                screen.appendChild(element("h2", "", translate("Diagnostics")));
                 screen.appendChild(element("p", "help-text",
                     "AVPlay: " + (window.webapis && window.webapis.avplay ? "available (formats unverified)" : "unavailable") +
                     ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
@@ -1596,11 +1745,42 @@
 
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("visibilitychange", function () {
-        if (document.hidden && player) {
-            try {
-                if (player.snapshot().state === "playing") { player.pause().catch(showPlayerError); }
-            } catch (error) { showPlayerError(error); }
+        if (document.hidden) {
+            if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
+            if (player) {
+                var item = playerItem;
+                var client = playerClient;
+                foregroundRecovery = function () {
+                    openDetail(item.ratingKey, client);
+                };
+                stopPlayer(function () {
+                    if (!document.hidden && foregroundRecovery) {
+                        var recover = foregroundRecovery; foregroundRecovery = null; recover();
+                    }
+                });
+            } else {
+                var controls = Array.prototype.slice.call(screen.querySelectorAll("button, input, select"));
+                suspendedView = { restore: restoreView, focus: controls.indexOf(document.activeElement), scroll: screen.scrollTop };
+                viewGeneration += 1;
+                cancelViewRequests();
+                stopAuthorization();
+                resetImages();
+                if (viewCleanup) { var cleanup = viewCleanup; viewCleanup = null; cleanup(); }
+            }
+        } else if (foregroundRecovery && !playerClosing) {
+            var recoverPlayer = foregroundRecovery; foregroundRecovery = null; recoverPlayer();
+        } else if (suspendedView) {
+            var previous = suspendedView; suspendedView = null;
+            pendingRestore = previous;
+            if (previous.restore) { previous.restore(); }
+            else { addConnectForm("The app returned to the foreground. Restart pairing if needed."); }
         }
+    });
+    window.addEventListener("pagehide", function () {
+        stopAuthorization();
+        resetImages();
+        if (viewCleanup) { viewCleanup(); viewCleanup = null; }
+        if (player) { stopPlayer(function () {}); }
     });
     if (window.tizen && window.tizen.tvinputdevice) {
         try {

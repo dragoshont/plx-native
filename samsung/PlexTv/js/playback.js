@@ -61,18 +61,33 @@
         var closed = false;
         var allocated = false;
         var reportChain = Promise.resolve();
+        var reporting = false;
+        var pendingReport = null;
         var lastPosition = Math.max(0, Number(settings.offset) || 0);
 
         function report(state) {
             if (!started) { return Promise.resolve(); }
             var position = Math.max(0, Math.round(adapter.snapshot().position));
             lastPosition = position;
-            reportChain = reportChain.catch(function () {}).then(function () {
-                return client.timeline(item, position, state, selection.session);
-            });
-            return reportChain.catch(function () {
-                emit({ type: "progress-error", message: "Plex progress could not be saved. Check the server and retry." });
-            });
+            if (!pendingReport || pendingReport.state !== "stopped") {
+                pendingReport = { position: position, state: state };
+            }
+            if (reporting) { return reportChain; }
+            reporting = true;
+            function drain() {
+                var next = pendingReport;
+                pendingReport = null;
+                return Promise.resolve().then(function () {
+                    return client.timeline(item, next.position, next.state, selection.session);
+                }).catch(function () {
+                    emit({ type: "progress-error", message: "Plex progress could not be saved. Check the server and retry." });
+                }).then(function () {
+                    if (pendingReport) { return drain(); }
+                    reporting = false;
+                });
+            }
+            reportChain = drain();
+            return reportChain;
         }
 
         function stop() {

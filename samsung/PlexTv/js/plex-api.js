@@ -45,6 +45,12 @@
         throw new Error("PMS response is missing the " + field + " list.");
     }
 
+    function requestCancelled() {
+        var error = new Error("The request was cancelled.");
+        error.code = "cancelled";
+        return error;
+    }
+
     function requestScope() {
         return {
             revision: 0, pending: [],
@@ -59,7 +65,7 @@
 
     function timedFetch(fetchRequest, url, options, scope) {
         var revision = scope ? scope.revision : 0;
-        function cancelled() { return new Error("The request was cancelled."); }
+        function cancelled() { return requestCancelled(); }
         function register(cancel) { if (scope) { scope.pending.push(cancel); } }
         function unregister(cancel) {
             if (scope) {
@@ -199,7 +205,7 @@
         function request(path, method, body) {
             var revision = scope.revision;
             return Promise.resolve().then(function () {
-                if (method !== "POST" && revision !== scope.revision) { throw new Error("The request was cancelled."); }
+                if (method !== "POST" && revision !== scope.revision) { throw requestCancelled(); }
                 return timedFetch(fetchRequest, "https://plex.tv" + path, {
                     method: method || "GET",
                     credentials: "omit",
@@ -241,8 +247,93 @@
                     return payload.MediaContainer;
                 });
         }
+        function cloud(host, path, method, query, empty) {
+            if (["discover.provider.plex.tv", "metadata.provider.plex.tv"].indexOf(host) === -1 ||
+                    !/^\/[A-Za-z0-9/_-]+$/.test(path)) {
+                return Promise.reject(new Error("Invalid Plex catalogue endpoint."));
+            }
+            var target = "https://" + host + path;
+            if (query) {
+                target += "?" + Object.keys(query).map(function (key) {
+                    return encodeURIComponent(key) + "=" + encodeURIComponent(query[key]);
+                }).join("&");
+            }
+            return timedFetch(fetchRequest, target, {
+                method: method || "GET", credentials: "omit", redirect: "error",
+                headers: { Accept: "application/json", "X-Plex-Token": token,
+                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Plex Tizen",
+                    "X-Plex-Language": options.language || "en" }
+            }, method && method !== "GET" ? null : scope).then(function (response) {
+                if (!response.ok) {
+                    var error = new Error("Plex catalogue request failed (HTTP " + response.status + ").");
+                    error.status = response.status; error.scope = "account";
+                    throw error;
+                }
+                if (empty) { return {}; }
+                return readJson(response).then(function (payload) {
+                    if (!payload.MediaContainer) { throw new Error("Plex returned an invalid catalogue container."); }
+                    return payload.MediaContainer;
+                });
+            });
+        }
+        function catalogueId(guid) {
+            var match = /^plex:\/\/(?:movie|show)\/([0-9a-f]{24})$/i.exec(String(guid || ""));
+            if (!match) { throw new Error("This item has no valid Plex catalogue identifier."); }
+            return match[1];
+        }
         return {
             cancelRequests: function () { scope.cancel(); },
+            watchlist: function (filter, start) {
+                if (["all", "available", "released"].indexOf(filter) === -1 || !isNonNegativeInteger(start || 0)) {
+                    return Promise.reject(new Error("Invalid Watchlist filter or page."));
+                }
+                return cloud("discover.provider.plex.tv", "/library/sections/watchlist/" + filter, "GET", {
+                    "X-Plex-Container-Start": start || 0, "X-Plex-Container-Size": 50
+                });
+            },
+            setWatchlist: function (guid, add) {
+                if (typeof add !== "boolean") { return Promise.reject(new Error("Choose add or remove Watchlist.")); }
+                return cloud("discover.provider.plex.tv", "/actions/" + (add ? "addToWatchlist" : "removeFromWatchlist"),
+                    "PUT", { ratingKey: catalogueId(guid) }, true);
+            },
+            catalogueState: function (guid) {
+                return cloud("metadata.provider.plex.tv", "/library/metadata/" + catalogueId(guid) + "/userState");
+            },
+            searchCatalogue: function (query) {
+                if (typeof query !== "string" || !query.trim() || query.length > 200) {
+                    return Promise.reject(new Error("Enter a catalogue search of 1 to 200 characters."));
+                }
+                return cloud("discover.provider.plex.tv", "/library/search", "GET", {
+                    query: query.trim(), limit: 30, searchTypes: "movies,tv",
+                    searchProviders: "discover", includeMetadata: 1
+                }).then(function (container) {
+                    if (!Array.isArray(container.SearchResults)) { throw new Error("Plex returned invalid catalogue search results."); }
+                    var items = [];
+                    container.SearchResults.forEach(function (group) {
+                        if (group.id !== "external") { return; }
+                        if (!Array.isArray(group.SearchResult)) { throw new Error("Plex returned an invalid catalogue search group."); }
+                        group.SearchResult.forEach(function (result) {
+                            if (result.Metadata && ["movie", "show"].indexOf(result.Metadata.type) !== -1) {
+                                items.push(result.Metadata);
+                            }
+                        });
+                    });
+                    return items.slice(0, 30);
+                });
+            },
+            catalogueDetails: function (item) {
+                var id = catalogueId(item.guid);
+                if (item.key !== "/library/metadata/" + id) {
+                    return Promise.reject(new Error("Plex returned an invalid catalogue detail path."));
+                }
+                return cloud("metadata.provider.plex.tv", item.key, "GET", { includeUserState: 1 }).then(function (container) {
+                    var items = listFrom(container, "Metadata");
+                    if (!items.length || items[0].guid && items[0].guid !== item.guid) {
+                        throw new Error("Plex returned mismatched catalogue details.");
+                    }
+                    return items[0];
+                });
+            },
             personProfile: function (tagKey) { return discover(tagKey); },
             personCredits: function (tagKey) {
                 return discover(tagKey, "/credits").then(function (container) {
@@ -321,6 +412,7 @@
                 if (!/^https:\/\//.test(connection.uri)) { return probe(); }
                 client = createClient({ baseUrl: connection.uri, token: server.token, fetch: options.fetch });
             } catch (error) { return probe(); }
+            if (options.onClient && options.onClient(client) === false) { return Promise.reject(requestCancelled()); }
             return client.identity().then(function (identity) {
                 if (identity.machineIdentifier !== server.id) {
                     var mismatch = new Error("Server identity mismatch. Connection refused.");
@@ -329,7 +421,7 @@
                 }
                 return { client: client, relay: connection.relay === true };
             }).catch(function (error) {
-                if (error.status === 401 || error.status === 403 || error.code === "identity-mismatch") {
+                if (error.status === 401 || error.status === 403 || error.code === "identity-mismatch" || error.code === "cancelled") {
                     throw error;
                 }
                 return probe();
@@ -355,7 +447,7 @@
         function request(url, method) {
             var revision = scope.revision;
             return Promise.resolve().then(function () {
-                if (revision !== scope.revision) { throw new Error("The request was cancelled."); }
+                if (revision !== scope.revision) { throw requestCancelled(); }
                 return timedFetch(fetchRequest, url, {
                     method: method,
                     credentials: "omit",
@@ -368,7 +460,8 @@
                         "X-Plex-Platform": "Tizen"
                     }
                 }, scope);
-            }).catch(function () {
+            }).catch(function (error) {
+                if (error.code === "cancelled") { throw error; }
                 throw new Error("Could not reach Plex. Check the network and try again.");
             }).then(function (response) {
                 if (!response || typeof response.status !== "number") {
@@ -475,14 +568,15 @@
                 }).join("&");
             }
             return Promise.resolve().then(function () {
-                if (!allowEmpty && revision !== scope.revision) { throw new Error("The request was cancelled."); }
+                if (!allowEmpty && (!method || method === "GET") && revision !== scope.revision) { throw requestCancelled(); }
                 return timedFetch(fetchRequest, target, {
                 method: method || "GET",
                 credentials: "omit",
                 redirect: "error",
                 headers: headers
-                }, allowEmpty ? null : scope);
-            }).catch(function () {
+                }, allowEmpty || method && method !== "GET" ? null : scope);
+            }).catch(function (error) {
+                if (error.code === "cancelled") { throw error; }
                 throw new Error("The server is unreachable. Check your network and retry.");
             }).then(function (response) {
                 if (!response || typeof response.status !== "number") {
@@ -536,6 +630,18 @@
             getChildren: function (id, start) {
                 return get("/library/metadata/" + key(id) + "/children", "GET", {
                     "X-Plex-Container-Start": start || 0, "X-Plex-Container-Size": 50
+                });
+            },
+            findGuid: function (section, guid) {
+                if (!/^plex:\/\/(?:movie|show)\/[0-9a-f]{24}$/i.test(String(guid || ""))) {
+                    return Promise.reject(new Error("Invalid Plex catalogue GUID."));
+                }
+                return get("/library/sections/" + key(section) + "/all", "GET", {
+                    guid: guid, includeGuids: 1, "X-Plex-Container-Size": 50
+                }).then(function (container) {
+                    return listFrom(container, "Metadata").filter(function (item) {
+                        return item.guid === guid || (item.Guid || []).some(function (entry) { return entry.id === guid; });
+                    });
                 });
             },
             getTracks: function (id) {

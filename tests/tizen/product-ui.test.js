@@ -172,6 +172,16 @@ async function run() {
         var writes = requests.filter(function (request) { return request.path === "/:/timeline"; });
         assert(writes.every(function (request) { return request.method === "POST"; }));
         assert(writes.some(function (request) { return request.query.get("state") === "stopped" && request.query.get("time") === "20000"; }));
+        click("Play from beginning"); await settle();
+        Object.defineProperty(window.document, "hidden", { configurable: true, value: true });
+        window.document.dispatchEvent(new window.Event("visibilitychange")); await settle();
+        assert.strictEqual(state, "NONE", "Backgrounding must stop native playback");
+        var opens = nativeCalls.filter(function (call) { return call === "open"; }).length;
+        Object.defineProperty(window.document, "hidden", { configurable: true, value: false });
+        window.document.dispatchEvent(new window.Event("visibilitychange")); await settle();
+        assert.strictEqual(nativeCalls.filter(function (call) { return call === "open"; }).length, opens,
+            "Foregrounding must never start playback automatically");
+        assert(window.document.querySelector(".synopsis"), "Foreground recovery must restore fresh details");
         assert.strictEqual(window.localStorage.length, 1, "Only the non-secret device identifier is stored");
         console.log("Tizen host DOM product journey: 250-item browse/search/details/playback/progress passed");
     } finally { dom.window.close(); }

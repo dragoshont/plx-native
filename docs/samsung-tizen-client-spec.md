@@ -40,8 +40,8 @@ approved tests.
 
 The original baseline was PlxNative's movie/television feature set. The owner's subsequent
 instruction requests **all features of the actual Plex app**; the original exclusions cannot be
-used to call this work complete. Music, photos, live TV/DVR, catalogue playback and Watchlist are
-requested scope gaps, not implemented capabilities. Official-client features that depend on Plex
+used to call this work complete. Music/photos and portions of DVR/Watchlist now have host
+implementations, but full parity and native acceptance remain outstanding. Official-client features that depend on Plex
 entitlements, licensed services or private distribution contracts also need source-backed
 availability evidence; do not invent an API or silently substitute a different media server.
 The requirements below describe the movie/TV implementation contract, not an assertion of complete
@@ -56,10 +56,10 @@ official-Plex parity.
 | Playback/progress | Fake AVPlay state/seek and PMS decision/timeline/read-back tests | Named-model native playback, direct/transcode, HDR/audio, native/external/burned subtitle matrix |
 | Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
 | Up Next/quality/versions | Source implementation with opt-in auto-next; multipart titles request a joined PMS transcode (`partIndex=-1`), never direct-play just the first file | Long sessions, interrupted transitions and actual server/native multipart joins, resume and completion |
-| Settings/languages | Non-secret preferences and generated English/Spanish/Belarusian catalogs | Complete app-copy translation and physical-TV text fit |
+| Settings/languages | Non-secret preferences, English/Spanish/Belarusian catalogs, static app-copy coverage and named placeholders | Dynamic errors/copy coverage and physical-TV text fit |
 | Credential persistence | Default memory-only; explicit unchecked remember-me consent stores plaintext account token | TV storage/relaunch/deletion behavior and final threat-model signoff |
-| Lifecycle/input | Background pause and source key/focus handling | Physical remote repeats/holds, suspend/wake, exit recovery and The Frame Art Mode |
-| Official Plex ecosystem | Requested by owner; no movie/TV-only completion claim | Source-backed music/photo/live TV/DVR/catalogue/Watchlist contracts and implementation |
+| Lifecycle/input | Background stop, explicit foreground resume, cancelled view reads and coalesced progress queue; synthetic journeys | Physical remote repeats/holds, process-exit reconciliation, suspend/wake and The Frame Art Mode |
+| Official Plex ecosystem | Music/photos, guide discovery, DVR scheduling/management and Watchlist read/mutations have host implementations | Live tuning/consumer lifecycle, licensed catalogue playback, server acceptance and remaining parity |
 | Distribution/support | Unsigned source build; earlier independent probe packages | Authorized signing/install, current-app model register and separate Store/legal decision |
 | Bounded HTTP bodies | Incremental 4 MiB byte ceiling and full-request deadline; stalled/oversized synthetic streams tested | Real browser streaming/UTF-8/blob APIs; older engines without bounded streaming currently fail explicitly rather than buffering an unbounded body |
 
@@ -274,8 +274,53 @@ fetch server-resized images, enforce the response ceiling and a 15-second decode
 release object URLs on replacement/back. Synthetic real-app journeys cover both features;
 MP3 delivery, photo formats and native output remain unobserved on Samsung hardware.
 Read requests owned by the current client can be cancelled on navigation; explicit mutations and
-playback cleanup are not cancelled by view replacement. Multi-server search/discovery ownership
-and legacy-engine transport still need completion.
+playback cleanup are not cancelled by view replacement. Discovery/search clients are registered
+with the view owner, including identity probes, so obsolete reads are cancelled and retries do not
+probe more connections after cancellation. Legacy-engine transport still needs completion.
+
+The guide/DVR feature is separated into `television.js` and `television-ui.js`. It reads existing
+EPG providers, guide shelves/channel lineups, subscriptions and scheduled recording statuses.
+Recording templates come from PMS; their encoded hint/parameter values are decoded once and
+re-encoded once, preserving nested percent encoding. Scheduling and subscription cancellation
+require explicit confirmation and suppress duplicate clicks. Scheduling is offered only for
+providers advertising `subscribe` with flavor `record`; tuner setup and automatic conflict
+resolution are not performed. Recording preference controls follow server-supplied settings;
+the bracketed preference wire shape follows the vendored OpenAPI's `style: deepObject` contract.
+Actual PMS acceptance and conflict/status behavior still require an authorized test server.
+
+Sources: vendored `docs/plex-openapi.json`, `/media/providers`, `/livetv/epg/channels`,
+`/media/subscriptions`, `/media/subscriptions/template`, and `/media/subscriptions/scheduled`.
+Live tune returns a media UUID without a normal PMS rating key. The documented HLS path has
+a separate `consumerId`, but consumer allocation, keepalive and release are not established;
+there is intentionally no speculative Tune/Play action allocating a tuner without reliable cleanup.
+
+Watchlist uses the account token at `discover.provider.plex.tv`, not a PMS grant.
+Read: `/library/sections/watchlist/{all|available|released}`. Explicit add/remove use PUT
+`/actions/addToWatchlist` and `/actions/removeFromWatchlist`; `ratingKey` is the final segment
+of a validated `plex://movie|show/{24hex}` GUID, never a numeric PMS item ID.
+Source: [python-plexapi MyPlexAccount](https://github.com/pushingkarmaorg/python-plexapi/blob/8a9ade7f364582cabb6d5bc200994fddb2113d48/plexapi/myplex.py),
+`watchlist`, `addToWatchlist`, `removeFromWatchlist`. These are maintained-client implementation
+evidence, not official Plex cloud API documentation or independently observed account behavior.
+Cloud search uses Discover `/library/search` with `searchProviders=discover`, and consumes the
+external `SearchResults[].SearchResult[].Metadata` group. Details use the returned validated
+metadata key at `metadata.provider.plex.tv` with `includeUserState=1`.
+Local availability is resolved by exact GUID per movie/show library:
+`/library/sections/{id}/all?includeGuids=1&guid=...`, with each server's own token, and matching
+GUIDs are checked again in the response. It is not a title-only guess.
+Source: the pinned client's `searchDiscover`, `_toOnlineMetadata`, and
+[LibrarySection.getGuid](https://github.com/pushingkarmaorg/python-plexapi/blob/8a9ade7f364582cabb6d5bc200994fddb2113d48/plexapi/library.py).
+Catalogue search displays at most 30 returned results, local matching at most 200 cards.
+Licensed/ad-supported playback remains disabled: personal-library decision schemas do not
+establish cloud streaming authorization, ad obligations or DRM. The absence of a DRM flag in
+that schema is not evidence that catalogue content is unprotected.
+
+Backgrounding cancels auto-next, stops native playback and attempts final timeline/cleanup.
+Foregrounding reloads details but never restarts playback without a user action. Photo resources
+and pairing polls are stopped while hidden; non-player views restore with focus/scroll state.
+Process termination can interrupt final network writes, so pagehide cleanup is best effort,
+not a guarantee of server reconciliation after a killed process.
+Periodic progress keeps one in-flight request and one coalesced pending sample; terminal stopped
+state takes priority, avoiding an unbounded queue during a slow/offline session.
 
 Samsung documents [Web Storage](https://developer.samsung.com/smarttv/develop/guides/data-handling/using-web-storage.html),
 not encryption at rest. Remember-me is disabled by default and explicitly explains unencrypted
@@ -397,16 +442,19 @@ Work directly through the dependency-ready items rather than waiting for a nativ
 
 - [ ] Confirm Home PIN request shape against primary Plex evidence and actual test-account behavior.
 - [ ] Verify pairing QR, shared grants, TLS/CORS and unavailable/denied-server recovery in the packaged TV app.
-- [ ] Abort stale auth/search/artwork requests, not only discard stale results; test repeated Back/search/sign-out.
+- [x] Cancel view-owned reads and active response readers, including search/discovery clients; cancellation/deadline and signed-account journeys exercised on host.
+- [ ] Exercise repeated Back/search/sign-out under packaged-runtime network loss and retry.
 - [ ] Test and fix every screen's remote focus, scroll restoration, loading/empty/error and retry paths.
 - [ ] Complete person/crew career paging beyond the 200-credit display cap and catalogue-to-local availability lookup.
 - [ ] Finish collection/library paging and search type/group completeness, including older PMS response variants.
 - [x] Add explicitly user-initiated watched/unwatched and remove-from-Continue-Watching actions with confirmation, duplicate-click prevention and synthetic writes only. Sources: `docs/pms-api.md` §timeline and `rust-modules/plex/src/plex/hubs.rs`.
 - [ ] Verify explicit watch actions against a named authorized test profile/item, including show/season leaf behavior and metadata refresh failures.
 - [ ] Finish artwork cache/resource eviction and establish measured low-memory ceilings.
-- [ ] Translate every app-owned string and format dates/durations/numbers; add missing-key/coverage checks.
+- [x] Add missing-key coverage for static/conditional control and status copy in English/Spanish/Belarusian; localize static elements and named resume/duration/record/auto-next placeholders.
+- [ ] Finish dynamic error/composite-copy localization and verify locale-sensitive formatting on the target engine.
 - [ ] Verify English/Spanish/Belarusian text fit, accessibility and couch legibility on actual display sizes.
-- [ ] Implement/test foreground restoration, graceful exit and interrupted-session recovery.
+- [x] Stop playback while hidden, cancel auto-next, reload details on foreground without auto-play, and coalesce slow progress writes; synthetic lifecycle/queue regressions exercised.
+- [ ] Verify graceful exit/process-kill and interrupted-session reconciliation on Samsung.
 - [ ] Verify remember-me relaunch/deletion on TV, protected-profile PIN gates and storage-error recovery.
 - [ ] Test The Frame Art Mode, wake/standby and restore separately before claiming support.
 
@@ -420,10 +468,14 @@ evidence; it is not replaced by another media server.
 - [ ] Music completion: server PlayQueues, larger album queues, native MP3/transcode verification and interruption recovery.
 - [x] Photos host baseline: album navigation, page-local viewer/slideshow, decode timeout and object-URL cleanup; synthetic UI/resource contracts exercised without progress writes.
 - [ ] Photos completion: verify native supported formats, display/remote behavior and measured memory ceilings.
-- [ ] Live TV: tuner/lineup/EPG, channel tuning and entitlement/capability handling.
-- [ ] DVR: schedule/manage recordings and conflicts through approved account-write contracts.
-- [ ] Watchlist: account-backed read/add/remove, persistence and local-server availability resolution.
-- [ ] Plex catalogue: browse/search/details and licensed/ad-supported playback feasibility, DRM and service authorization.
+- [x] Live TV host discovery: advertised EPG providers, guide shelves, date/channel grid and existing channel lineups; recording capability is checked before offering scheduling.
+- [ ] Live tuning: establish consumer allocation/keepalive/release and native codec/transcode behavior before allocating a real tuner.
+- [x] DVR host operations: template-driven scheduling, subscription cancellation/preferences and scheduled/conflict status display, with confirmation and synthetic-only writes.
+- [ ] DVR server acceptance, target storage/location selection and comprehensive conflict-management workflows.
+- [x] Watchlist host operations: account-backed paged reads, confirmed add/remove, and exact-GUID local availability across scoped server grants.
+- [ ] Watchlist cloud/profile acceptance and remote paging/recovery on the packaged app.
+- [x] Plex catalogue metadata search/details and local matching; source-backed and synthetic signed-account journey exercised.
+- [ ] Licensed/ad-supported catalogue playback: establish Plex service authorization, DRM and ad obligations; do not substitute personal-PMS playback contracts.
 - [ ] Inventory remaining official-client features/entitlements and map each to implemented, unsupported or blocked evidence.
 
 ### Baseline runtime and reusable development process

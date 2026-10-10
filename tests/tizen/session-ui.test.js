@@ -27,6 +27,7 @@ function harness(saved, failure) {
     };
     if (saved) { data["plx-tizen-account"] = JSON.stringify({ version: 1, unencryptedAccepted: true, token: saved }); }
     Object.defineProperty(dom.window, "localStorage", { value: storage });
+    dom.window.fetch = function () { assert.fail("The synthetic session API must not use the network"); };
     dom.window.PlexApi = {
         createAuthClient: function () { return {
             startAuthorization: function () { return Promise.resolve({ code: "TEST", id: 1 }); },

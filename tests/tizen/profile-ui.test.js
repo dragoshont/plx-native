@@ -35,6 +35,7 @@ async function run() {
     var document = {
         getElementById: function (id) { return id === "screen" ? screen : status; },
         createElement: function (tag) { return new Node(tag); },
+        querySelector: function () { return null; },
         addEventListener: function () {}
     };
     var accountApi = {
@@ -74,7 +75,9 @@ async function run() {
         }
     };
     vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/main.js"), "utf8"), {
-        document: document, window: { PlexApi: api, addEventListener: function () {} },
+        document: document, window: { PlexApi: api, Promise: Promise, URL: URL, Blob: Blob,
+            fetch: function () { assert.fail("The synthetic API must not use the network"); },
+            addEventListener: function () {} },
         setTimeout: function () { return 1; }, clearTimeout: function () {}
     });
     function click(label) {
