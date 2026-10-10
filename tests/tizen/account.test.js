@@ -12,7 +12,14 @@ var responses = [
             { uri: "https://server.invalid:32400", local: true }
         ] }, { provides: "server", name: "Offline owned server", clientIdentifier: "machine-2",
             owned: true, connections: [null, { uri: "https://bad.invalid/path" }] },
-        { provides: "player", connections: [] }, null]
+        { provides: "player", connections: [] },
+        // plex.tv can register a real PMS as provides="sync" (observed 2026-10 on a live owned
+        // server); product still names it, and selectServer verifies the machine identifier.
+        { provides: "sync", product: "Plex Media Server", name: "Mislabelled owned server",
+            clientIdentifier: "machine-3", accessToken: "synthetic-owned-token", owned: true,
+            connections: [{ uri: "https://10-0-0-2.hash.plex.direct:32400", local: true }] },
+        { provides: "sync", product: "Plex Sync Agent", clientIdentifier: "not-a-server", connections: [] },
+        null]
 ];
 var client = api.createAccountClient({
     token: "synthetic-account-token",
@@ -31,7 +38,10 @@ client.getProfiles().then(function (profiles) {
     assert.strictEqual(calls[1].url.indexOf("1234"), -1);
     return client.getServers();
 }).then(function (servers) {
-    assert.strictEqual(servers.length, 2);
+    assert.strictEqual(servers.length, 3);
+    assert.strictEqual(servers[2].id, "machine-3");
+    assert.strictEqual(servers[2].owned, true);
+    assert.strictEqual(servers[2].connections.length, 1);
     assert.strictEqual(servers[1].owned, true);
     assert.strictEqual(servers[1].token, "");
     assert.strictEqual(servers[1].connections.length, 0);

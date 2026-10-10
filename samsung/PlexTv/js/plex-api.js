@@ -391,8 +391,11 @@
                     }
                     return result.filter(function (resource) {
                         return resource && typeof resource.clientIdentifier === "string" &&
-                            resource.clientIdentifier && typeof resource.provides === "string" &&
-                            resource.provides.split(",").indexOf("server") !== -1;
+                            resource.clientIdentifier && ((typeof resource.provides === "string" &&
+                            resource.provides.split(",").indexOf("server") !== -1) ||
+                            // plex.tv can list a live PMS as provides="sync"; selectServer still
+                            // verifies the machine identifier before any library request.
+                            resource.product === "Plex Media Server");
                     }).map(function (resource) {
                         return {
                             id: resource.clientIdentifier,
