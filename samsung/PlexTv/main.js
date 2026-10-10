@@ -405,7 +405,16 @@
                 accountToken = result.token;
                 stopAuthorization();
                 accountClient = window.PlexApi.createAccountClient({ token: accountToken });
-                openProfiles();
+                var storageWarning = "";
+                if (window.PlexSession) {
+                    try {
+                        if (window.PlexSession.enabled(window.localStorage)) {
+                            window.PlexSession.save(window.localStorage, accountToken);
+                        }
+                    }
+                    catch (error) { storageWarning = translate("Could not save sign-in. Check app storage permissions."); }
+                }
+                openProfiles(storageWarning);
             } else if (result.status === "expired") {
                 beginAuthorization(info.parentNode);
             } else {
@@ -468,6 +477,7 @@
                     pin.setAttribute("inputmode", "numeric");
                     pin.setAttribute("aria-label", translate("Profile PIN"));
                     if (profile.protected) { screen.appendChild(pin); }
+                    var retryProfile = null;
                     function selectProfile() {
                         if (profile.protected && !/^[0-9]{4}$/.test(pin.value)) {
                             setStatus("Enter the four-digit profile PIN.", true);
@@ -476,6 +486,7 @@
                         var request = ++selection;
                         var generation = viewGeneration;
                         setStatus("Switching profile...");
+                        if (retryProfile) { retryProfile.disabled = true; }
                         accountClient.switchProfile(profile.uuid, profile.protected ? pin.value : "")
                             .then(function (token) {
                                 pin.value = "";
@@ -496,7 +507,14 @@
                                             setStatus(sessionError.message, true);
                                         }
                                     });
-                                } else { setStatus(error.message, true); }
+                                } else {
+                                    setStatus(error.message, true);
+                                    if (!profile.protected) {
+                                        if (!retryProfile) { retryProfile = button(screen, "Retry", selectProfile); }
+                                        retryProfile.disabled = false;
+                                        retryProfile.focus();
+                                    }
+                                }
                             });
                     }
                     if (profile.protected) { button(screen, "Use this profile", selectProfile); }
@@ -512,7 +530,8 @@
             var actions = group(screen, "", "page-actions");
             button(actions, "Use linked account", function () { activeProfile = linkedProfile; openServers(); });
             button(actions, "Sign out", signOut);
-            setStatus("Select the Plex identity to use. Protected profiles require their PIN.");
+            if (typeof warning === "string" && warning) { setStatus(warning, true); }
+            else { setStatus("Select the Plex identity to use. Protected profiles require their PIN."); }
             focusFirst();
         }).catch(function (error) {
             if (generation !== viewGeneration) { return; }
@@ -598,6 +617,10 @@
                 openProfiles();
             });
             button(actions, "Refresh servers", openServers);
+            button(actions, "Settings", function () {
+                restoreView = openServers;
+                visit(openSettings);
+            });
             button(actions, "Sign out", signOut);
             setStatus("Owned and shared servers use their own access grants. Only secure advertised origins are tried.");
             focusFirst();
@@ -605,6 +628,10 @@
             if (generation !== viewGeneration) { return; }
             if (recoverSession(error)) { return; }
             button(screen, "Retry discovery", openServers);
+            button(screen, "Settings", function () {
+                restoreView = openServers;
+                visit(openSettings);
+            });
             button(screen, "Sign out", signOut);
             setStatus(error.message, true);
             focusFirst();
@@ -1431,6 +1458,7 @@
         resetImages();
         button(screen, "Back", backView);
         setStatus("Loading details...");
+        focusFirst();
         client.getMetadata(id).then(function (item) {
             if (generation !== viewGeneration) { return; }
             renderDetail(item, client);
@@ -2632,8 +2660,13 @@
             var saveSignIn = button(privacy, savedLabel, function () {
                 var shouldSave = saveSignIn.getAttribute("aria-pressed") !== "true";
                 try {
-                    if (shouldSave) { window.PlexSession.remember(window.localStorage, accountToken, true); }
-                    else { window.PlexSession.forget(window.localStorage); }
+                    if (shouldSave) {
+                        window.PlexSession.save(window.localStorage, accountToken);
+                        window.PlexSession.setEnabled(window.localStorage, true);
+                    } else {
+                        window.PlexSession.forget(window.localStorage);
+                        window.PlexSession.setEnabled(window.localStorage, false);
+                    }
                     saveSignIn.setAttribute("aria-pressed", String(shouldSave));
                     saveSignIn.textContent = translate("Stay signed in on this TV") + ": " +
                         translate(shouldSave ? "On" : "Off");
@@ -2660,7 +2693,7 @@
                 viewGeneration += 1;
                 clear(screen);
                 page(translate("Diagnostics"), "diagnostics");
-                screen.appendChild(element("p", "help-text", translate("Account credentials are session-only unless you opt in to unencrypted storage in Settings. No analytics or crash uploads are enabled.")));
+                screen.appendChild(element("p", "help-text", translate("Sign-in is saved on this TV by default. You can turn it off in Settings. Storage is unencrypted. No analytics or crash uploads are enabled.")));
                 screen.appendChild(element("p", "help-text",
                     "AVPlay: " + (window.webapis && window.webapis.avplay ? "available (formats unverified)" : "unavailable") +
                     ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
@@ -2717,7 +2750,9 @@
             if (homeNavigation) { homeNavigation.querySelector("button").focus(); return; }
         }
         if (key === 38 && active && active.plexCard && screen.className.indexOf("screen-home") !== -1) {
-            var shelves = screen.querySelectorAll(".shelf-row");
+            var shelves = Array.prototype.slice.call(screen.querySelectorAll(".shelf-row")).filter(function (row) {
+                return row.querySelector(".media-card");
+            });
             if (shelves[0] && shelves[0].contains(active)) {
                 var featureAbove = screen.querySelector(".home-feature-primary");
                 if (featureAbove) {

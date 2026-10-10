@@ -148,9 +148,10 @@ on `PATH`; on Windows use the equivalent SDK tools and a copied source folder.
    a successfully signed package is not proof it installed.
 5. Open **Plex Tizen Development** from the TV's Apps screen. Scan the QR or enter the displayed
    code at `plex.tv/link`, select your profile (PIN only if protected), then your server.
-   The TV and PMS keep your existing library and progress. Use Settings only if you want to
-   save sign-in; that explicit option stores the account token unencrypted. By default a
-   restart/update may require signing in again.
+   The TV and PMS keep your existing library and progress. Sign-in is saved automatically
+   in unencrypted TV storage. Settings can turn this off; sign-out deletes the saved token.
+   Keep the same app/package IDs and signing identity when updating; uninstalling or clearing
+   app data removes the saved sign-in. Restart/update retention still requires native verification.
 6. Start with read-only Home/library/detail/search navigation. For playback, use content you
    intend to watch or explicitly disposable test records. See the
    [remaining acceptance gates](samsung-upstream-readiness.md#required-before-a-parity-announcement).
@@ -230,8 +231,8 @@ an app. Signing and retail installation are separate authorized steps. If the in
 still requires HAXM, Linux/KVM on an AMD host is the documented AMD-V alternative; do not assume
 an ARM Windows VM or CrossOver supplies the missing backend.
 
-Credentials stay in memory unless a user explicitly enables saved sign-in **in Settings**. That option stores
-the account token **unencrypted** in Web Storage; leave it off on shared or untrusted TVs.
+Sign-in is saved automatically in **unencrypted** Web Storage. Turn **Stay signed in on this TV**
+off in Settings on shared or untrusted TVs; the opt-out remains until explicitly turned on.
 Sign-out deletes the saved token; if deletion fails the app warns that its data must be cleared.
 Never include a saved token in a developer package, test fixture or screenshot.
 

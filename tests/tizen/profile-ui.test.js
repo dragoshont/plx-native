@@ -153,9 +153,11 @@ async function run() {
         "Signing out while a profile switch is pending must land on the sign-in screen");
     linkPin = true;
     protectedProfile = false;
+    var transientFailure = true;
     accountApi.switchProfile = function (uuid, pinValue) {
         assert.strictEqual(pinValue, "");
         switches += 1;
+        if (transientFailure) { return Promise.reject({ message: "Temporary profile failure" }); }
         return Promise.resolve("synthetic-unprotected-token");
     };
     click("Get a new code");
@@ -164,6 +166,12 @@ async function run() {
     click("Synthetic Guest");
     await settle();
     assert.strictEqual(switches, before + 1, "An unprotected profile must switch with one click");
+    assert.strictEqual(status.textContent, "Temporary profile failure");
+    transientFailure = false;
+    click("Retry");
+    await settle();
+    assert.strictEqual(switches, before + 2, "Retry must reuse the selected profile without refetching profiles");
+    assert(tokens.indexOf("synthetic-unprotected-token") !== -1);
     assert(!screen.querySelectorAll().some(function (node) { return node.textContent === "Use this profile"; }),
         "An unprotected profile must not require an intermediate confirmation");
     console.log("Tizen synthetic profile UI/recovery tests: passed");

@@ -102,7 +102,7 @@ official-Plex parity.
 | Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
 | Up Next/quality/versions | Source implementation with opt-in auto-next; multipart titles request a joined PMS transcode (`partIndex=-1`), never direct-play just the first file | Long sessions, interrupted transitions and actual server/native multipart joins, resume and completion |
 | Settings/languages | Non-secret preferences, English/Spanish/Belarusian catalogs, static app-copy coverage and named placeholders | Dynamic errors/copy coverage and physical-TV text fit |
-| Credential persistence | Default memory-only; explicit opt-in in Settings stores the account token unencrypted | TV storage/relaunch/deletion behavior and final threat-model signoff |
+| Credential persistence | Saves the original account token automatically in unencrypted TV storage; Settings opt-out and sign-out deletion; old opt-in records remain readable | TV storage/relaunch/update/deletion behavior; storage is not encryption at rest |
 | Lifecycle/input | Background stop, explicit foreground resume, cancelled view reads and coalesced progress queue; synthetic journeys | Physical remote repeats/holds, process-exit reconciliation, suspend/wake and The Frame Art Mode |
 | Official Plex ecosystem | Music/photos, guide discovery, DVR scheduling/management and Watchlist read/mutations have host implementations | Live tuning/consumer lifecycle, licensed catalogue playback, server acceptance and remaining parity |
 | Distribution/support | Unsigned source build; earlier independent probe packages | Authorized signing/install, current-app model register and separate Store/legal decision |
@@ -368,8 +368,10 @@ Periodic progress keeps one in-flight request and one coalesced pending sample; 
 state takes priority, avoiding an unbounded queue during a slow/offline session.
 
 Samsung documents [Web Storage](https://developer.samsung.com/smarttv/develop/guides/data-handling/using-web-storage.html),
-not encryption at rest. Sign-in remains session-only by default; the optional Settings choice
-explicitly stores the original Plex account token unencrypted on this TV. Protected Home profiles
+not encryption at rest. At the owner's explicit request, successful sign-in now saves the
+original Plex account token automatically, unencrypted on this TV. Settings can disable saving,
+and that opt-out survives sign-out. Version-1 explicitly accepted records remain readable;
+new version-2 records describe storage without inventing historical consent. Protected Home profiles
 must still be selected and PIN-authorized. Sign-out and expiry recovery attempt deletion, and a
 deletion failure requires the user to clear app data rather than claiming a secure sign-out.
 No telemetry/crash upload transport is installed.
@@ -553,14 +555,20 @@ playback and watch-state writes remain excluded.
 | UX-07 | Native baseline: shelf titles are Romanian while navigation is English/UK wording. | App locale and server-supplied library/hub names are separate. Investigate metadata/locale requests; do not translate personal library names or claim all localized source titles are UI errors. |
 | UX-08 | Native baseline: focused season reads “Sezonul 8” without series identity. | Candidate includes `parentTitle` with the season title when supplied. Native comparison required. |
 | UX-09 | Native baseline: linked-account/profile and server pickers add two screens/three presses; server connection observed at roughly 30–72 seconds. | Record account protection/admin flags and advertised connection attempts before removing gates. Never bypass a protected profile or assume a sole server grant is reachable. Connection latency cause remains open. |
+| UX-10 | Updates/restarts of the default memory-only build lose sign-in. Owner explicitly requested retention. | Successful linking now saves the original account token automatically. Version-2 storage and legacy restoration, Settings opt-out across later links, storage failure, sign-out deletion and protected PIN gating have host coverage. Native restart/update acceptance pending; preserve installed app/package IDs and author signing identity. |
+| UX-11 | Native baseline movie details never rendered; Back reloaded Home into focusless loading and then server-unreachable. Pending sections/hubs requests had no observed HTTP result; root cause unknown. | Detail loading now focuses its Back escape control; regression failed before and passes after. Preserve this as an incomplete loop, not successful LG parity. Investigate request timeouts and Home loading from fresh native evidence; no claim of network recovery yet. |
+| UX-12 | Independent review found Up trapped at the first populated shelf when a preceding hub was empty, and transient unprotected-profile switch failure lacked Retry. | Populated-row selection now consistently skips empty hubs; selected-profile Retry preserves stale-result guards. Host regressions added; native acceptance pending. Library Refresh destination now explicitly asserted. |
+| UX-13 | Native after-install connections to every advertised PMS origin timed out; Settings was unreachable without Home. No HTTP status was returned. | Settings is now available from server selection and discovery failure, so managing sign-in does not require a working PMS. Host offline-Settings/Back journey exercised. Native audit blocked on PMS/network reachability; timeout/socket cancellation and connection progress remain open. |
 
 Fix batch `29f8ab60` passed the committed-tree Samsung suite, strict ES5 parser, unsigned SDK
 build and quality gate. Its signed development package was verified byte-for-byte against the
 committed app assets, with only explicit application/package IDs added to the staged manifest.
-It has been handed to the sole device lane for checksum verification and installation;
-an install request is not an install receipt or native acceptance. Updating the memory-only
-signed-in app may require the owner to sign in again; no token is extracted or persisted to
-avoid that step.
+That package was superseded, not installed. The subsequent `9db91e36` package was installed
+successfully with a checksum-bound receipt from the device lane. Its login was still memory-only;
+the owner's later persistence correction supersedes that default. The frozen pre-install loop
+is truncated at failed movie-detail loading: 18 genuine discrete paint captures encoded into a
+33.4-second replay, not a continuous recording or a frame-for-frame LG comparison. Native
+after-fix acceptance remains separate from host checks and installation.
 
 ### Player and protocol
 

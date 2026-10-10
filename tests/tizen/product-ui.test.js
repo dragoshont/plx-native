@@ -204,6 +204,18 @@ async function run() {
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
         assert.strictEqual(window.document.activeElement, selectedHome,
             "Up from the hero must return to navigation, not the separate Account control");
+        var emptyShelf = window.document.createElement("section");
+        emptyShelf.className = "shelf";
+        var emptyRow = window.document.createElement("div");
+        emptyRow.className = "shelf-row";
+        emptyShelf.appendChild(emptyRow);
+        var shelfPanel = window.document.querySelector(".home-shelves");
+        shelfPanel.insertBefore(emptyShelf, shelfPanel.firstChild);
+        firstShelfCard.focus();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
+        assert(window.document.activeElement.classList.contains("home-feature-primary"),
+            "An empty first hub must not trap Up from the first populated shelf");
+        emptyShelf.remove();
         var navigation = window.document.querySelector(".home-navigation");
         assert(navigation, "Home navigation belongs above the shelves, not below them");
         assert(navigation.querySelector(".menu-icon-search"), "Search needs a visible icon");
@@ -255,6 +267,12 @@ async function run() {
         assert(!window.document.querySelector(".home-utilities").hidden,
             "Account must open the same utility panel in a library, not jump to Settings");
         assert(!window.document.querySelector(".settings-menu"));
+        click("Refresh");
+        await settle();
+        assert(window.document.querySelector(".screen-library"),
+            "Refresh from library Account utilities must stay in that library");
+        assert.strictEqual(window.document.querySelector('.home-navigation button[aria-current="page"]').textContent, "Movies");
+        click("Account");
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 27, bubbles: true }));
         assert(window.document.querySelector(".home-utilities").hidden);
         assert(window.document.activeElement.classList.contains("account-control"));
@@ -305,6 +323,8 @@ async function run() {
         await settle();
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 1);
         window.document.querySelector(".media-card").click();
+        assert.strictEqual(window.document.activeElement.textContent, "Back",
+            "A pending detail request must retain a focused escape control");
         await settle();
         assert(window.document.querySelector(".synopsis").textContent.includes("Synthetic metadata"));
         assert(window.document.querySelector(".detail-expand"),

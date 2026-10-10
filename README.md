@@ -26,7 +26,7 @@ PlxNative is independent and is not affiliated with Plex, LG or Samsung.
 | Navigation and artwork | LG-inspired feature/shelves/navigation, profiles, collections, people and return paths; profile-photo and extra-step fixes are tracked in the [issue ledger](docs/samsung-tizen-client-spec.md#real-tv-navigation-issue-ledger). Not every screen has native acceptance |
 | Playback | AVPlay/PMS negotiation, resume/progress, tracks, captions, chapters/markers, versions and Up Next have source and synthetic tests. Earlier selected 2017 AVPlay clip probes do **not** certify current-app playback, HDR/audio, watch progress or every codec |
 | Additional Plex features | Music, photos, Watchlist/catalogue browsing and parts of guide/DVR have host implementations. Live tuning and licensed catalogue playback remain unresolved |
-| Sign-in storage | Memory-only by default. Optional unencrypted storage is an explicit Settings choice; no remember-me step on the sign-in screen |
+| Sign-in storage | Saved automatically on this TV in unencrypted Web Storage; Settings opt-out and sign-out deletion. No remember-me step on the sign-in screen |
 | Capture and performance | Fresh native renderer layers can be captured at about one frame per second. They are not the panel, do not include the hardware video plane, and do not prove 60-fps UI performance |
 | Models | One 2017 development target is observed. Newer TVs, including The Frame, need their own model/firmware, codec, remote and lifecycle checks; a newer year is not a support guarantee |
 

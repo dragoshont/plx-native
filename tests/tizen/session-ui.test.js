@@ -6,7 +6,7 @@ var JSDOM = require("jsdom").JSDOM;
 var app = path.resolve(__dirname, "../../samsung/PlexTv");
 var session = require("../../samsung/PlexTv/js/session");
 
-function harness(saved, failure) {
+function harness(saved, failure, persistence) {
     var dom = new JSDOM(fs.readFileSync(path.join(app, "index.html"), "utf8"), {
         url: "https://app.synthetic.invalid", runScripts: "outside-only"
     });
@@ -26,7 +26,11 @@ function harness(saved, failure) {
             delete data[key];
         }
     };
-    if (saved) { data["plx-tizen-account"] = JSON.stringify({ version: 1, unencryptedAccepted: true, token: saved }); }
+    if (saved) {
+        data["plx-tizen-account"] = JSON.stringify(typeof saved === "object" ? saved :
+            { version: 1, unencryptedAccepted: true, token: saved });
+    }
+    if (persistence) { data["plx-tizen-save-sign-in"] = persistence; }
     Object.defineProperty(dom.window, "localStorage", { value: storage });
     dom.window.fetch = function () { assert.fail("The synthetic session API must not use the network"); };
     dom.window.PlexApi = {
@@ -99,6 +103,13 @@ async function run() {
     await settle();
     assert.strictEqual(session.load(denied.storage), "synthetic-account-token", "PMS access denial must not erase the Plex account");
     assert(denied.text().includes("Server access denied"));
+    denied.click("Settings");
+    await settle();
+    assert(denied.text().includes("Stay signed in on this TV: On"),
+        "Saved sign-in controls must remain reachable when PMS is unavailable");
+    denied.click("Back");
+    await settle();
+    assert(denied.text().includes("Choose a server"));
     denied.dom.window.close();
     var app = harness("");
     assert.strictEqual(app.dom.window.document.querySelector(".remember-checkbox"), null,
@@ -107,14 +118,30 @@ async function run() {
     app.approve();
     app.click("Get a new code");
     await settle();
-    assert.strictEqual(session.load(app.storage), "");
+    assert.strictEqual(session.load(app.storage), "synthetic-account-token",
+        "A successful link must survive an application restart by default");
+    var savedRecord = JSON.parse(app.storage.getItem("plx-tizen-account"));
+    app.dom.window.close();
+    app = harness(savedRecord, "happy");
+    await settle();
+    assert.deepStrictEqual(app.tokens, ["synthetic-account-token"],
+        "A new application instance restores the version-2 record without QR pairing");
+    assert(!app.text().includes("Get a new code"));
+    app.dom.window.close();
+
+    app = harness("", "happy", "off");
+    app.approve();
+    app.click("Get a new code");
+    await settle();
+    assert.strictEqual(session.load(app.storage), "", "A later link must respect the remembered Settings opt-out");
+    assert.deepStrictEqual(app.tokens, ["synthetic-account-token"], "Opt-out must not prevent session-only sign-in");
     app.dom.window.close();
 
     app = harness("", "happy");
     app.approve();
     app.click("Get a new code");
     await settle();
-    assert.strictEqual(session.load(app.storage), "", "A new link remains session-only until the Settings choice is enabled");
+    assert.strictEqual(session.load(app.storage), "synthetic-account-token", "A new link persists by default");
     app.click("Use linked account");
     await settle();
     app.click("Synthetic (shared)");
@@ -126,16 +153,14 @@ async function run() {
             return /^Stay signed in on this TV:/.test(node.textContent);
         });
     };
-    assert.strictEqual(storageChoice().textContent, "Stay signed in on this TV: Off");
-    assert.strictEqual(storageChoice().getAttribute("aria-pressed"), "false");
-    storageChoice().click();
-    assert.strictEqual(session.load(app.storage), "synthetic-account-token", "Settings stores only after explicit consent");
     assert.strictEqual(storageChoice().textContent, "Stay signed in on this TV: On");
+    assert.strictEqual(storageChoice().getAttribute("aria-pressed"), "true");
     storageChoice().click();
     assert.strictEqual(session.load(app.storage), "", "Turning the Settings choice off removes the saved token without signing out");
+    storageChoice().click();
+    assert.strictEqual(session.load(app.storage), "synthetic-account-token");
     app.click("Sign out");
     assert.strictEqual(session.load(app.storage), "");
-    app.dom.window.close();
     app.dom.window.close();
 
     app = harness("synthetic-account-token");
@@ -155,6 +180,8 @@ async function run() {
     app.approve();
     app.click("Get a new code");
     await settle();
+    assert(app.text().includes("Could not save sign-in"),
+        "Default persistence failure must be visible while the linked session remains usable");
     app.click("Use linked account");
     await settle();
     app.click("Synthetic (shared)");
@@ -171,6 +198,6 @@ async function run() {
     await settle();
     assert(app.text().includes("Clear this app's data"), "Expiry recovery must retain a deletion-failure warning");
     app.dom.window.close();
-    console.log("Tizen session relaunch/PIN/consent/expiry/error UI tests: passed");
+    console.log("Tizen session default persistence/relaunch/opt-out/PIN/expiry/error UI tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });
