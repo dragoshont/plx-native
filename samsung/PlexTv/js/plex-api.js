@@ -192,7 +192,7 @@
                     });
                 }
                 resolve({
-                    ok: response.ok, status: response.status,
+                    ok: response.ok, status: response.status, url: String(response.url || ""),
                     text: function () { return body(false); },
                     blob: function () { return body(true); }
                 });
@@ -217,6 +217,12 @@
 
     function profileImagePath(path) {
         return /^https:\/\/plex\.tv\/users\/[a-zA-Z0-9_-]+\/avatar(?:\?c=[a-zA-Z0-9_.-]+)?$/.test(String(path || ""));
+    }
+
+    function profileImageTarget(url) {
+        url = String(url || "");
+        return profileImagePath(url) ||
+            /^https:\/\/assets\.plex\.tv\/avatars\/[A-Za-z0-9_-]+(?:\?[^#]*)?$/.test(url);
     }
 
     function createAccountClient(options) {
@@ -312,8 +318,9 @@
             image: function (path) {
                 if (!profileImagePath(path)) { return Promise.reject(new Error("Invalid Plex profile artwork.")); }
                 return timedFetch(fetchRequest, path, {
-                    credentials: "omit", redirect: "error", headers: { Accept: "image/*" }
+                    credentials: "omit", redirect: "follow", headers: { Accept: "image/*" }
                 }, scope).then(function (response) {
+                    if (!profileImageTarget(response.url)) { throw new Error("Invalid Plex profile artwork."); }
                     if (!response.ok) { throw new Error("Profile artwork is unavailable (HTTP " + response.status + ")."); }
                     return response.blob();
                 });
