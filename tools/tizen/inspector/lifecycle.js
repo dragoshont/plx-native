@@ -60,10 +60,11 @@ function saveFrames(target, capture) {
         const entries = capture.frames.map((frame, index) => {
             const filename = 'frame-' + String(index + 1).padStart(4, '0') + '.png';
             fs.writeFileSync(path.join(target, filename), frame.image, { flag: 'wx', mode: 0o600 });
-            return { filename, width: frame.width, height: frame.height, receivedMs: frame.receivedMs };
+            return { filename, width: frame.width, height: frame.height,
+                ...(frame.layer ? { layer: frame.layer } : { receivedMs: frame.receivedMs }) };
         });
         fs.writeFileSync(path.join(target, 'manifest.json'), JSON.stringify({
-            ...capture.receipt, timing: 'host-receive-time-not-video-fps', entries
+            ...capture.receipt, timing: capture.receipt.timing || 'host-receive-time-not-video-fps', entries
         }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
     } catch (_) { throw new InspectorError('output_write_failed'); }
 }

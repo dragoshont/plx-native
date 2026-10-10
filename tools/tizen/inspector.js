@@ -5,11 +5,13 @@ const { Client, InspectorError, localEndpoint, discover, selectTarget } = requir
 const { geometry } = require('./inspector/geometry');
 const { screenshot, screencastCapability, screencast } = require('./inspector/capture');
 const { acquireLock, outputPath, saveScreenshot, saveFrames } = require('./inspector/lifecycle');
+const { layerCapture } = require('./inspector/layers');
 
 const HELP = `Samsung Web Inspector (Node >=22)
   node tools/tizen/inspector.js targets|probe|geometry --endpoint http://127.0.0.1:PORT
   node tools/tizen/inspector.js screenshot --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/image.png
   node tools/tizen/inspector.js screencast --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/frames --duration-ms 10000 --max-frames 120
+  node tools/tizen/inspector.js layers --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/layers
 Options: --target-index N (required for multiple pages), --timeout-ms 15000 (100..15000).
 Read-only fixed probes; no arbitrary evaluation, keys, navigation or app launch.
 Capture output is PRIVATE and is never a DOM reconstruction. See docs/samsung-web-inspector.md.
@@ -24,7 +26,7 @@ function integer(value, min, max) {
 
 function options(args) {
     const command = args[0];
-    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast'].includes(command)) {
+    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast', 'layers'].includes(command)) {
         throw new InspectorError('invalid_command');
     }
     const values = {};
@@ -36,7 +38,7 @@ function options(args) {
             i + 1 >= args.length || args[i + 1].startsWith('--')) throw new InspectorError('invalid_option');
         values[name] = args[++i];
     }
-    const pixel = command === 'screenshot' || command === 'screencast';
+    const pixel = ['screenshot', 'screencast', 'layers'].includes(command);
     if (pixel && (!values['--allow-private-pixels'] || !values['--output'])) {
         throw new InspectorError('private_pixel_consent_required');
     }
@@ -48,7 +50,7 @@ function options(args) {
         command, endpoint: localEndpoint(values['--endpoint']),
         timeoutMs: integer(values['--timeout-ms'] || '15000', 100, 15000),
         targetIndex: values['--target-index'] === undefined ? undefined : integer(values['--target-index'], 0, 99),
-        output: pixel ? outputPath(values['--output'], command === 'screencast') : undefined,
+        output: pixel ? outputPath(values['--output'], command !== 'screenshot') : undefined,
         durationMs: integer(values['--duration-ms'] || '10000', 100, 30000),
         maxFrames: integer(values['--max-frames'] || '120', 1, 120)
     };
@@ -95,6 +97,11 @@ async function run(config, lock = acquireLock) {
                 const capture = await screencast(client, config.durationMs, config.maxFrames);
                 result = { ...capture.receipt, version };
                 if (capture.frames.length) saveFrames(config.output, capture);
+            }
+            if (config.command === 'layers') {
+                const capture = await layerCapture(client, Math.min(config.timeoutMs, 1000));
+                result = { ...capture.receipt, version };
+                saveFrames(config.output, capture);
             }
         }
         if (interrupted) throw new InspectorError('interrupted');
