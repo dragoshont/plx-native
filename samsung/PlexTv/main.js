@@ -217,7 +217,7 @@
             node.appendChild(progress);
         }
         var shape = node.getAttribute ? node.getAttribute("data-shape") : "portrait";
-        queueImage(image, client, seriesPoster || item.thumb, shape === "landscape" ? { width: 480, height: 270 } :
+        queueImage(image, client, seriesPoster || item.thumb || item.art, shape === "landscape" ? { width: 480, height: 270 } :
             shape === "square" ? { width: 360, height: 360 } : { width: 240, height: 360 });
         return node;
     }
