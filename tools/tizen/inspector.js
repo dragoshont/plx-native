@@ -6,12 +6,15 @@ const { geometry } = require('./inspector/geometry');
 const { screenshot, screencastCapability, screencast } = require('./inspector/capture');
 const { acquireLock, outputPath, saveScreenshot, saveFrames } = require('./inspector/lifecycle');
 const { layerCapture } = require('./inspector/layers');
+const { LiveView } = require('./inspector/live');
 
 const HELP = `Samsung Web Inspector (Node >=22)
   node tools/tizen/inspector.js targets|probe|geometry --endpoint http://127.0.0.1:PORT
   node tools/tizen/inspector.js screenshot --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/image.png
   node tools/tizen/inspector.js screencast --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/frames --duration-ms 10000 --max-frames 120
   node tools/tizen/inspector.js layers --endpoint http://127.0.0.1:PORT --allow-private-pixels --output /private/path/layers
+  node tools/tizen/inspector.js live --endpoint http://127.0.0.1:PORT --allow-private-pixels --duration-ms 300000 --interval-ms 1000
+    (serves fresh separate layers from memory on a tokenised 127.0.0.1 URL printed to stderr; Ctrl-C stops)
 Options: --target-index N (required for multiple pages), --timeout-ms 15000 (100..15000).
 Read-only fixed probes; no arbitrary evaluation, keys, navigation or app launch.
 Capture output is PRIVATE and is never a DOM reconstruction. See docs/samsung-web-inspector.md.
@@ -26,7 +29,7 @@ function integer(value, min, max) {
 
 function options(args) {
     const command = args[0];
-    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast', 'layers'].includes(command)) {
+    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast', 'layers', 'live'].includes(command)) {
         throw new InspectorError('invalid_command');
     }
     const values = {};
@@ -34,24 +37,30 @@ function options(args) {
         const name = args[i];
         if (Object.hasOwn(values, name)) throw new InspectorError('duplicate_option');
         if (name === '--allow-private-pixels') { values[name] = true; continue; }
-        if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames'].includes(name) ||
+        if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms'].includes(name) ||
             i + 1 >= args.length || args[i + 1].startsWith('--')) throw new InspectorError('invalid_option');
         values[name] = args[++i];
     }
-    const pixel = ['screenshot', 'screencast', 'layers'].includes(command);
-    if (pixel && (!values['--allow-private-pixels'] || !values['--output'])) {
+    const pixel = ['screenshot', 'screencast', 'layers', 'live'].includes(command);
+    const saves = pixel && command !== 'live';
+    if (pixel && (!values['--allow-private-pixels'] || (saves && !values['--output']))) {
         throw new InspectorError('private_pixel_consent_required');
     }
-    if ((!pixel && (values['--output'] || values['--allow-private-pixels'])) ||
-        (command !== 'screencast' && (values['--duration-ms'] || values['--max-frames']))) {
+    if ((!pixel && values['--allow-private-pixels']) || (!saves && values['--output']) ||
+        (!['screencast', 'live'].includes(command) && values['--duration-ms']) ||
+        (command !== 'screencast' && values['--max-frames']) ||
+        (command !== 'live' && values['--interval-ms'])) {
         throw new InspectorError('inapplicable_option');
     }
+    const live = command === 'live';
     return {
         command, endpoint: localEndpoint(values['--endpoint']),
         timeoutMs: integer(values['--timeout-ms'] || '15000', 100, 15000),
         targetIndex: values['--target-index'] === undefined ? undefined : integer(values['--target-index'], 0, 99),
-        output: pixel ? outputPath(values['--output'], command !== 'screenshot') : undefined,
-        durationMs: integer(values['--duration-ms'] || '10000', 100, 30000),
+        output: saves ? outputPath(values['--output'], command !== 'screenshot') : undefined,
+        durationMs: live ? integer(values['--duration-ms'] || '300000', 1000, 1800000) :
+            integer(values['--duration-ms'] || '10000', 100, 30000),
+        intervalMs: integer(values['--interval-ms'] || '1000', 500, 10000),
         maxFrames: integer(values['--max-frames'] || '120', 1, 120)
     };
 }
@@ -64,11 +73,18 @@ function versionSummary(value) {
         protocol: typeof protocol === 'string' && /^\d+\.\d+$/.test(protocol) ? protocol : 'unreported' };
 }
 
-async function run(config, lock = acquireLock) {
+async function run(config, lock = acquireLock, ready = view => process.stderr.write(JSON.stringify(
+    { status: 'live', view, note: 'private local URL; do not share' }) + '\n')) {
     const release = lock();
     let client;
+    let viewer;
     let interrupted = false;
-    const interrupt = () => { interrupted = true; if (client) client.close(); };
+    const interrupt = () => {
+        // A live view ends cleanly: the in-flight capture still releases its snapshots and disables LayerTree.
+        if (viewer) { viewer.stop('interrupted'); return; }
+        interrupted = true;
+        if (client) client.close();
+    };
     process.on('SIGINT', interrupt);
     process.on('SIGTERM', interrupt);
     let result;
@@ -103,6 +119,12 @@ async function run(config, lock = acquireLock) {
                 result = { ...capture.receipt, version };
                 saveFrames(config.output, capture);
             }
+            if (config.command === 'live') {
+                viewer = new LiveView(client, { durationMs: config.durationMs, intervalMs: config.intervalMs,
+                    waitMs: Math.min(config.timeoutMs, 1000) });
+                ready(await viewer.start());
+                result = { ...await viewer.done, version };
+            }
         }
         if (interrupted) throw new InspectorError('interrupted');
         return result;
@@ -110,6 +132,7 @@ async function run(config, lock = acquireLock) {
         if (interrupted) throw new InspectorError('interrupted');
         throw error;
     } finally {
+        if (viewer) await viewer.close();
         if (client) client.close();
         process.removeListener('SIGINT', interrupt);
         process.removeListener('SIGTERM', interrupt);

@@ -184,6 +184,64 @@ cleanup blocks success. Capturing layers does not capture Samsung AVPlay's
 hardware video plane, system UI, or panel post-processing, and it is not a video
 recording. The normal private-pixel consent and output protections apply.
 
+### Live native layer viewer
+
+`live` keeps one Inspector connection open and repeatedly runs the same
+`layers` capture sequence. It serves only the latest capture, from memory, on a
+loopback HTTP URL:
+
+```sh
+node tools/tizen/inspector.js live \
+    --endpoint http://127.0.0.1:39506 --allow-private-pixels \
+    --duration-ms 300000 --interval-ms 1000
+```
+
+The URL is written to stderr as a JSON line. It contains a random 192-bit path
+token. Treat it as private and never paste it into a shared log. The server
+binds to `127.0.0.1` only. It rejects any `Host` other than the exact loopback
+host and port, and returns 405 for anything other than GET. Responses use
+`no-store`, a nonce-based CSP, `DENY` framing and `no-referrer`. `--output` is
+rejected: pixels are never written to disk, and the previous capture is
+discarded when a new one is published. A frame URL for an older sequence
+returns 410, so the page never shows a reused image under a fresh capture
+number.
+
+The page shows a red label: **separate and incomplete renderer layers, not the
+panel**. It does not composite layers. Each layer caption shows the
+parent-relative offset, a transform warning and whether its SHA-256 changed
+since the previous capture. A static screen is therefore reported as
+`unchanged`, not presented as motion. Each capture costs about a second of
+sequential replays, so the session is bounded:
+- Duration: 1 s to 30 min, default 5 min.
+- Interval: 0.5 to 10 s, default 1 s.
+- Viewer connections: at most 8.
+
+The loop stops in any of these cases:
+- The duration elapses.
+- The user interrupts it (Ctrl-C).
+- The WebSocket closes.
+- Three consecutive capture failures occur.
+- Any snapshot or domain cleanup failure occurs, because it may leave
+  renderer state behind.
+
+The stop handler closes the HTTP server and all connections, then releases the
+device lease. The final receipt reports cycles, changed cycles, failures and
+`memory-only-discarded`.
+
+Measured on UE55MU6172 (Tizen 3.0, Chromium 47) against the installed
+sign-in screen:
+- A 45-second session ran 45 cycles, each capture taking 0.75–0.97 s, with zero
+  failures.
+- Every capture had three layers: 1920x1080, 226x64 and 28x28.
+- All sampled frames were served.
+- The main layer, inspected visually, held the complete sign-in UI.
+- Only the first cycle was `changed`. The screen was static, and the spinner
+  rotates by a compositor transform, so its painted pixels are byte-identical.
+
+The viewer is genuinely live: a capture changes when the page repaints. It is
+not a frame-accurate recording of compositor animation, the video plane or
+the panel.
+
 ## Retail result and source interpretation
 
 Observed on **Samsung UE55MU6172, Tizen 3.0**, 2026-10-11:
