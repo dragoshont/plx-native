@@ -75,6 +75,13 @@ async function run() {
                 }
             }
         } else if (url.pathname === "/library/metadata/10") { container = { Metadata: [movie] }; }
+        else if (url.pathname === "/library/sections/1/collections") {
+            var collectionStart = Number(url.searchParams.get("X-Plex-Container-Start") || 0);
+            container = { offset: collectionStart, totalSize: 51, Metadata: [] };
+            for (var c = collectionStart; c < Math.min(51, collectionStart + 50); c += 1) {
+                container.Metadata.push(Object.assign({}, movie, { title: "Collection title " + c }));
+            }
+        }
         else if (url.pathname === "/library/metadata/99") { container = { Metadata: [onDeck] }; }
         else if (url.pathname === "/hubs/search") { container = { Hub: [{ title: "Movies", Metadata: [movie] }] }; }
         else if (url.pathname === "/video/:/transcode/universal/decision") { container = { generalDecisionCode: 1001 }; }
@@ -198,6 +205,22 @@ async function run() {
             "Appending a page must preserve the focused title, not leave focus on the removed node");
         for (var page = 0; page < 3; page += 1) { click("Load more"); await settle(); }
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 200, "Bound DOM and metadata retained after 250 items");
+        click("Collections");
+        await settle();
+        assert.strictEqual(window.document.querySelectorAll(".media-card").length, 50);
+        window.document.querySelector(".media-card").click();
+        await settle();
+        click("Back");
+        await settle();
+        assert(Array.from(window.document.querySelectorAll("button")).some(function (node) {
+            return node.textContent === "Load more";
+        }), "Returning from details must preserve the listing's remaining pages");
+        click("Load more");
+        await settle();
+        assert.strictEqual(window.document.querySelectorAll(".media-card").length, 51,
+            "Collection pages must advance rather than append the first page again");
+        click("Back");
+        await settle();
         click("Back to Home");
         await settle();
         click("Search");

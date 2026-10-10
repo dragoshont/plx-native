@@ -75,10 +75,20 @@ async function run() {
         }
     });
     var result = await paged.personLibraryIndex(921);
-    assert.deepStrictEqual(starts, [0, 50, 100, 150, 200, 250, 300, 350, 400, 450]);
-    assert.strictEqual(result.complete, false);
+    assert.strictEqual(starts.length, 18, "A large career must not stop matching at 500 titles");
+    assert.strictEqual(result.complete, true);
     assert.strictEqual(api.matchCredit(result.index, "m499"), "499");
-    assert.strictEqual(api.matchCredit(result.index, "m500"), null);
+    assert.strictEqual(api.matchCredit(result.index, "m899"), "899");
+    var invalid = api.createClient({
+        baseUrl: "https://server.synthetic.invalid", token: "synthetic-server-token",
+        fetch: function () {
+            return Promise.resolve({ ok: true, status: 200, json: function () {
+                return Promise.resolve({ MediaContainer: { Metadata: [], offset: 0, totalSize: 1 } });
+            } });
+        }
+    });
+    await assert.rejects(invalid.personLibraryIndex(921), /incomplete person-library page/,
+        "A truncated page must not be advertised as a complete availability index");
     console.log("Tizen person biography/catalogue/local identity and paging tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

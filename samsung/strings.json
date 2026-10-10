@@ -231,6 +231,7 @@
   "Showing the first 200 credits.": { "es": "Se muestran los primeros 200 créditos.", "be": "Паказаны першыя 200 работ." },
   "{count} credits are in this library.": { "es": "{count} créditos están en esta biblioteca.", "be": "Работ у гэтай бібліятэцы: {count}." },
   "Only the first 500 local titles were checked.": { "es": "Solo se comprobaron los primeros 500 títulos locales.", "be": "Правераны толькі першыя 500 лакальных назваў." },
+  "Local title lookup reached its safety limit.": { "es": "La búsqueda de títulos locales alcanzó su límite de seguridad.", "be": "Пошук лакальных назваў дасягнуў бяспечнага ліміту." },
   "This server's titles could not be checked. Search libraries to find an available version.": { "es": "No se pudieron comprobar los títulos de este servidor. Busca en las bibliotecas una versión disponible.", "be": "Не ўдалося праверыць назвы гэтага сервера. Шукайце даступную версію ў бібліятэках." },
   "Selected item": { "es": "Elemento seleccionado", "be": "Выбраны элемент" },
   "Loading libraries...": { "es": "Cargando bibliotecas...", "be": "Загрузка бібліятэк..." },

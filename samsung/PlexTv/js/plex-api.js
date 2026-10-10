@@ -729,18 +729,28 @@
                 });
             },
             personLibraryIndex: function (personId) {
-                var items = [];
-                var limit = 500;
+                var index = {};
+                var limit = 10000;
                 var self = this;
                 function page(start) {
                     return self.getPerson(null, personId, start).then(function (container) {
                         var rows = listFrom(container, "Metadata");
-                        items = items.concat(rows);
-                        var total = Number(container.totalSize);
-                        if (rows.length && items.length < limit && (!isFinite(total) || start + rows.length < total)) {
-                            return page(start + rows.length);
+                        if (rows.length > 50 || container.offset !== undefined && Number(container.offset) !== start) {
+                            throw new Error("Plex returned an invalid person-library page.");
                         }
-                        return { index: localCatalogueIndex(items), complete: !(items.length >= limit && (!isFinite(total) || total > items.length)) };
+                        var entries = localCatalogueIndex(rows);
+                        Object.keys(entries).forEach(function (guid) {
+                            if (!Object.prototype.hasOwnProperty.call(index, guid)) { index[guid] = entries[guid]; }
+                        });
+                        var next = start + rows.length;
+                        var total = container.totalSize === undefined || container.totalSize === null ?
+                            NaN : Number(container.totalSize);
+                        var more = isFinite(total) ? next < total : rows.length === 50;
+                        if (more && !rows.length) { throw new Error("Plex returned an incomplete person-library page."); }
+                        if (more && next < limit) {
+                            return page(next);
+                        }
+                        return { index: index, complete: !more };
                     });
                 }
                 return page(0);
@@ -766,8 +776,11 @@
                 return get(target);
             },
             getLetters: function (section) { return get("/library/sections/" + key(section) + "/firstCharacter"); },
-            getCollections: function (section) {
-                return get("/library/sections/" + key(section) + "/collections");
+            getCollections: function (section, start) {
+                if (!isNonNegativeInteger(start || 0)) { return Promise.reject(new Error("Invalid collection page.")); }
+                return get("/library/sections/" + key(section) + "/collections", "GET", {
+                    "X-Plex-Container-Start": start || 0, "X-Plex-Container-Size": 50
+                });
             },
             image: function (path, size) {
                 if (!/^https:\/\/(?:metadata-static\.plex\.tv|image\.tmdb\.org)\//.test(path)) { localPath(path); }

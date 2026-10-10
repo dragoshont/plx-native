@@ -29,6 +29,7 @@
     var imageQueue = [];
     var imageActive = 0;
     var imageUrls = [];
+    var imageDecodes = [];
     var player = null;
     var playerItem = null;
     var playerClient = null;
@@ -103,6 +104,7 @@
     function resetImages() {
         imageGeneration += 1;
         imageQueue = [];
+        imageDecodes.slice().forEach(function (cancel) { cancel(); });
         imageUrls.forEach(function (url) { window.URL.revokeObjectURL(url); });
         imageUrls = [];
     }
@@ -114,19 +116,38 @@
                 Promise.resolve().then(function () { return job.client.image(job.path, job.size); }).then(function (blob) {
                     if (job.generation !== imageGeneration) { return; }
                     if (blob.size > (job.maxBytes || 2 * 1024 * 1024)) { throw new Error("Artwork exceeds the image memory limit."); }
-                    var url = window.URL.createObjectURL(blob);
-                    imageUrls.push(url);
-                    if (imageUrls.length > 60) { window.URL.revokeObjectURL(imageUrls.shift()); }
-                    job.node.onerror = function () {
-                        if (job.generation !== imageGeneration) { return; }
-                        job.node.onerror = null;
+                    if (screen.contains && !screen.contains(job.node)) { return; }
+                    return new Promise(function (resolve, reject) {
+                        var url = window.URL.createObjectURL(blob);
+                        imageUrls.push(url);
+                        var complete = false;
+                        var timer = setTimeout(function () { finish(new Error("Artwork decode timed out.")); }, 5000);
+                        function cancel() { finish(); }
+                        function finish(error, loaded) {
+                            if (complete) { return; }
+                            complete = true;
+                            clearTimeout(timer);
+                            job.node.onload = null;
+                            job.node.onerror = null;
+                            window.URL.revokeObjectURL(url);
+                            imageUrls.splice(imageUrls.indexOf(url), 1);
+                            imageDecodes.splice(imageDecodes.indexOf(cancel), 1);
+                            if (error) { reject(error); }
+                            else {
+                                if (loaded && job.generation === imageGeneration && job.loaded) { job.loaded(); }
+                                resolve();
+                            }
+                        }
+                        imageDecodes.push(cancel);
+                        job.node.onload = function () { finish(null, true); };
+                        job.node.onerror = function () { finish(new Error("Artwork could not be decoded.")); };
+                        job.node.src = url;
+                    });
+                }).catch(function () {
+                    if (job.generation === imageGeneration) {
                         job.node.alt = translate("Artwork unavailable");
                         job.node.src = placeholderArt();
-                    };
-                    job.node.src = url;
-                    if (job.loaded) { job.loaded(); }
-                }).catch(function () {
-                    if (job.generation === imageGeneration) { job.node.alt = "Artwork unavailable"; }
+                    }
                 }).then(function () { imageActive -= 1; pumpImages(); });
             }(imageQueue.shift()));
         }
@@ -231,6 +252,7 @@
             cleanup();
         }
         if (node === screen) {
+            resetImages();
             setDetailMode(false);
             screen.className = "screen";
             screen.scrollTop = 0;
@@ -1088,7 +1110,7 @@
         button(toolbar, "A-Z", function () { visit(function () { openLetters(section); }); });
         button(toolbar, "Collections", function () {
             visit(function () {
-                openListing("Collections", function () { return currentClient.getCollections(section.key); }, currentClient);
+                openListing("Collections", function (offset) { return currentClient.getCollections(section.key, offset); }, currentClient);
             });
         });
         var list = element("div", "item-list");
@@ -1156,7 +1178,7 @@
         });
     }
 
-    function openListing(title, loader, client, offset, retained) {
+    function openListing(title, loader, client, offset, retained, cached) {
         var generation = ++viewGeneration;
         clear(screen);
         viewClients.push(client);
@@ -1165,11 +1187,11 @@
         setStatus("Loading...");
         offset = offset || 0;
         retained = retained || [];
-        loader(offset).then(function (container) {
+        (cached ? Promise.resolve(cached) : loader(offset)).then(function (container) {
             if (generation !== viewGeneration) { return; }
             var items = retained.concat(container.Metadata || []).slice(-200);
             restoreView = function () {
-                openListing(title, function () { return Promise.resolve({ Metadata: items }); }, client);
+                openListing(title, loader, client, offset, retained, container);
             };
             var list = element("div", "item-list");
             screen.appendChild(list);
@@ -1724,12 +1746,12 @@
         return Math.floor(seconds / 60) + ":" + ("0" + seconds % 60).slice(-2);
     }
 
-    function openPerson(person, client) {
+    function openPerson(person, client, careerStart) {
         var generation = ++viewGeneration;
         clear(screen);
         viewClients.push(client);
         resetImages();
-        restoreView = function () { openPerson(person, client); };
+        restoreView = function () { openPerson(person, client, careerStart); };
         page(person.tag || "Person", "person");
         var portrait = element("img", "person-portrait");
         portrait.alt = "";
@@ -1762,16 +1784,30 @@
                 var groups = results[0];
                 var local = results[1];
                 if (generation !== viewGeneration) { return; }
-                var shown = 0;
+                var allCredits = [];
                 var held = 0;
-                groups.slice(0, 20).forEach(function (group) {
-                    if (shown >= 200) { return; }
-                    var credits = element("section", "credit-list");
-                    credits.appendChild(element("h3", "group-title", group.title || "Credits"));
-                    screen.appendChild(credits);
-                    (group.Credit || []).slice(0, 200 - shown).forEach(function (credit) {
+                groups.forEach(function (group) {
+                    (group.Credit || []).forEach(function (credit) {
+                        if (credit.Metadata) { allCredits.push({ group: group.title, credit: credit }); }
+                    });
+                });
+                var career = element("section", "career-pages");
+                screen.appendChild(career);
+                function renderCareer(start) {
+                    careerStart = start;
+                    clear(career);
+                    held = 0;
+                    var credits;
+                    var groupName;
+                    allCredits.slice(start, start + 50).forEach(function (entry) {
+                        var credit = entry.credit;
                         var title = credit.Metadata;
-                        if (!title) { return; }
+                        if (!credits || groupName !== entry.group) {
+                            groupName = entry.group;
+                            credits = element("section", "credit-list");
+                            credits.appendChild(element("h3", "group-title", groupName || "Credits"));
+                            career.appendChild(credits);
+                        }
                         var label = (title.title || "Untitled") + (title.year ? " / " + title.year : "") +
                             (credit.role ? " / " + credit.role : "");
                         var ratingKey = local && window.PlexApi.matchCredit(local.index, title.ratingKey);
@@ -1785,13 +1821,19 @@
                                 visit(function () { openSearch(title.title); });
                             }, client);
                         }
-                        shown += 1;
                     });
-                });
-                setStatus((shown >= 200 ? translate("Showing the first 200 credits.") + " " : "") +
-                    (local ? translate("{count} credits are in this library.", { count: held }) +
-                        (local.complete ? "" : " " + translate("Only the first 500 local titles were checked.")) :
-                        translate("This server's titles could not be checked. Search libraries to find an available version.")));
+                    if (start > 0) {
+                        button(career, "Previous page", function () { renderCareer(start - 50); }).focus();
+                    }
+                    if (start + 50 < allCredits.length) {
+                        var nextPage = button(career, "Next page", function () { renderCareer(start + 50); });
+                        if (start === 0 && document.activeElement && !screen.contains(document.activeElement)) { nextPage.focus(); }
+                    }
+                    setStatus(local ? translate("{count} credits are in this library.", { count: held }) +
+                        (local.complete ? "" : " " + translate("Local title lookup reached its safety limit.")) :
+                        translate("This server's titles could not be checked. Search libraries to find an available version."));
+                }
+                renderCareer(careerStart || 0);
             }).catch(function (error) {
                 if (generation === viewGeneration) { screen.appendChild(element("p", "inline-error", error.message)); }
             });

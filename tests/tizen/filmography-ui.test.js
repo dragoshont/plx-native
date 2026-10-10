@@ -35,7 +35,7 @@ Node.prototype.querySelectorAll = function () {
 };
 
 
-async function journey(indexFails, language) {
+async function journey(indexFails, language, largeCareer) {
     var screen = new Node("main");
     var status = new Node("p");
     var opened = [];
@@ -55,6 +55,13 @@ async function journey(indexFails, language) {
         personProfile: function () { return Promise.resolve({ Metadata: [{ summary: "Synthetic biography" }] }); },
         personCredits: function (tagKey) {
             assert.strictEqual(tagKey, "5d776827151a60001f24ab18");
+            if (largeCareer) {
+                var credits = [];
+                for (var i = 0; i < 251; i += 1) {
+                    credits.push({ Metadata: { ratingKey: "career" + i, title: "Career title " + i } });
+                }
+                return Promise.resolve([{ title: "Acting", Credit: credits }]);
+            }
             return Promise.resolve([{ title: "Acting", Credit: [
                 { role: "Lead", Metadata: { ratingKey: "5d7768295af944001f1f7477", title: "Held Film", year: 2001 } },
                 { Metadata: { ratingKey: "5d9c08804eefaa001f5df5fc", title: "Absent Show" } }
@@ -120,6 +127,15 @@ async function journey(indexFails, language) {
     window.PlexI18n.setLanguage(language);
     click("Synthetic Actor");
     await settle();
+    if (largeCareer) {
+        assert(find("Career title 0 / Search libraries"));
+        assert(!find("Career title 50 / Search libraries"), "Career pages must keep the DOM bounded");
+        for (var page = 0; page < 5; page += 1) { click("Next page"); }
+        assert(find("Career title 250 / Search libraries"), "Credits after the old 200-title cap remain reachable");
+        click("Previous page");
+        assert(find("Career title 200 / Search libraries"));
+        return;
+    }
     if (indexFails) {
         assert(find("Held Film / 2001 / Lead / Search libraries"), "An unchecked library must not claim availability");
         assert(status.textContent.indexOf("could not be checked") !== -1);
@@ -143,6 +159,7 @@ async function run() {
     await journey(false, "en");
     await journey(true, "en");
     await journey(false, "es");
+    await journey(false, "en", true);
     console.log("Tizen filmography local-library join journey: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

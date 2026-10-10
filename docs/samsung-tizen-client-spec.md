@@ -1,6 +1,10 @@
 # Samsung Tizen Plex client: product specification
 
 **Status:** implementation in progress; Samsung runtime acceptance outstanding
+
+The focused [upstream-readiness backlog](samsung-upstream-readiness.md) separates remaining
+LG movie/show parity gates from the expanded official-client/service scope. No readiness
+announcement is authorized by source completeness or installation alone.
 **Product target:** a full Samsung Smart TV Plex client with feature parity to the supported
 PlxNative feature set, not a proof-of-concept app. Implementation may land in vertical slices; the
 completed product is not reduced to the first slice.
@@ -90,7 +94,7 @@ official-Plex parity.
 | Surface | Existing implementation/evidence | Required before completion |
 |---|---|---|
 | Account/profiles/servers | Synthetic short-code, PIN, scoped grants and recovery tests | Actual Plex and Samsung TLS/CORS, profile PIN acceptance, QR and relaunch checks |
-| Browse/search/details | Mock PMS and host DOM journeys; collections and local/catalogue people paths | Full remote navigation, search cancellation, large-library/image memory and text-fit evidence; catalogue filmography currently displays at most 200 credits and checks at most 500 local titles for availability |
+| Browse/search/details | Mock PMS and host DOM journeys; paged collections and career pages; GUID availability index | Full remote navigation, search cancellation, large-library/image memory and text-fit evidence; career pages retain 50 controls and local indexing has an explicitly reported 10,000-title safety ceiling |
 | Playback/progress | Fake AVPlay state/seek and PMS decision/timeline/read-back tests | Named-model native playback, direct/transcode, HDR/audio, native/external/burned subtitle matrix |
 | Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
 | Up Next/quality/versions | Source implementation with opt-in auto-next; multipart titles request a joined PMS transcode (`partIndex=-1`), never direct-play just the first file | Long sessions, interrupted transitions and actual server/native multipart joins, resume and completion |
@@ -463,7 +467,7 @@ superseded assertions; current source takes precedence.
 | Music and photos | `rust-modules/data/src/browse/mod.rs`, `SecKind::from_wire`, accepts only movie/show. Tests in `browse_fetch_state_tests.rs` explicitly reject artist/photo. Generic metadata/hub names are not playable screens. | Music queues/shuffle/repeat and photo slideshow exist on host. Server music PlayQueues, larger queues, native audio/image formats, interruption recovery and memory limits remain. These are new product features, not copied LG screens. |
 | Live TV/DVR | No `/livetv` or `/media/subscriptions` bindings found in Rust source; the LG parity audit excludes this domain. | Guide/grid and confirmed DVR operations exist on host. Tuner consumer allocation/keepalive/release, storage-location selection, conflict workflows and actual server/native acceptance remain. LG provides no tuner lifecycle to reuse. |
 | Watchlist | No Watchlist read/add/remove bindings found in Rust source. | Paged reads, confirmed mutations and exact-GUID local matches exist on host. Cloud/profile acceptance, packaged remote paging and recovery remain. |
-| Cloud catalogue | `rust-modules/plex/src/plex/discover.rs` implements person biographies and `CreditGroup` filmography, not general catalogue search or licensed playback. `rust-modules/data/src/person.rs` joins credits to local availability; unowned credits are not local playback targets. | Metadata search/details and local matching exist on host. Career paging remains capped; licensed/ad-supported streaming is blocked on authorization, DRM and ad contracts. A Discover module name does not prove AVOD support. |
+| Cloud catalogue | `rust-modules/plex/src/plex/discover.rs` implements person biographies and `CreditGroup` filmography, not general catalogue search or licensed playback. `rust-modules/data/src/person.rs` joins credits to local availability; unowned credits are not local playback targets. | Metadata search/details, local matching and 50-credit career pages exist on host. Licensed/ad-supported streaming is blocked on authorization, DRM and ad contracts. A Discover module name does not prove AVOD support. |
 | Server queues and Up Next | `rust-modules/plex/src/plex/timeline.rs`, `create_play_queue`, POSTs `/playQueues` with `type=video`, continuous episodes, queue/item IDs and server identity. `rust-modules/media/src/route/plan.rs` retains queue projections. | Local music queue is not equivalent to a server PlayQueue. Reuse the identity/projection rules, but establish music-specific creation, mutation, paging and cleanup contracts rather than copying the video-only call. |
 | Localization | LG has English/Spanish/Belarusian catalogs under `locales/`; translated movie/show surfaces do not supply translations for the new media/service domains. | Static/conditional copy and named placeholders covered on host. Dynamic errors/composite copy, old-engine formatting and actual display text fit remain. |
 | Playback and lifecycle | `rust-modules/media/src/player/CLAUDE.md` documents bundled FFmpeg demux, access-unit queues, Starfish feed and ACB hardware-plane binding. Those are LG-specific native interfaces. | AVPlay is a separate adapter. Hidden-state stop and foreground no-auto-play are host exercised; codecs, HDR/audio/subtitles, seeks, process kill, standby and The Frame Art Mode need Samsung acceptance. LG device results cannot certify these. |
@@ -547,12 +551,14 @@ Work directly through the dependency-ready items rather than waiting for a nativ
 - [x] Cancel view-owned reads and active response readers, including search/discovery clients; cancellation/deadline and signed-account journeys exercised on host.
 - [ ] Exercise repeated Back/search/sign-out under packaged-runtime network loss and retry.
 - [ ] Test and fix every screen's remote focus, scroll restoration, loading/empty/error and retry paths.
-- [x] Join catalogue credits to this server's titles by GUID tail, as LG `person.rs` does; held credits open the local item. Host helper and DOM journey tested (500-title index cap reported).
-- [ ] Complete person/crew career paging beyond the 200-credit display cap and the 500-title local index cap.
-- [ ] Finish collection/library paging and search type/group completeness, including older PMS response variants.
+- [x] Join catalogue credits to this server's titles by GUID tail, as LG `person.rs` does; held credits open the local item. The compact index checks up to 10,000 titles, reports truncation and rejects incomplete/misaligned pages.
+- [x] Replace the 200-credit display cap with 50-credit Previous/Next pages; preserve the career page on return and exercise a 251-credit career. Remove the 500-title local-index cutoff; a 900-title synthetic index reaches its final title.
+- [x] Advance collection pages with explicit PMS offsets and retain the loader/remaining pages when returning from details; a 51-item collection regression exercises both behaviors.
+- [ ] Finish search type/group completeness and older PMS response-variant acceptance.
 - [x] Add explicitly user-initiated watched/unwatched and remove-from-Continue-Watching actions with confirmation, duplicate-click prevention and synthetic writes only. Sources: `docs/pms-api.md` §timeline and `rust-modules/plex/src/plex/hubs.rs`.
 - [ ] Verify explicit watch actions against a named authorized test profile/item, including show/season leaf behavior and metadata refresh failures.
-- [ ] Finish artwork cache/resource eviction and establish measured low-memory ceilings.
+- [x] Bound download-plus-decode concurrency to three; release Blob URLs after decode rather than evicting undecoded visible images at 60 URLs; cancel pending decodes on view exit. A 73-image synthetic regression exercises both lifetime and cancellation.
+- [ ] Establish measured decoded-image/metadata low-memory ceilings and long-session stability on the target TV.
 - [x] Add missing-key coverage for static/conditional control and status copy in English/Spanish/Belarusian; localize static elements and named resume/duration/record/auto-next placeholders.
 - [ ] Finish dynamic error/composite-copy localization and verify locale-sensitive formatting on the target engine.
 - [ ] Verify English/Spanish/Belarusian text fit, accessibility and couch legibility on actual display sizes.
