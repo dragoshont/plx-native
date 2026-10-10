@@ -2217,7 +2217,19 @@ select:focus {
 }
 
 .screen-library .poster {
-    height: 24vw;
+    height: calc((90vw - 156px) / 4);
+}
+
+.item-list .media-card:focus {
+    transform: scale(1.06);
+}
+
+.item-list .media-card:focus .poster {
+    box-shadow: 0 0 0 4px #ffffff, 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+.browse-header .account-control:focus {
+    box-shadow: 0 0 0 4px #ffffff, 0 0 0 7px rgba(0, 0, 0, 0.6);
 }
 
 .screen-library .media-card[data-shape="landscape"] .poster {
