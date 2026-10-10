@@ -223,7 +223,7 @@
     }
 
     function queueImage(node, client, path, size, maxBytes, loaded, first) {
-        node.removeAttribute("data-artwork-error");
+        node.setAttribute("data-artwork-error", "");
         var unavailable = !path ? "metadata" :
             !client.image || !window.URL || !window.URL.createObjectURL ? "unsupported" :
             imageQueue.length >= 200 ? "capacity" : null;
