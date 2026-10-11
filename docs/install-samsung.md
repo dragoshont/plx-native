@@ -62,6 +62,20 @@ Replace that placeholder; do not type the letters `TV_IP`.
 **Ready to connect** means the developer port answers, not that signing or
 installation permission has been checked.
 
+A TV that is off or in standby shows **Not reachable**; turn it on and scan
+again, or skip it for now.
+
+Allow your TVs in your signing certificate. List every TV you want to use;
+one Samsung sign-in covers them all:
+
+```sh
+python3 tools/tizen.py cert add TV_IP [TV_IP ...]
+```
+
+A browser opens for Samsung sign-in. Every named TV must be reachable, or
+nothing is changed. TVs already covered keep working, and if every TV is
+already covered no sign-in is needed. Run it again later to add another TV.
+
 The current Samsung release is
 [Plx 0.2.2](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.2).
 Install it directly from its GitHub asset:
@@ -80,7 +94,7 @@ currently prereleases, and this repository also carries webOS releases.
 
 Repeat the command with another TV's address to install on several TVs.
 If installation reports that no signing profile allows this TV, run
-`python3 tools/tizen.py tv cert add TV_IP` and follow Samsung sign-in, then
+`python3 tools/tizen.py cert add TV_IP` and follow Samsung sign-in, then
 retry installation.
 An update must use the same author certificate as the installed app; an
 author mismatch requires resolving the error before updating.
@@ -127,6 +141,25 @@ same command again to restart. To use another port:
 ```sh
 python3 tools/tizen.py portal --port 47900
 ```
+
+## Optional: start over
+
+To remove Plx and begin again with fresh signing profiles:
+
+```sh
+python3 tools/tizen.py remove TV_IP PlxNative0.Plx
+python3 tools/tizen.py info TV_IP --app PlxNative0.Plx
+python3 tools/tizen.py cert reset PROFILE [PROFILE ...]
+python3 tools/tizen.py cert reset PROFILE [PROFILE ...] --yes
+```
+
+`remove` uninstalls exactly that app and checks the TV's app list; an app that
+is not installed is left as it is. Run it once per TV.
+`cert reset` without `--yes` only shows what would be removed. With `--yes`
+it backs up and then removes exactly the named signing profiles.
+Resetting the profile that signed an installed app means that app must be
+removed before a new profile can install it again.
+Then continue from **cert add** in step 4.
 
 For building Plx from source or deeper troubleshooting, see the
 [developer guide](samsung-getting-started.md).
