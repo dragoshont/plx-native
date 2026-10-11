@@ -16,6 +16,7 @@ function boot(firstStatus) {
     var fail = false;
     var now = 100000;
     var resolvePoll;
+    var polls = 0;
     window.Date.now = function () { return now; };
     window.setTimeout = function (callback, delay) {
         timers.set(++timerId, { callback: callback, delay: delay });
@@ -31,10 +32,14 @@ function boot(firstStatus) {
                 qr: "https://plex.tv/synthetic-qr/" + starts });
         },
         pollAuthorization: function () {
+            polls += 1;
+            if (firstStatus === "pollfail" && polls === 1) {
+                return Promise.reject(new Error("Synthetic transient poll failure"));
+            }
             if (starts === 1 && firstStatus === "slow") {
                 return new Promise(function (resolve) { resolvePoll = resolve; });
             }
-            return Promise.resolve({ status: starts === 1 ? firstStatus : "pending" });
+            return Promise.resolve({ status: starts === 1 && firstStatus !== "pollfail" ? firstStatus : "pending" });
         },
         cancelRequests: function () {}
     }; } };
@@ -107,6 +112,18 @@ async function run() {
         assert.strictEqual(ui.starts(), 7, "Foregrounding starts a fresh pairing");
         ui.window.dispatchEvent(new ui.window.Event("pagehide"));
         assert.strictEqual(ui.timers(), 0, "Leaving the app cancels every pairing timer");
+    } finally { ui.window.close(); }
+
+    ui = boot("pollfail");
+    try {
+        await settle();
+        var wait = ui.window.document.querySelector(".auth-wait");
+        assert(wait.textContent.includes("Network issue"), "A failed poll says it is retrying");
+        ui.fire(5000);
+        await settle();
+        assert.strictEqual(ui.starts(), 1, "A transient poll failure keeps the same code");
+        assert.strictEqual(wait.textContent, "Waiting for you to sign in…",
+            "A recovered poll must clear the network warning");
     } finally { ui.window.close(); }
 
     ui = boot("denied");

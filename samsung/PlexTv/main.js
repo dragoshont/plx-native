@@ -478,6 +478,7 @@
                 return;
             }
             if (result.status === "pending") {
+                info.textContent = translate("Waiting for you to sign in…");
                 authTimer = setTimeout(function () {
                     pollAuthorization(generation, info);
                 }, 3000);
