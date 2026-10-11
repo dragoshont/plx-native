@@ -77,16 +77,16 @@ nothing is changed. TVs already covered keep working, and if every TV is
 already covered no sign-in is needed. Run it again later to add another TV.
 
 The current Samsung release is
-[Plx 0.2.2](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.2).
+[Plx 0.2.3](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.3).
 Install it directly from its GitHub asset:
 
 ```sh
-python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.2/Plx-0.2.2.wgt TV_IP
+python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.3/Plx-0.2.3.wgt TV_IP
 ```
 
 The tool downloads the `.wgt` to a temporary folder, validates it, signs and
 installs it, then verifies that its app ID is listed on the TV. Failures are
-printed in the terminal. This URL selects **0.2.2**, not a future release.
+printed in the terminal. This URL selects **0.2.3**, not a future release.
 For another version, copy its `.wgt` asset link from
 [GitHub Releases](https://github.com/dragoshont/plx-native/releases).
 GitHub's generic `releases/latest` link is not suitable: Samsung releases are

@@ -231,6 +231,19 @@ body.playing {
     color: #101012;
 }
 
+/* Skip Intro / Skip Credits: a labelled pill, not an icon disc (LG skip_pill.rs). */
+.playback-controls .menu-control.skip-marker {
+    width: auto;
+    padding: 12px 32px;
+    border-radius: 36px;
+    font-size: 26px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.playback-controls .menu-control.skip-marker::before,
+.playback-controls .menu-control.skip-marker::after { content: none; }
+
 .player-hud h2 {
     margin: 0 0 16px;
     font-size: 32px;

@@ -1828,8 +1828,12 @@
             }
         }
         if (["movie", "episode", "show", "season"].indexOf(item.type) !== -1) {
-            detailAction(more, "Mark watched", "watched", function () { confirmWatchAction(item, client, "watched"); });
-            detailAction(more, "Mark unwatched", "unwatched", function () { confirmWatchAction(item, client, "unwatched"); });
+            // LG parity: the toggle that applies is a direct hero action; its opposite stays in More.
+            var leafCount = Number(item.leafCount) || 0;
+            var fullyWatched = item.type === "show" || item.type === "season" ?
+                leafCount > 0 && Number(item.viewedLeafCount) >= leafCount : Number(item.viewCount) > 0 && !item.viewOffset;
+            detailAction(fullyWatched ? more : actions, "Mark watched", "watched", function () { confirmWatchAction(item, client, "watched"); });
+            detailAction(fullyWatched ? actions : more, "Mark unwatched", "unwatched", function () { confirmWatchAction(item, client, "unwatched"); });
         }
         var trailer = window.PlexItemMenu && window.PlexItemMenu.trailerFor(item);
         if (trailer) {
@@ -2442,8 +2446,42 @@
         var forward = button(controls, translate("Forward {seconds} seconds", { seconds: preferences.skipInterval }),
             function () { seekPlayer(preferences.skipInterval * 1000); }, false, "forward");
         forward.setAttribute("data-seconds", String(preferences.skipInterval));
-        button(controls, "More", openPlaybackOptions, false, "settings");
+        var moreControl = button(controls, "More", openPlaybackOptions, false, "settings");
         hud.appendChild(controls);
+        var skip = { skipped: {}, key: null, control: null };
+        function updateSkip(position) {
+            var marker = window.PlexSkipMarkers.markerAt(item.Marker, position, skip.skipped);
+            var next = window.PlexSkipMarkers.prompt(marker);
+            var nextKey = next ? next.key : null;
+            if (nextKey === skip.key) { return; }
+            var hadFocus = skip.control && document.activeElement === skip.control;
+            if (skip.control) {
+                if (hudFocus === skip.control) { hudFocus = null; }
+                controls.removeChild(skip.control);
+                skip.control = null;
+            }
+            skip.key = nextKey;
+            if (!next) {
+                if (hadFocus) { pauseControl.focus(); }
+                return;
+            }
+            // Raised once as the segment starts, with focus on the button, so one OK skips.
+            var control = button(controls, next.label, function () {
+                if (!player || player !== ownPlayer || playerClosing) { return; }
+                skip.skipped[next.key] = true;
+                updateSkip(next.action === "seek" ? next.target : position);
+                if (next.action === "finish") { finishEpisode(); }
+                else { seekToPlayer(next.target); }
+            }, false, "none");
+            controls.removeChild(control);
+            controls.insertBefore(control, moreControl);
+            control.className += " skip-marker";
+            skip.control = control;
+            if (!document.getElementById("player-menu")) {
+                showHud();
+                control.focus();
+            }
+        }
         screen.appendChild(hud);
         var ownPlayer;
         try {
@@ -2460,6 +2498,7 @@
                         progress.setAttribute("aria-valuetext", timeLabel(event.position) + " / " +
                             timeLabel(event.duration || item.duration || 0));
                         if (progressFill.style) { progressFill.style.width = percent + "%"; }
+                        updateSkip(event.position);
                         if (externalCues) {
                             var externalSubtitle = document.getElementById("subtitle-text");
                             if (externalSubtitle) {

@@ -127,7 +127,7 @@ async function run() {
         });
     };
     ["js/plex-api.js", "js/avplay.js", "js/playback.js", "js/subtitles.js", "js/preferences.js",
-        "js/session.js", "js/recents.js", "js/item-menu.js", "js/file-info.js", "js/i18n.js", "main.js"].forEach(function (file) {
+        "js/session.js", "js/recents.js", "js/item-menu.js", "js/skip-markers.js", "js/file-info.js", "js/i18n.js", "main.js"].forEach(function (file) {
         window.eval(fs.readFileSync(path.join(app, file), "utf8"));
     });
     function click(text) {
