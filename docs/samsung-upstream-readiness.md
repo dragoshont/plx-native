@@ -144,10 +144,23 @@ Every tested app JS file matched the installed build. The run ended on Home with
 | Result | Cases |
 |---|---|
 | Observed passing | Playback start, resume, seek, stop and restart; both Continue Watching modes; auto-next off and on (the successor's timeline proves the next episode played); intro and credits marker seeks; watched/unwatched pairs; subtitle search and download (5 results, metadata stream count +1); restoring local settings |
-| Observed failing, host-fixed | (a) After an audio-stream switch AVPlay stayed `READY`. The reopen at ~6690 s prepared, but the READY-state `seekTo` never called back; no timeline was sent for 62 s. `avplay.js` now limits that seek to `resumeSeekTimeout` (8 s by default). If the seek fails or times out, it starts playback and retries the seek from `PLAYING`, which Samsung documents as the safe state for seeking HLS. If the retry also fails, it emits `resume-failed`, which the player shows as a status message instead of hanging. Covered by `avplay.test.js`. (b) Remove from Continue Watching left the item on a freshly reloaded Home. Home built its deck from the promoted `home.continue`/`home.ondeck` hubs, which PMS does not filter after removal. `getHomeHubs` now takes the deck from `/hubs/continueWatching`, as LG does (`plex/src/plex/hubs.rs`); if that call fails it falls back to the promoted rows. Covered by `home-deck.test.js`. **Both fixes still need re-verification on the device** |
+| Observed failing, host-fixed | (a) After an audio-stream switch AVPlay stayed `READY`. The reopen at ~6690 s prepared, but the READY-state `seekTo` never called back; no timeline was sent for 62 s. `avplay.js` now limits that seek to `resumeSeekTimeout` (8 s by default). If the seek fails or times out, it starts playback and retries the seek from `PLAYING`, which Samsung documents as the safe state for seeking HLS. If the retry also fails, it emits `resume-failed`, which the player shows as a status message instead of hanging. Covered by `avplay.test.js`. (b) Remove from Continue Watching left the item on a freshly reloaded Home. Home built its deck from the promoted `home.continue`/`home.ondeck` hubs, which PMS does not filter after removal. `getHomeHubs` now takes the deck from `/hubs/continueWatching`, as LG does (`plex/src/plex/hubs.rs`); if that call fails it falls back to the promoted rows. Covered by `home-deck.test.js`. Both fixes were re-verified on build `ea0d7c9b` (see below) |
 | Unverified | Subtitle cue rendering on the panel; PGS/ASS (none in the sampled media); exact firmware and HDR; physical remote; full-panel capture |
 
 Follow-up: LG restarts the transcode with `offset=` and treats the stream as starting at 0 plus a display base (`plex/src/plex/transcoder.rs`). Samsung still sends `offset: 0` and relies on AVPlay seeking. The PLAYING-state retry fixes the hang. Moving to server-side offsets would avoid a long first seek, but it means remapping positions in timelines and markers.
+
+## Direct-play device pass (build `ea0d7c9b` = `11e87f78` + `9eaaa04c`)
+
+Same TV. Once the update was installed, `productinfo` reported firmware `T-KTMDEUC-1410.1`, model family `UMU6100` and UHD support. All 19 live scripts matched the build. The pass ended on Home with AVPlay `NONE` and preferences restored.
+
+| Result | Cases |
+|---|---|
+| Fix re-verification: passing | (a) Audio switch at 6693.9 s resumed to 6702.8 s and then 6707.8 s with AVPlay `PLAYING`; the first large-offset attempt failed with an explicit stream-failure status rather than a hang. (b) The removed item is absent from a fresh `/hubs/continueWatching` and from Home |
+| Passing | Diagnostics shows the measured profile. With the policy set to Off, the app transcodes |
+| **Failing, host-fixed** | Direct play. A 1080p H.264 MKV (9.9 Mbps) and a 3840x1600 HEVC file (14.5 Mbps) both showed *Server transcode*. Root cause: the decision request carried the HLS transcode caps (`protocol=hls`, `videoResolution=1920x1080`, `videoBitrate=8000`). PMS therefore declined any original above those caps, which LG's MDE request (`transcoder.rs`) never sends. A second cause: Plex reports DTS as `dca`, while the profile listed `dts`. `playback.js` now asks for direct play with `protocol=http` and no caps, maps `dca` to the profile's `dts`, and advertises `dca`. If PMS declines, it re-requests a capped HLS transcode with its own decision. Covered by `playback.test.js` with a PMS mock that enforces caps. **Needs re-verification on the device** |
+| Blocked or unavailable | The PMS dashboard decision for Off mode; a natural decoder rejection (no unsupported sample); progress readback after the transcoded attempts (viewOffset unchanged, to investigate) |
+
+Launching under the debugger once failed with "Could not launch the null application". Reinstalling the unchanged signed WGT once recovered Inspector; the root cause is unproven.
 
 ## Follow-up feature parity review
 

@@ -196,6 +196,67 @@ async function run() {
     await session.stop();
     assert(test.calls.some(function (call) { return call[0] === "cleanup"; }));
 
+    // PMS-shaped decision: a direct ask carrying the HLS transcode caps (1080p / 8 Mbps) or
+    // protocol=hls is answered with a transcode, which is what the 2017 UE55MU6172 observed
+    // for a 9.9 Mbps 1080p H.264 MKV and a 3840x1600 HEVC MKV (device pass ea0d7c9b).
+    function pmsDecision(source) {
+        return function (query) {
+            var direct = query.directPlay === 1 && query.protocol === "http" &&
+                !(query.videoBitrate && query.videoBitrate < source.bitrate) &&
+                !(query.maxVideoBitrate && query.maxVideoBitrate < source.bitrate) &&
+                !(query.videoResolution && Number(query.videoResolution.split("x")[1]) < source.height) &&
+                /add-direct-play-profile\([^)]*audioCodec=[^)&]*\b/.test(query["X-Plex-Client-Profile-Extra"]) &&
+                new RegExp("audioCodec=[^)&]*\\b" + source.audioCodec + "\\b").test(
+                    (/add-direct-play-profile\(([^)]*)\)/.exec(query["X-Plex-Client-Profile-Extra"]) || [""])[0]);
+            return { generalDecisionCode: 1000, Metadata: [{ Media: [{ width: source.width, height: source.height,
+                videoCodec: source.videoCodec, Part: [{ decision: direct ? "directplay" : "transcode" }] }] }] };
+        };
+    }
+    var tvProfile = { evidence: "Measured on a 2017 Samsung TV (Tizen 3.0)", containers: ["mkv", "mp4", "mov"],
+        video: ["h264", "hevc"], audio: ["aac", "ac3", "eac3", "dts", "mp3"], maxWidth: 3840, maxHeight: 2160 };
+    var sources = [
+        { ratingKey: "31", container: "mkv", videoCodec: "h264", audioCodec: "ac3", width: 1920, height: 1080, bitrate: 9900 },
+        { ratingKey: "32", container: "mkv", videoCodec: "hevc", audioCodec: "eac3", width: 3840, height: 1600, bitrate: 14500 },
+        { ratingKey: "33", container: "mkv", videoCodec: "h264", audioCodec: "dca", width: 1920, height: 1080, bitrate: 6000 }
+    ];
+    for (var s = 0; s < sources.length; s += 1) {
+        var source = sources[s];
+        var sourceItem = { ratingKey: source.ratingKey, duration: 100000, Media: [{ container: source.container,
+            videoCodec: source.videoCodec, audioCodec: source.audioCodec, width: source.width, height: source.height,
+            bitrate: source.bitrate, Part: [{ id: "4" + s, key: "/library/parts/4" + s + "/file.mkv", Stream: [] }] }] };
+        test = rig();
+        var answer = pmsDecision(source);
+        test.client.request = function (path, method, query) {
+            test.calls.push(["decision", JSON.parse(JSON.stringify(query))]);
+            return Promise.resolve(answer(query));
+        };
+        session = playback.create({ client: test.client, adapter: test.adapter, item: sourceItem,
+            settings: { profile: tvProfile, quality: "1080" } });
+        await session.start();
+        assert.strictEqual(session.mode(), "direct", source.videoCodec + " " + source.width + "x" + source.height +
+            " " + source.audioCodec + " at " + source.bitrate + " kbps must direct play, not inherit the transcode cap");
+        assert(test.calls.some(function (call) { return call[0] === "open" && /library\/parts\/4/.test(call[1]); }));
+        await session.stop();
+    }
+
+    // When PMS still answers transcode, the HLS start must carry the transcode caps again.
+    test = rig();
+    var hlsQueries = [];
+    test.client.request = function (path, method, query) {
+        hlsQueries.push(JSON.parse(JSON.stringify(query)));
+        return Promise.resolve({ generalDecisionCode: 1000, Metadata: [{ Media: [{ Part: [{ decision: "transcode" }] }] }] });
+    };
+    test.client.streamUrl = function (path, query) { test.calls.push(["url", path, JSON.parse(JSON.stringify(query))]); return "https://synthetic.invalid" + path; };
+    session = playback.create({ client: test.client, adapter: test.adapter, item: item, settings: { profile: profile } });
+    await session.start();
+    assert.strictEqual(session.mode(), "transcode");
+    var started = test.calls.filter(function (call) { return call[0] === "url"; }).pop();
+    assert.strictEqual(started[2].protocol, "hls");
+    assert.strictEqual(started[2].directPlay, 0);
+    assert.strictEqual(started[2].videoBitrate, 8000, "A transcode keeps its quality cap");
+    assert.strictEqual(hlsQueries[hlsQueries.length - 1].directPlay, 0, "The transcode is registered by its own decision");
+    await session.stop();
+
     console.log("Tizen playback negotiation/progress/read-back tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exit(1); });

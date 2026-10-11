@@ -27,6 +27,25 @@
         return { audioId: audioId, subtitleId: subtitleId, explicit: false };
     }
 
+    // Plex names DTS core "dca"; the capability profile uses the codec's common name.
+    function plexAudio(codec) { return codec === "dca" ? "dts" : codec; }
+
+    // The direct-play ask mirrors LG's MDE request (plex/src/plex/transcoder.rs mde_decision):
+    // protocol=http and NO transcode caps. A 1080p / 8 Mbps cap or protocol=hls makes PMS answer
+    // "transcode" for any file above the cap, which the 2017 test TV observed for every source.
+    function directQuery(query) {
+        var ask = {};
+        Object.keys(query).forEach(function (key) { ask[key] = query[key]; });
+        ask.protocol = "http";
+        ask.directPlay = 1;
+        delete ask.videoResolution;
+        delete ask.videoBitrate;
+        delete ask.videoQuality;
+        delete ask.videoCodec;
+        delete ask.audioCodec;
+        return ask;
+    }
+
     function plan(item, options) {
         options = options || {};
         var mediaIndex = options.mediaIndex || 0;
@@ -42,7 +61,7 @@
         var profile = options.profile;
         var kind = item.type === "track" ? "music" : "video";
         var direct = kind === "video" && !multipart && profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
-            profile.video.indexOf(media.videoCodec) !== -1 && profile.audio.indexOf(media.audioCodec) !== -1 &&
+            profile.video.indexOf(media.videoCodec) !== -1 && profile.audio.indexOf(plexAudio(media.audioCodec)) !== -1 &&
             media.width <= profile.maxWidth && media.height <= profile.maxHeight && !burn;
         var session = "tizen-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
         var query = {
@@ -60,7 +79,8 @@
         };
         if (direct) {
             query["X-Plex-Client-Profile-Extra"] += "+add-direct-play-profile(type=videoProfile&protocol=http&container=" +
-                profile.containers.join(",") + "&videoCodec=" + profile.video.join(",") + "&audioCodec=" + profile.audio.join(",") + ")";
+                profile.containers.join(",") + "&videoCodec=" + profile.video.join(",") + "&audioCodec=" +
+                profile.audio.map(function (codec) { return codec === "dts" ? "dca" : codec; }).join(",") + ")";
         }
         if (kind === "music") {
             query.protocol = "http";
@@ -149,7 +169,8 @@
         }
         function negotiate() {
             if (closed || stopping) { throw new Error("Playback was cancelled."); }
-            return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", selection.query).then(function (decision) {
+            var asked = selection.direct ? directQuery(selection.query) : selection.query;
+            return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", asked).then(function (decision) {
                 if (closed || stopping) { throw new Error("Playback was cancelled."); }
                 if (Number(decision.generalDecisionCode) >= 2000 || Number(decision.transcodeDecisionCode) >= 2000) {
                     throw new Error("Plex refused playback. Change quality, source or subtitle settings and retry.");
@@ -158,7 +179,12 @@
                     decision.Metadata[0].Media && decision.Metadata[0].Media[0];
                 var selectedPart = selectedMedia && selectedMedia.Part && selectedMedia.Part[0];
                 streamMedia = selectedMedia || null;
-                selection.direct = !!(selection.direct && selectedPart && selectedPart.decision === "directplay");
+                if (selection.direct && !(selectedPart && selectedPart.decision === "directplay")) {
+                    // PMS declined the original; register the capped HLS transcode with its own decision.
+                    selection.direct = false;
+                    selection.query.directPlay = 0;
+                    return negotiate();
+                }
                 var path = selection.direct ? selection.part.key : "/" + selection.kind +
                     "/:/transcode/universal/start." + (selection.kind === "music" ? "mp3" : "m3u8");
                 var url = client.streamUrl(path, selection.direct ? {} : selection.query);
