@@ -43,7 +43,7 @@ The clean candidate SHA-256 is
 ### Earlier sign-in-screen receipt
 
 On 2026-10-11, source `7c6f7158cb95ecffad955fc7ccac477d444c9bcf` was packaged with the existing Samsung developer certificate,
-installed over `PlxTizenDv.PlexTv` and launched on the owner's previously identified 2017
+installed over the owner's private application ID and launched on the owner's previously identified 2017
 UE55MU6172 (recorded firmware `T-KTMDEUC-1410.1`; not re-read during this deployment).
 Samsung's install command exited successfully and the debug relaunch returned an Inspector port.
 Signed package SHA-256: `69b0f2cfd39471168f1efd1847d504328cf65eea58dc314a756f6eff989d0428`.
@@ -54,7 +54,7 @@ Fresh native renderer-layer captures were inspected: the installed sign-in scree
 remember-me checkbox. A bounded live viewer completed 89 cycles without capture failures,
 approximately 0.86 seconds per capture, on this static screen. These are separate paint
 layers, not full panel/compositor screenshots, and exclude AVPlay's hardware video plane.
-See [Inspector capture evidence and limits](samsung-web-inspector.md).
+Capture tooling and its limits are documented in the separate `tizen-tv-builder` toolkit.
 The owner subsequently signed in manually. The native navigation lane observed the profile/server
 pickers, Home and shelves; its full LG-reference loop and after-fix comparison are still in progress.
 Current-app native playback acceptance remains pending.

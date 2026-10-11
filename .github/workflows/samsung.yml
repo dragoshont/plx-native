@@ -2,8 +2,8 @@ name: Samsung Tizen
 
 # WHAT A GREEN RUN HERE MEANS: the Samsung web app under samsung/PlexTv parses as strict ES5 (the
 # 2018 Chromium 56 floor), its generated locale bundles match their sources, and its host contract
-# tests (Plex API, playback negotiation, timeline parity with the LG client, UI state) and the
-# inspector tooling tests pass against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
+# tests (Plex API, playback negotiation, timeline parity with the LG client, UI state) pass
+# against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
 # AVPlay plays anything, or that any Samsung model is supported. Those claims need observed TV
 # evidence (docs/samsung-upstream-readiness.md). No Rust, no ARM build, no LG artifact is touched.
 
@@ -13,14 +13,12 @@ on:
     paths:
       - 'samsung/**'
       - 'tests/tizen/**'
-      - 'tests/tizen-inspector/**'
       - 'tools/tizen/**'
       - '.github/workflows/samsung.yml'
   pull_request:
     paths:
       - 'samsung/**'
       - 'tests/tizen/**'
-      - 'tests/tizen-inspector/**'
       - 'tools/tizen/**'
       - '.github/workflows/samsung.yml'
   workflow_dispatch:
@@ -44,7 +42,3 @@ jobs:
         run: tools/tizen/test.sh
       - name: Generated locale bundles are committed
         run: git diff --exit-code -- samsung/
-      - name: Install pinned inspector dependencies (ws)
-        run: npm ci --prefix tools/tizen/inspector --no-audit --no-fund
-      - name: Inspector tooling tests
-        run: node --test tests/tizen-inspector/*.test.js

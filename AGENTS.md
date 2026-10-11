@@ -144,15 +144,7 @@ the macOS simulator are valuable, but they cannot prove every device behavior.
 - There is one physical television. Before any command that deploys, runs, drives, captures, or
   tests it, use the `tv-lock` skill and acquire the repository TV lock. Prefer `ui-sim` when the
   device is unnecessary or busy. Read-only status/log collection is the documented exception.
-- **Do not write to a real person's Plex account unless the account owner has authorized it.**
-  The repository owner may authorize device testing that writes to their own Plex account or
-  server — playback, timeline/progress, watched/unwatched, Continue Watching removal, stream
-  selection, subtitle search/download and profile selection — by stating so in the session prompt
-  or in a message relayed verbatim from them. Such an authorization overrides the default below
-  for the scope it names; do not re-ask per operation. Record each write (ratingKey, action,
-  timestamp) in a private session artifact, never in the repository. Authorization never extends
-  to extracting, logging or publishing tokens, cookies or credentials. Without it, the default
-  applies: boot with `--guest` and verify the identity
+- **Never write to a real person's Plex account.** Boot with `--guest` and verify the identity
   line in the log before sending any key; never press `ok` on a card whose `ratingKey` you have not
   read from the log; reopen a screen by relaunching with `--screen` rather than walking Home. A
   Continue Watching tile resumes playback on OK whenever Settings > Playback > Continue Watching
@@ -178,27 +170,3 @@ the macOS simulator are valuable, but they cannot prove every device behavior.
   settings remain under `.claude/`.
 - `.codex/agents/*.toml` are thin Codex wrappers around the canonical prompts. They inherit the
   parent model and reasoning effort unless a future task deliberately changes that policy.
-
-<!-- architrave:begin -->
-<!-- Managed by Architrave's Python installer; edit the kit, not this block. -->
-## Architrave
-
-Read `architrave.config.json`. Use the `architrave` skill/agent for non-trivial
-work; its small core is the canonical mission/worker/stop contract.
-Work directly for cheap single-lane changes. Host sessions, context, worktrees,
-permissions, lifecycle and model settings remain host-owned.
-
-Ground in this repository; reproduce rather than reinvent. A knowledge profile
-uses docs/scripts/schemas/tests, never an invented UI lane. UI uses configured
-design source/map/tokens and platform guidance; backend uses its real contract.
-Load those packs only for the relevant task.
-
-Mutation defaults to deny. Never expose secrets, bypass human checkpoints,
-manually edit Run state, blindly replay uncertain side effects or mistake
-worker completion/compile for product PASS. Durable recovery and evidence use
-`harness/architrave_runtime.py`; details in `knowledge/runtime-v2.md` on demand.
-Run targeted checks first; required gates must pass before completion.
-Consult architrave:cto at start and on stall inline; schedule the smallest
-demonstrable product slice, not harness ceremony. Keep Run/worktree/key artifacts
-private and ignored. No duplicate transcripts, plans or status files.
-<!-- architrave:end -->

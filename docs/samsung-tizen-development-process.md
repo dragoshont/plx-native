@@ -137,31 +137,31 @@ or command family:
 No step may silently continue after a failed precondition. Error output names the failed check and
 the safe next diagnostic, not a guessed cause or a security bypass.
 
-Initial local command family:
+App-local command family (this repository):
 
 ```sh
-tools/tizen/doctor.sh
 npm ci --prefix tests/tizen --ignore-scripts
-tools/tizen/new-web-app.sh SampleApp /tmp/tizen-apps tv-samsung-3.0
-tools/tizen/check-es5.sh /path/to/app
+tools/tizen/check-es5.sh samsung/PlexTv
 tools/tizen/test.sh
 tools/tizen/build-source.sh samsung/PlexTv
-tools/tizen/build-web.sh /path/to/app <security-profile>
+tools/tizen/build-web.sh samsung/PlexTv <security-profile>
 ```
 
-The generator wraps Samsung's installed `BasicEmptyProject`; the app owner must replace its
-`example.invalid` widget ID before distribution. `build-web.sh` requires the signing profile
-explicitly and writes generated packages beneath `samsung/dist/` (ignored by Git). These helpers
-cover project creation and local packaging only; install, emulator launch, key injection and log
-collection are not automated yet.
+These scripts only build and test **this** app with Samsung's official `tizen` CLI.
+`build-web.sh` requires the signing profile explicitly and writes generated packages beneath
+`samsung/dist/` (ignored by Git). `build-source.sh` runs Samsung's unsigned source build into a
+unique temporary output directory and removes only its own output on exit.
 
 `test.sh` runs synthetic account/PMS/native-adapter contracts, the host DOM product journey,
 generated-locale freshness and strict Acorn ES5 parsing. Dependencies are declared and locked under
 `tests/tizen/`; they are host tools, not production assets. Use
 `node tools/tizen/build-locales.js --write` after editing Samsung strings or upstream locale sources.
-`build-source.sh` runs Samsung's unsigned source build into a unique temporary output directory
-and removes only its own output on exit; it does not mutate the candidate source directory or
-install/sign a package. None of these commands launch a Samsung runtime.
+None of these commands launch a Samsung runtime.
+
+Generic, app-independent tooling — environment doctor, project generator, manifest/privilege audit,
+deterministic packing and signature checks, emulator and retail-TV harnesses, remote/inspector
+workbench, capture and recording — is deliberately **not** part of this repository. It lives in the
+separate `tizen-tv-builder` toolkit, which this app does not depend on to build, test or package.
 
 ## 6. Emulator and device policy
 
@@ -179,9 +179,8 @@ install/sign a package. None of these commands launch a Samsung runtime.
   Do not equate a package build or a `list-vm` entry with a successful emulator run. Resolve this
   with a supported host/image combination or a Samsung-supported emulator update; do not edit VM
   internals or bypass the manager as a workaround.
-- The initial shared helpers now live at `tools/tizen/doctor.sh` and
-  `tools/tizen/new-web-app.sh`, `tools/tizen/check-es5.sh`, and `tools/tizen/build-web.sh`.
-  On this host, the generator produced a clean `tv-samsung-3.0` `BasicEmptyProject`; the build
+- Historical note (2026-10-09): early shared helpers lived in this repository and have since moved
+  to the separate toolkit. On this host, the generator produced a clean `tv-samsung-3.0` `BasicEmptyProject`; the build
   wrapper originally ran a heuristic scan for common post-ES5 syntax, Samsung's `tizen build-web`, and
   `tizen package -t wgt` with an explicitly selected local signing profile. The signed package
   passed ZIP integrity checking and
@@ -218,35 +217,11 @@ server-side transcode or a clear unavailable state; it never guesses native deco
 
 ## 8. Reusable process deliverables
 
-Build these once through the first app, but keep each deliverable independently useful:
-
-1. **Tizen app skill/playbook:** initial routing and safety guidance exists in
-   `.agents/skills/samsung-tizen-tv/SKILL.md`; automated install/run details remain future work.
-2. **Project template:** `new-web-app.sh` wraps Samsung's installed sample; a versioned, repository-
-   owned template with lifecycle tests is not yet established.
-3. **Environment checker:** `doctor.sh` currently reports host architecture, Tizen CLI/version,
-   available TV web templates and emulator inventory. TV Extension version checks and actionable
-   prerequisite remediation remain future work.
-4. **Build/package wrapper:** `build-web.sh` runs the strict Acorn ES5 syntax gate, `tizen build-web` and
-   `tizen package` with an explicit profile, then hashes the package. Manifest/privilege/identifier
-   validation, secret scanning and output redaction remain future work.
-5. **Emulator harness:** image boot/readiness, install/launch, remote key schedule, logs, screenshot
-   and teardown are not automated. The current host cannot launch its installed x86_64 image.
-   Expose individual steps for debugging when the harness is implemented.
-6. **Device harness integration:** target identity, certificate/permit preflight, lock-aware bounded
-   run and teardown; never store DUIDs or credentials in source.
-7. **Conformance contract:** test interfaces for app startup/readiness, key dispatch, diagnostics,
-   lifecycle and graceful exit. Apps can provide adapters without adopting common UI code.
-8. **Compatibility evidence register:** reusable schema and tooling for per-model capability/results.
-9. **CI gates:** unit/contract tests, lint, ES5/engine compatibility as applicable, manifest and
-   privilege validation, secret scan, mock app smoke and reproducible packaging.
-10. **Release/onboarding guide:** documented at the end after local build/emulator/device workflows
-    are proven; explain what is universal and what must be repeated per developer or TV.
-
-Each deliverable records what was automated, the manual fallback, known platform limits, and its
-owner/source of truth. Do not duplicate the same runbook across a skill, README and scripts: keep
-the skill as the entry point, canonical behavior in tooling, and detailed facts in one maintained
-reference.
+The reusable deliverables (agent skills, project template, environment checker, build/package and
+audit wrapper, emulator harness, device harness, conformance contract and compatibility evidence
+register) are owned by the separate `tizen-tv-builder` toolkit and versioned there. This repository
+keeps only the Samsung Plex app, its tests, and the thin app build scripts listed in §5. App-specific
+device results stay in `docs/samsung-upstream-readiness.md`.
 
 ## 9. First-app process milestones
 
