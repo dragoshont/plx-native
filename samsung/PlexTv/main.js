@@ -2281,13 +2281,13 @@
         if (hud) { hud.hidden = false; }
         if (shell) { shell.classList.remove("hud-hidden"); }
         if (!player || playerClosing || hudBuffering ||
-                ["playing", "paused"].indexOf(player.snapshot().state) === -1 ||
+                player.snapshot().state !== "playing" ||
                 document.getElementById("player-menu") || status.className.indexOf("status-error") !== -1) { return; }
         var owner = player;
         hudTimer = setTimeout(function () {
             hudTimer = null;
             if (player !== owner || playerClosing || hudBuffering ||
-                    ["playing", "paused"].indexOf(owner.snapshot().state) === -1 ||
+                    owner.snapshot().state !== "playing" ||
                     document.getElementById("player-menu")) { return; }
             if (hud) {
                 if (hud.contains(document.activeElement)) {

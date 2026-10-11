@@ -516,12 +516,9 @@ async function run() {
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 19, bubbles: true }));
         await settle();
         assert.strictEqual(state, "PAUSED", "Media Pause must still work while the HUD is hidden");
-        assert.strictEqual(hudTimers.size, 1, "Paused playback still arms the HUD auto-hide timer");
-        hideHud();
-        assert.strictEqual(window.document.querySelector(".player-hud").hidden, true,
-            "The HUD auto-hides while playback is paused");
-        remote("keydown", 13);
-        assert.strictEqual(window.document.activeElement, pauseControl, "Revealing the paused HUD restores transport focus");
+        assert.strictEqual(hudTimers.size, 0, "Paused playback must not arm HUD hiding");
+        assert.strictEqual(window.document.querySelector(".player-hud").hidden, false,
+            "Pausing keeps the paused controls visible");
         var pausedPosition = position;
         pauseControl.focus();
         remote("keydown", 38);
@@ -563,7 +560,8 @@ async function run() {
         click("Pause / Play");
         await settle();
         assert.strictEqual(state, "PAUSED");
-        assert.strictEqual(hudTimers.size, 1, "Paused playback arms a HUD auto-hide timer");
+        assert.strictEqual(hudTimers.size, 0, "Paused playback must not hide its controls");
+        assert.strictEqual(window.document.querySelector(".player-hud").hidden, false);
         click("Forward 15 seconds");
         await settle();
         assert.strictEqual(position, 27000);
