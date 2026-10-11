@@ -41,6 +41,7 @@
     var hudTimer = null;
     var hudBuffering = false;
     var hudFocus = null;
+    var scrubReturnFocus = null;
     var nextTimer = null;
     var playerClosing = false;
     var lastAction = 0;
@@ -2282,12 +2283,14 @@
         var shell = document.querySelector(".app-shell");
         if (hud) { hud.hidden = false; }
         if (shell) { shell.classList.remove("hud-hidden"); }
-        if (!player || playerClosing || hudBuffering || player.snapshot().state !== "playing" ||
+        if (!player || playerClosing || hudBuffering ||
+                ["playing", "paused"].indexOf(player.snapshot().state) === -1 ||
                 document.getElementById("player-menu") || status.className.indexOf("status-error") !== -1) { return; }
         var owner = player;
         hudTimer = setTimeout(function () {
             hudTimer = null;
-            if (player !== owner || playerClosing || hudBuffering || owner.snapshot().state !== "playing" ||
+            if (player !== owner || playerClosing || hudBuffering ||
+                    ["playing", "paused"].indexOf(owner.snapshot().state) === -1 ||
                     document.getElementById("player-menu")) { return; }
             if (hud) {
                 if (hud.contains(document.activeElement)) {
@@ -2399,6 +2402,7 @@
         clear(screen);
         hudBuffering = false;
         hudFocus = null;
+        scrubReturnFocus = null;
         playerItem = item;
         playerClient = client;
         playerSettings = {
@@ -2417,10 +2421,14 @@
         time.id = "playback-time";
         hud.appendChild(time);
         var progress = element("div", "playback-progress");
-        progress.setAttribute("role", "progressbar");
-        progress.setAttribute("aria-label", item.title || translate("Playing"));
+        progress.id = "playback-progress";
+        progress.setAttribute("role", "slider");
+        progress.setAttribute("tabindex", "0");
+        progress.setAttribute("aria-label", translate("Playback position"));
         progress.setAttribute("aria-valuemin", "0");
-        progress.setAttribute("aria-valuemax", "100");
+        progress.setAttribute("aria-valuemax", String(item.duration || 1));
+        progress.setAttribute("aria-valuenow", String(offset || 0));
+        progress.setAttribute("aria-valuetext", timeLabel(offset || 0) + " / " + timeLabel(item.duration || 0));
         var progressFill = element("div", "playback-progress-fill");
         progress.appendChild(progressFill);
         hud.appendChild(progress);
@@ -2450,7 +2458,10 @@
                         var label = document.getElementById("playback-time");
                         if (label) { label.textContent = timeLabel(event.position) + " / " + timeLabel(event.duration || item.duration); }
                         var percent = Math.min(100, Math.max(0, event.position * 100 / (event.duration || item.duration || 1)));
-                        progress.setAttribute("aria-valuenow", String(Math.round(percent)));
+                        progress.setAttribute("aria-valuemax", String(event.duration || item.duration || 1));
+                        progress.setAttribute("aria-valuenow", String(Math.round(event.position)));
+                        progress.setAttribute("aria-valuetext", timeLabel(event.position) + " / " +
+                            timeLabel(event.duration || item.duration || 0));
                         if (progressFill.style) { progressFill.style.width = percent + "%"; }
                         if (externalCues) {
                             var externalSubtitle = document.getElementById("subtitle-text");
@@ -2570,6 +2581,15 @@
         scrubRepeats += 1;
         var step = preferences.skipInterval * 1000 * Math.min(4, 1 + Math.floor((scrubRepeats - 1) / 3));
         scrubTarget = Math.max(0, Math.min(snapshot.duration || playerItem.duration || 0, scrubTarget + direction * step));
+        var duration = snapshot.duration || playerItem.duration || 1;
+        var progress = document.getElementById("playback-progress");
+        if (progress) {
+            progress.setAttribute("aria-valuemax", String(duration));
+            progress.setAttribute("aria-valuenow", String(Math.round(scrubTarget)));
+            progress.setAttribute("aria-valuetext", timeLabel(scrubTarget) + " / " + timeLabel(duration));
+            var fill = progress.querySelector(".playback-progress-fill");
+            if (fill && fill.style) { fill.style.width = Math.min(100, Math.max(0, scrubTarget * 100 / duration)) + "%"; }
+        }
         setStatus(translate("Seek to {time}", { time: timeLabel(scrubTarget) }));
         if (scrubTimer !== null) { clearTimeout(scrubTimer); }
         scrubTimer = setTimeout(commitScrub, 300);
@@ -3052,8 +3072,29 @@
         return false;
     }
 
+    function restoreScrubControl() {
+        var controls = screen.querySelectorAll(".playback-controls button");
+        var target = scrubReturnFocus;
+        if (!target || !target.parentNode || target.disabled || insideHidden(target)) {
+            target = controls.length > 1 ? controls[1] : controls[0];
+        }
+        if (target) { target.focus(); }
+    }
+
     function moveFocus(direction, key) {
         var active = document.activeElement;
+        var hud = player && screen.querySelector(".player-hud");
+        var playerControls = hud && hud.querySelector(".playback-controls");
+        var scrubSurface = hud && hud.querySelector(".playback-progress");
+        if (playerControls && scrubSurface && !hud.hidden && key === 38 && playerControls.contains(active)) {
+            scrubReturnFocus = active;
+            scrubSurface.focus();
+            return;
+        }
+        if (scrubSurface && !hud.hidden && key === 40 && active === scrubSurface) {
+            restoreScrubControl();
+            return;
+        }
         var localRow = active && active.parentNode;
         if ((key === 37 || key === 39) && localRow &&
                 /(?:home-navigation|home-feature-actions|playback-controls|detail-actions)/.test(localRow.className || "")) {
@@ -3182,9 +3223,19 @@
             active.checked = !active.checked;
             return;
         }
+        if (player && active && active.id === "playback-progress" && key === 13) {
+            event.preventDefault();
+            commitScrub();
+            return;
+        }
         if (key === 10009 || key === 27 || key === 8) {
             if (editing && key === 8) { return; }
             event.preventDefault();
+            if (player && active && active.id === "playback-progress") {
+                commitScrub();
+                restoreScrubControl();
+                return;
+            }
             if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; setStatus("Auto-play cancelled."); return; }
             var menu = document.getElementById("player-menu");
             if (menu) {

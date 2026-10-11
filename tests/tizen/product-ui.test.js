@@ -419,12 +419,23 @@ async function run() {
         assert.strictEqual(window.document.body.className, "playing");
         assert.strictEqual(window.document.querySelector(".playback-controls").querySelectorAll("button").length, 4,
             "Playback should expose only transport and More on the main overlay");
+        var scrubSurface = window.document.querySelector(".playback-progress");
+        assert.strictEqual(scrubSurface.getAttribute("role"), "slider",
+            "Playback position is a remote-focusable scrub surface, not a passive progress bar");
+        assert.strictEqual(scrubSurface.getAttribute("tabindex"), "0",
+            "The scrub surface is reachable by remote focus");
+        assert.strictEqual(scrubSurface.getAttribute("aria-valuenow"), "0",
+            "The slider exposes its current position");
         function remote(type, key, repeat) {
             window.document.dispatchEvent(new window.KeyboardEvent(type, { keyCode: key, repeat: !!repeat, bubbles: true }));
         }
         var playerControls = Array.from(window.document.querySelectorAll(".playback-controls button"));
         assert.strictEqual(window.document.activeElement, playerControls[0], "Playback starts with rewind focused");
         playerControls[1].focus();
+        remote("keydown", 38);
+        assert.strictEqual(window.document.activeElement, scrubSurface, "Up from transport controls focuses playback position");
+        remote("keydown", 40);
+        assert.strictEqual(window.document.activeElement, playerControls[1], "Down returns to the transport control that opened the slider");
         var seeksBeforeNavigation = seekTargets.length;
         remote("keydown", 39);
         assert.strictEqual(window.document.activeElement, playerControls[2],
@@ -505,7 +516,32 @@ async function run() {
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 19, bubbles: true }));
         await settle();
         assert.strictEqual(state, "PAUSED", "Media Pause must still work while the HUD is hidden");
-        assert.strictEqual(hudTimers.size, 0);
+        assert.strictEqual(hudTimers.size, 1, "Paused playback still arms the HUD auto-hide timer");
+        hideHud();
+        assert.strictEqual(window.document.querySelector(".player-hud").hidden, true,
+            "The HUD auto-hides while playback is paused");
+        remote("keydown", 13);
+        assert.strictEqual(window.document.activeElement, pauseControl, "Revealing the paused HUD restores transport focus");
+        var pausedPosition = position;
+        pauseControl.focus();
+        remote("keydown", 38);
+        assert.strictEqual(window.document.activeElement, scrubSurface,
+            "Up from paused transport focuses the scrub slider");
+        var pausedSeeks = seekTargets.length;
+        for (var pausedRepeat = 0; pausedRepeat < 7; pausedRepeat++) {
+            remote("keydown", 39, pausedRepeat > 0);
+        }
+        assert(Number(scrubSurface.getAttribute("aria-valuenow")) > pausedPosition,
+            "Held Right previews the pending scrub position accessibly");
+        remote("keyup", 39);
+        await settle();
+        assert.strictEqual(seekTargets.length, pausedSeeks + 1, "Paused held scrub commits one seek");
+        assert(position > pausedPosition && position <= movie.duration, "Paused scrub advances without exceeding duration");
+        assert.strictEqual(state, "PAUSED", "Scrubbing while paused leaves playback paused");
+        remote("keydown", 13);
+        assert.strictEqual(state, "PAUSED", "OK on the slider commits but does not toggle playback");
+        remote("keydown", 27);
+        assert.strictEqual(window.document.activeElement, pauseControl, "Back from the slider restores its transport control");
         click("Pause / Play");
         await settle();
         assert.strictEqual(state, "PLAYING");
@@ -517,7 +553,7 @@ async function run() {
         assert.strictEqual(window.document.querySelector(".player-hud").hidden, false);
         listener.oncurrentplaytime(12000);
         assert(window.document.getElementById("playback-time").textContent.startsWith("0:12"));
-        assert.strictEqual(window.document.querySelector(".playback-progress").getAttribute("aria-valuenow"), "12");
+        assert.strictEqual(window.document.querySelector(".playback-progress").getAttribute("aria-valuenow"), "12000");
         listener.onbufferingstart();
         assert.strictEqual(hudTimers.size, 0, "Buffering must keep controls visible");
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
@@ -527,7 +563,7 @@ async function run() {
         click("Pause / Play");
         await settle();
         assert.strictEqual(state, "PAUSED");
-        assert.strictEqual(hudTimers.size, 0, "Paused playback must not hide its controls");
+        assert.strictEqual(hudTimers.size, 1, "Paused playback arms a HUD auto-hide timer");
         click("Forward 15 seconds");
         await settle();
         assert.strictEqual(position, 27000);

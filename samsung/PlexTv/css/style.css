@@ -189,6 +189,11 @@ body.playing {
     background: rgba(255, 255, 255, 0.28);
 }
 
+.playback-progress:focus {
+    outline: 3px solid #ffffff;
+    outline-offset: 8px;
+}
+
 .playback-progress-fill {
     width: 0;
     height: 100%;

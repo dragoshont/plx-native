@@ -49,6 +49,7 @@
   },
   "Server transcode": { "es": "Transcodificación del servidor", "be": "Транскадаванне серверам" },
   "Server stream": { "es": "Flujo indicado por el servidor", "be": "Паток паводле сервера" },
+  "Playback position": { "es": "Posición de reproducción", "be": "Пазіцыя прайгравання" },
   "Transcode limit": { "es": "Límite de transcodificación", "be": "Мяжа транскадавання" },
   "Transcode quality": { "es": "Calidad de transcodificación", "be": "Якасць транскадавання" },
   "Device tracks": { "es": "Pistas del dispositivo", "be": "Дарожкі прылады" },
