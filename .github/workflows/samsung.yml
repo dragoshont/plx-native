@@ -38,6 +38,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned test dependencies (jsdom, acorn)
+        run: npm ci --prefix tests/tizen --no-audit --no-fund
       - name: Contract tests, ES5 parse and locale build
         run: tools/tizen/test.sh
       - name: Generated locale bundles are committed
