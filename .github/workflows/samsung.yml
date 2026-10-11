@@ -45,4 +45,4 @@ jobs:
       - name: Generated locale bundles are committed
         run: git diff --exit-code -- samsung/
       - name: Inspector tooling tests
-        run: node --test tests/tizen-inspector/
+        run: node --test tests/tizen-inspector/*.test.js
