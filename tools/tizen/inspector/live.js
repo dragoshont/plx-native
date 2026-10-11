@@ -5,11 +5,10 @@ const crypto = require('node:crypto');
 const { InspectorError } = require('./client');
 const { layerCapture } = require('./layers');
 const { KEYS, readState, refuseOk, press } = require('./nav');
-const { keyCommand, createSender } = require('./remote');
+const { keyCommand, createSender, connectionStatus } = require('./remote');
 
 const KIND = 'live-on-device-renderer-paint-replay-not-panel';
-const LABEL = 'Live native renderer paint layers replayed on the TV. Separate and incomplete: ' +
-    'NOT the panel image (no hardware video plane, system UI, compositing or panel processing).';
+const LABEL = 'TV app view. Playback video and TV menus are not captured.';
 const MAX_FAILURES = 3;
 const GEOMETRY = ['width', 'height', 'offsetX', 'offsetY', 'hasTransform'];
 const QUEUE_LIMIT = 2; // one command dispatching plus one waiting; anything more is refused, never queued
@@ -34,23 +33,26 @@ function page(nonce, intervalMs, interactive) {
 <button data-key="up">Up</button><button data-key="down">Down</button><button data-key="left">Left</button>
 <button data-key="right">Right</button><button data-key="ok">OK</button><button data-key="back">Back</button>
 <span class="sep"></span><button id="refresh">Refresh now</button><button id="pause">Pause</button></div>
-<div id="command">input: idle</div>` : '<div id="command">input disabled (view only)</div>';
-    return `<!doctype html><html><head><meta charset="utf-8"><title>Samsung native layers (not panel)</title>
+<div id="command"></div>` : '<div id="command">View only</div>';
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Samsung TV viewer</title>
 <style>body{background:#141414;color:#ececec;font:14px system-ui,sans-serif;margin:16px}
-#label{background:#2a2a2a;border-left:3px solid #d6a740;padding:8px 12px;font-weight:600}#status,#command,#focus,#meta{margin:6px 0;font-family:monospace}
-#stale{display:none;background:#b8860b;color:#000;padding:6px 12px;font-weight:700}
+#label{color:#bbb;padding:4px 0}#status,#command,#focus,#meta{margin:6px 0}
+#status[data-disconnected="true"]{background:#b8860b;color:#000;padding:6px 12px;font-weight:700}
 #controls button{margin:2px;padding:6px 12px}.sep{display:inline-block;width:16px}
 #surface{outline:2px solid #555;padding:6px;margin-top:8px}#surface:focus{outline:3px solid #fff}
 figure{display:inline-block;vertical-align:top;margin:0 12px 12px 0;border:1px solid #2e2e2e;padding:6px;max-width:100%}
 img{max-width:100%;background:repeating-conic-gradient(#333 0 25%,#222 0 50%) 0 0/16px 16px;display:block}
 figcaption{font-family:monospace;font-size:12px;margin-top:4px}</style></head><body>
-<div id="label"></div><div id="stale"></div><div id="status">connecting…</div><div id="meta"></div>
+<div id="status" role="status">Connecting to TV...</div><div id="label"></div>
 ${controls}<div id="focus"></div>
 <div id="surface" tabindex="0" role="application" aria-label="TV remote surface: arrows, Enter/Space = OK, Backspace = Back"><div id="layers"></div></div>
+<details><summary>Capture details</summary><div id="meta"></div><div id="diagnostics"></div>
+<p>Images come from the TV app's renderer. Layers are shown separately, not combined into a full TV screenshot.</p></details>
 <script nonce="${nonce}">
 'use strict';
 const keyCommand = ${keyCommand.toString()};
 const createSender = ${createSender.toString()};
+const connectionStatus = ${connectionStatus.toString()};
 const base = location.pathname;
 const csrf = ${JSON.stringify(nonce)};
 const interval = ${intervalMs};
@@ -68,12 +70,15 @@ async function post(route, body) {
 function report(result) {
   const node = $('command');
   if (!node) return;
-  node.textContent = 'input: ' + result.key + ' ' + result.status + (result.reason ? ' (' + result.reason + ')' : '') +
-    (result.rttMs !== undefined ? ' server-RTT ' + result.rttMs + 'ms' : '') +
-    (result.clientRttMs !== undefined ? ' round-trip ' + result.clientRttMs + 'ms' : '');
+  const reasons = { profile_switch_refused: 'Select your profile with the TV remote.',
+    viewer_unreachable: 'Disconnected. Controls unavailable.', viewer_ended: 'Disconnected. Controls unavailable.',
+    command_in_flight: 'Wait for the previous key.', playback_control_refused: 'This viewer supports browsing only.' };
+  node.textContent = result.status === 'pressed' ? '' : result.status === 'pending' ? 'Sending...' :
+    reasons[result.reason] || 'Key not sent' + (result.reason ? ': ' + result.reason.replace(/_/g, ' ') : '.');
 }
 const sender = createSender((key, extra) => post('key', Object.assign({ key: key }, extra)), report);
 function send(key) {
+  if (!connectionStatus(state, fetched, Date.now(), interval).enabled) { render(); return; }
   const focus = state && state.focus;
   const extra = key === 'ok' && focus && focus.kind === 'card' && focus.ratingKey ? { ratingKey: focus.ratingKey } : {};
   sender.send(key, extra);
@@ -91,19 +96,18 @@ if ($('controls')) {
   for (const button of document.querySelectorAll('button[data-key]')) {
     button.addEventListener('click', () => send(button.dataset.key));
   }
-  $('refresh').addEventListener('click', () => post('refresh', {}).then(report, () => {}));
-  $('pause').addEventListener('click', () => post('pause', { paused: !(state && state.paused) }).then(tick, () => {}));
+  $('refresh').addEventListener('click', () => post('refresh', {}).then(report, () => report({reason:'viewer_unreachable'})));
+  $('pause').addEventListener('click', () => post('pause', { paused: !(state && state.paused) }).then(tick, () => report({reason:'viewer_unreachable'})));
 }
 function render() {
+  const connection = connectionStatus(state, fetched, Date.now(), interval);
+  $('status').textContent = connection.text;
+  for (const button of document.querySelectorAll('#controls button')) button.disabled = !connection.enabled;
+  surface.setAttribute('aria-disabled', String(!connection.enabled));
+  $('status').setAttribute('data-disconnected', String(!!state && !connection.enabled));
   if (!state) return;
   const age = state.capturedAt ? ((Date.now() - Date.parse(state.capturedAt)) / 1000).toFixed(1) + 's' : 'none';
-  const polled = ((Date.now() - fetched) / 1000).toFixed(0);
-  const stale = state.state !== 'live' || state.lastError || Date.now() - fetched > 5000 ||
-    (state.capturedAt && !state.paused && Date.now() - Date.parse(state.capturedAt) > 3 * interval + 5000);
-  $('stale').style.display = stale ? 'block' : 'none';
-  $('stale').textContent = 'STALE: last genuine capture shown; ' + (state.endReason ? 'ended ' + state.endReason :
-    state.lastError ? 'last error ' + state.lastError : Date.now() - fetched > 5000 ? 'viewer unreachable ' + polled + 's' : 'capture overdue');
-  $('status').textContent = 'state=' + state.state + (state.paused ? ' PAUSED' : '') + ' capture#' + state.sequence +
+  $('diagnostics').textContent = 'state=' + state.state + (state.paused ? ' PAUSED' : '') + ' capture#' + state.sequence +
     ' frame age ' + age + ' (capture ' + state.captureMs + 'ms) cycles=' + state.cycles + ' changed=' + state.changedCycles +
     (state.truncated ? ' TRUNCATED to ' + state.layers.length + '/' + state.drawableLayers + ' layers' : '') +
     (state.input && state.input.enabled ? ' commands pending=' + state.input.pending : '');
@@ -111,8 +115,11 @@ function render() {
   $('meta').textContent = 'source=' + state.provenance.source + ' tv=' + (meta.provenance === 'unknown' ? 'unknown' :
     ['model', 'year', 'os', 'firmware'].filter(key => meta[key]).map(key => key + ':' + meta[key]).join(' ') + ' (' + meta.provenance + ')');
   const focus = state.focus;
-  $('focus').textContent = focus ? 'focus ' + (focus.error ? 'unknown (' + focus.error + ')' : focus.kind + ' row=' + (focus.row || '-') +
-    (focus.cardType ? ' ' + focus.cardType : '') + ' OK ' + (focus.okRefusal ? 'blocked: ' + focus.okRefusal : 'allowed')) : '';
+  const ok = document.querySelector('button[data-key="ok"]');
+  if (ok) ok.disabled = !connection.enabled || !focus || !!focus.error || !!focus.okRefusal;
+  $('focus').textContent = connection.enabled && focus && focus.okRefusal === 'profile_switch_refused' ?
+    'Select your profile with the TV remote.' : connection.enabled && focus && focus.okRefusal ?
+    'OK unavailable here. Use arrows or Back.' : '';
   if ($('pause')) $('pause').textContent = state.paused ? 'Resume' : 'Pause';
   const key = state.sequence + ':' + state.layers.map(layer => layer.sha256).join(',');
   if (key !== shown && state.layers.length) {
@@ -132,14 +139,16 @@ function render() {
       const image = document.createElement('img');
       image.src = base + 'frame/' + state.sequence + '/' + layer.index + '.png';
       image.alt = 'separate renderer layer ' + layer.index;
-      figure.append(image, text('figcaption', caption(layer)));
+      const detail = document.createElement('details');
+      detail.append(text('summary', 'Layer details'), text('figcaption', caption(layer)));
+      figure.append(image, detail);
       return figure;
     }));
   }
 }
 async function tick() {
   try { state = await (await fetch(base + 'state', { cache: 'no-store' })).json(); fetched = Date.now(); $('label').textContent = state.label; }
-  catch (_) { /* keep the last frame; render() marks it STALE */ }
+  catch (_) { fetched = 0; }
   render();
 }
 setInterval(render, 250);

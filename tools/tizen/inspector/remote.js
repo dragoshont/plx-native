@@ -40,4 +40,20 @@ function createSender(post, report) {
     };
 }
 
-module.exports = { keyCommand, createSender };
+function connectionStatus(state, fetched, now, interval) {
+    if (!state) return { text: 'Connecting to TV...', enabled: false };
+    if (state.state === 'ended') return { text: 'Disconnected. Last image shown; controls unavailable.', enabled: false };
+    if (!fetched || now - fetched > 5000) {
+        return { text: 'Connection lost. Last image shown; controls unavailable.', enabled: false };
+    }
+    if (state.lastError || (state.capturedAt && !state.paused &&
+        now - Date.parse(state.capturedAt) > 3 * interval + 5000)) {
+        return { text: 'Image updates interrupted. Last image shown; controls unavailable.', enabled: false };
+    }
+    if (state.state !== 'live' || !state.capturedAt) {
+        return { text: 'Waiting for the first TV image...', enabled: false };
+    }
+    return { text: state.paused ? 'Image updates paused.' : 'Connected to TV.', enabled: true };
+}
+
+module.exports = { keyCommand, createSender, connectionStatus };

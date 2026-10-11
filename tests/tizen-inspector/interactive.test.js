@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const { fake, image } = require('./fake');
 const { LiveView, QUEUE_LIMIT, BODY_LIMIT } = require('../../tools/tizen/inspector/live');
 const { STATE } = require('../../tools/tizen/inspector/nav');
-const { keyCommand, createSender } = require('../../tools/tizen/inspector/remote');
+const { keyCommand, createSender, connectionStatus } = require('../../tools/tizen/inspector/remote');
 
 const browse = (label = 'Movies', extra = {}) => ({ screen: 'screen screen-home', menu: false, player: false,
     continueAction: 'unset', active: { kind: 'button', label, nav: true, row: 'other',
@@ -102,6 +102,22 @@ test('shortcuts map only on the focused remote surface and never on editing targ
     assert.deepEqual(keyCommand(keyEvent(surface, 'ArrowDown', { repeat: true }), surface), { key: 'down', send: false });
 });
 
+test('connection status disables stale controls and never labels old frames live', () => {
+    const now = 100000;
+    const live = { state: 'live', capturedAt: new Date(now - 1000).toISOString(), paused: false };
+    assert.equal(connectionStatus(null, 0, now, 10000).enabled, false);
+    assert.deepEqual(connectionStatus(live, now, now, 10000), { text: 'Connected to TV.', enabled: true });
+    assert.match(connectionStatus(live, now - 5001, now, 10000).text, /Connection lost/);
+    assert.equal(connectionStatus(live, now - 5001, now, 10000).enabled, false);
+    assert.equal(connectionStatus(live, 0, now, 10000).enabled, false);
+    assert.equal(connectionStatus({ ...live, lastError: 'protocol_error' }, now, now, 10000).enabled, false);
+    assert.equal(connectionStatus({ ...live, capturedAt: new Date(now - 35001).toISOString() }, now, now, 10000).enabled, false);
+    assert.deepEqual(connectionStatus({ ...live, paused: true }, now, now, 10000),
+        { text: 'Image updates paused.', enabled: true });
+    assert.match(connectionStatus({ ...live, state: 'ended' }, now, now, 10000).text, /Disconnected/);
+    assert.equal(connectionStatus({ ...live, state: 'ended' }, now, now, 10000).enabled, false);
+});
+
 test('the page sender allows one command in flight and reports drops and failures', async () => {
     const reports = [];
     let resolve;
@@ -130,6 +146,11 @@ test('the served page embeds the same tested remote code and binds keys to the s
     const html = (await send(url, { method: 'GET' })).text;
     assert.ok(html.includes(keyCommand.toString()));
     assert.ok(html.includes(createSender.toString()));
+    assert.ok(html.includes(connectionStatus.toString()));
+    assert.match(html, /button\.disabled = !connection\.enabled/);
+    assert.match(html, /if \(!connectionStatus\(state, fetched, Date\.now\(\), interval\)\.enabled\)/);
+    assert.match(html, /Select your profile with the TV remote/);
+    assert.doesNotMatch(html, /STALE:|Live native renderer paint/);
     assert.ok(html.includes(JSON.stringify(view.nonce)));
     assert.match(html, /id="surface" tabindex="0" role="application"/);
     assert.match(html, /surface\.addEventListener\('keydown'/);
@@ -139,6 +160,60 @@ test('the served page embeds the same tested remote code and binds keys to the s
     assert.doesNotThrow(() => new vm.Script(script));
     // Unchanged pixels reuse images but still refresh captions (a layer can move without repainting).
     assert.match(script, /if \(reuse\) \{[^}]*querySelectorAll\('figcaption'\)/);
+});
+
+test('browser page disables buttons and keyboard dispatch when its connection disappears', async t => {
+    const { url, view } = await viewer(t);
+    const html = (await send(url, { method: 'GET' })).text;
+    const script = html.slice(html.indexOf('<script'), html.indexOf('</script>')).replace(/^<script[^>]*>/, '');
+    const now = Date.now();
+    let online = true;
+    let posts = 0;
+    const nodes = new Map();
+    const node = id => {
+        if (!nodes.has(id)) nodes.set(id, {
+            textContent: '', disabled: false, attributes: {}, dataset: { key: id },
+            addEventListener() {}, focus() {},
+            setAttribute(key, value) { this.attributes[key] = value; }
+        });
+        return nodes.get(id);
+    };
+    const buttons = ['up', 'down', 'left', 'right', 'ok', 'back', 'refresh', 'pause'].map(node);
+    const state = { ...view.state, layers: [] };
+    const context = vm.createContext({
+        document: {
+            getElementById: node,
+            querySelectorAll: selector => selector === 'button[data-key]' ? buttons.slice(0, 6) : buttons,
+            querySelector: () => node('ok')
+        },
+        location: { pathname: '/' },
+        Date: { now: () => now, parse: Date.parse },
+        setInterval() {}, setTimeout() {},
+        fetch: async (_url, options) => {
+            if (options.method === 'POST') posts++;
+            if (!online) throw new Error('offline');
+            return { json: async () => state };
+        }
+    });
+    vm.runInContext(script, context);
+    await new Promise(setImmediate);
+    assert.equal(node('status').textContent, 'Connected to TV.');
+    assert.equal(node('down').disabled, false);
+    online = false;
+    await vm.runInContext('tick()', context);
+    assert.match(node('status').textContent, /Connection lost/);
+    assert.ok(buttons.every(button => button.disabled));
+    assert.equal(node('surface').attributes['aria-disabled'], 'true');
+    vm.runInContext("send('down')", context);
+    await new Promise(setImmediate);
+    assert.equal(posts, 0);
+    online = true;
+    await vm.runInContext('tick()', context);
+    assert.equal(node('down').disabled, false);
+    state.state = 'ended';
+    await vm.runInContext('tick()', context);
+    assert.match(node('status').textContent, /Disconnected/);
+    assert.ok(buttons.every(button => button.disabled));
 });
 
 test('POST requires interactive mode, exact origin, CSRF header, JSON type and a bounded body', async t => {
@@ -170,7 +245,7 @@ test('POST requires interactive mode, exact origin, CSRF header, JSON type and a
     t.after(() => { readOnly.stop('interrupted'); return readOnly.done; });
     const readOnlyHeaders = { ...headers, Origin: readOnly.origin, 'X-Plx-Viewer': readOnly.nonce };
     assert.equal((await send(readOnlyUrl + 'key', { body: '{"key":"down"}', headers: readOnlyHeaders })).status, 405);
-    assert.match((await send(readOnlyUrl, { method: 'GET' })).text, /input disabled \(view only\)/);
+    assert.match((await send(readOnlyUrl, { method: 'GET' })).text, /View only/);
     assert.equal(target.log.some(entry => entry.method === 'Input.dispatchKeyEvent'), false);
 });
 

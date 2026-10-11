@@ -216,8 +216,9 @@ discarded when a new one is published. A frame URL for an older sequence
 returns 410, so the page never shows a reused image under a fresh capture
 number.
 
-The page shows a red label: **separate and incomplete renderer layers, not the
-panel**. It does not composite layers. Each layer caption shows the
+The page says **TV app view. Playback video and TV menus are not captured.**
+It does not composite layers. Expand Capture details or Layer details for
+technical diagnostics. Each layer caption shows the
 parent-relative offset, a transform warning and whether the layer changed
 since the previous capture. A layer counts as changed when its PNG SHA-256 or
 its reported geometry (size, offset, transform presence) differs; `state`
@@ -243,7 +244,11 @@ A new capture of an unchanged screen gets a new `capturedAt` and `sequence`
 but `changed: false`; the page reuses the image it already holds when every
 layer hash is unchanged. The page computes frame age from `capturedAt`. When
 the viewer ends, errors or stops answering, the page keeps the last genuine
-image under a yellow **STALE** banner; it never substitutes another source.
+image with **Disconnected**, **Connection lost**, or **Image updates interrupted**;
+remote controls are disabled until a fresh connection and image are available.
+Keyboard shortcuts are also disabled while disconnected. It never substitutes
+another source. An unavailable OK action is disabled before clicking, with
+plain-language guidance instead of a protocol error.
 
 `--tv-model`, `--tv-year`, `--tv-os` and `--tv-firmware` are optional,
 limited to 40 characters of `[A-Za-z0-9 ._-]`, and reported with provenance
