@@ -297,7 +297,7 @@ app was a synthetic hello `.wgt`, not PlexTv. It was signed with a self-made aut
 
 | TV | Install | Launch | Uninstall |
 |---|---|---|---|
-| UE43RU7092 (2019, Tizen 5.0) | pass, about 4 s | pass | pass with `-p <app-id> -t <name>` |
+| UE43RU7092 (2019, Tizen 5.0) | pass, about 4 s | pass | **fail**: CLI is a silent no-op; delete via the TV's Apps screen |
 | UE55MU6172 (2017, Tizen 3.0) | pass, about 4 s | pass | pass with `-p <app-id> -t <name>` |
 
 - The 2017 set had earlier run `install-permit` for a different, Samsung-issued certificate. No
@@ -323,13 +323,18 @@ tizen uninstall -p <package-id>.<app-name> -t <name>
 `tizen uninstall` needs the full **application** ID. Given only the package ID it fails with "The
 package is not exist", and without `-t` it exits silently without removing anything.
 
+On the 2019 set (Tizen 5.0) even the correct command printed only "Platform log view" and left the
+app installed; `sdb uninstall`, `sdb shell 0 vd_appuninstall` and `sdb shell 0 uninstall` all
+returned "closed". Remove the app on the TV instead: Apps → Settings (gear) → select the app →
+Delete. Confirm removal by re-listing apps, not by the CLI's exit status.
+
 **Troubleshooting.**
 
 | Symptom | Likely cause |
 |---|---|
 | `install failed[118]` | `install-permit` not run for this TV/certificate (section 3) |
 | Signing says "Invalid password" | AES-encrypted `.p12` (see tizen-cert-cli above), a wrong password, or Linux/Docker with no keyring: `security-profiles add` stores masked passwords. Write `profiles.xml` with the plain passwords instead. The real error is in `~/tizen-studio-data/cli/logs/cli.log` |
-| `tizen uninstall` says "package is not exist" or does nothing | Use the app ID (`<pkg>.<name>`) and `-t <device name>` (above) |
+| `tizen uninstall` says "package is not exist" or does nothing | Use the app ID (`<pkg>.<name>`) and `-t <device name>` (above); on Tizen 5.0 it may still do nothing, so delete on the TV |
 | Port 26101 open but `sdb connect` fails | Developer Mode's Host PC IP points at another computer |
 | `sdb connect` fails but `nc -vz <tv-ip> 26101` works | macOS Local Network permission (section 4) |
 | TV refuses the connection | Host PC IP in Developer Mode is not the address the computer actually uses (section 4) |
