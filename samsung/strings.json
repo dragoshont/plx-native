@@ -7,6 +7,46 @@
   "Not reported by server": { "es": "El servidor no lo indica", "be": "Сервер не паведаміў" },
   "Original source": { "es": "Archivo original", "be": "Арыгінальная крыніца" },
   "Direct play": { "es": "Reproducción directa", "be": "Прамое прайграванне" },
+  "Unverified model ({reason}). Plex will convert unverified formats.": {
+    "es": "Modelo no verificado ({reason}). Plex convertirá los formatos no verificados.",
+    "be": "Мадэль не праверана ({reason}). Plex будзе перакадзіраваць неправераныя фарматы."
+  },
+  "Product information is unavailable": {
+    "es": "La información del producto no está disponible",
+    "be": "Звесткі пра прадукт недаступныя"
+  },
+  "Model name could not be read": {
+    "es": "No se pudo leer el nombre del modelo",
+    "be": "Не ўдалося прачытаць назву мадэлі"
+  },
+  "Firmware could not be read": {
+    "es": "No se pudo leer el firmware",
+    "be": "Не ўдалося прачытаць прашыўку"
+  },
+  "Product model could not be read": {
+    "es": "No se pudo leer el modelo del producto",
+    "be": "Не ўдалося прачытаць мадэль прадукту"
+  },
+  "Model name did not match the observed register": {
+    "es": "El nombre del modelo no coincide con el registro observado",
+    "be": "Назва мадэлі не супадае з назіраным рэестрам"
+  },
+  "Firmware did not match the observed register": {
+    "es": "El firmware no coincide con el registro observado",
+    "be": "Прашыўка не супадае з назіраным рэестрам"
+  },
+  "Product model did not match the observed register": {
+    "es": "El modelo del producto no coincide con el registro observado",
+    "be": "Мадэль прадукту не супадае з назіраным рэестрам"
+  },
+  "Tizen version did not match the observed register": {
+    "es": "La versión de Tizen no coincide con el registro observado",
+    "be": "Версія Tizen не супадае з назіраным рэестрам"
+  },
+  "Device identity is not in the observed register": {
+    "es": "La identidad del dispositivo no está en el registro observado",
+    "be": "Ідэнтычнасці прылады няма ў назіраным рэестры"
+  },
   "Server transcode": { "es": "Transcodificación del servidor", "be": "Транскадаванне серверам" },
   "Server stream": { "es": "Flujo indicado por el servidor", "be": "Паток паводле сервера" },
   "Transcode limit": { "es": "Límite de transcodificación", "be": "Мяжа транскадавання" },

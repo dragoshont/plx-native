@@ -71,7 +71,20 @@
         if (preferences.directPlay === "off") { return translate("Direct play: {state}", { state: translate("Off") }); }
         var profile = directPlayProfile();
         if (!profile) { return translate("Direct play: {state}", { state: translate("Off") }); }
-        if (profile.status === "unknown") { return translate("Unverified model. Plex will convert unverified formats."); }
+        if (profile.status === "unknown") {
+            var reasons = {
+                "productinfo-unavailable": "Product information is unavailable",
+                "model-name-unavailable": "Model name could not be read",
+                "firmware-unavailable": "Firmware could not be read",
+                "product-model-unavailable": "Product model could not be read",
+                "model-name-mismatch": "Model name did not match the observed register",
+                "firmware-mismatch": "Firmware did not match the observed register",
+                "product-model-mismatch": "Product model did not match the observed register",
+                "tizen-version-mismatch": "Tizen version did not match the observed register"
+            };
+            return translate("Unverified model ({reason}). Plex will convert unverified formats.", {
+                reason: translate(reasons[profile.reason] || "Device identity is not in the observed register") });
+        }
         if (profile.status === "observed") { return translate("Observed video only: {model}. Audio, HDR and other formats remain unverified; Plex converts them.", { model: profile.model }); }
         return translate("Direct play: {state}", { state: translate("Auto") }) + " (" +
             profile.video.join("/").toUpperCase() + ", " + profile.audio.join("/").toUpperCase() + ", " +
