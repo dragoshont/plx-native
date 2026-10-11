@@ -19,7 +19,7 @@ function harness() {
     w.PlexTelevision = { create: function () { return client; } };
     var text = fs.readFileSync(path.join(app, "main.js"), "utf8");
     text = text.slice(0, text.lastIndexOf('    addConnectForm("");')) +
-        'window.journey = { openProfiles: openProfiles, openServers: openServers, openFavorites: openFavorites, loadHome: loadHome, openSection: openSection, openListing: openListing, openBrowseOptions: openBrowseOptions, openLetters: openLetters, openSearch: openSearch, openDetail: openDetail, openPerson: openPerson, openSettings: openSettings, addConnectForm: addConnectForm, choices: settingsChoices, confirm: confirmServiceWrite, renderDetail: renderDetail, back: backView, visit: visit, service: serviceView, status: setStatus, focus: focusFirst, button: button, element: element, group: group, tile: titleTile, catalogue: catalogueUi, find: findCatalogueItem, setup: function(c) { currentClient=c; accountClient=c; servers=[]; homeSections=[]; } }; }());';
+        'window.journey = { openProfiles: openProfiles, openServers: openServers, openFavorites: openFavorites, loadHome: loadHome, openSection: openSection, openListing: openListing, openBrowseOptions: openBrowseOptions, openLetters: openLetters, openSearch: openSearch, openDetail: openDetail, openPerson: openPerson, openSettings: openSettings, addConnectForm: addConnectForm, choices: settingsChoices, confirm: confirmServiceWrite, renderDetail: renderDetail, back: backView, visit: visit, service: serviceView, status: setStatus, focus: focusFirst, button: button, element: element, group: group, tile: titleTile, catalogue: catalogueUi, find: findCatalogueItem, state: function() { return { currentOffset: currentOffset, currentItems: currentItems.slice(), currentSection: currentSection }; }, setup: function(c) { currentClient=c; accountClient=c; servers=[]; homeSections=[]; } }; }());';
     w.eval(text); w.journey.setup(client);
     var j = w.journey, screen = w.document.getElementById("screen");
     var options = { client: function () { return client; }, preferences: function () { return { language: "en" }; },
@@ -65,6 +65,34 @@ var routes = [
 ];
 async function settle() { for(var i=0;i<8;i++) { await new Promise(function (ok) { setImmediate(ok); }); } }
 async function run() {
+    var staleRetry = harness();
+    try {
+        staleRetry.j.openSection(section);
+        staleRetry.empty({ items: [{ ratingKey: "1", title: "Synthetic title", type: "movie" }],
+            totalSize: 500, offset: 0 });
+        await settle();
+        var pagingBeforeSearch = staleRetry.j.state();
+        assert.strictEqual(pagingBeforeSearch.currentOffset, 1);
+        assert.strictEqual(pagingBeforeSearch.currentItems.length, 1);
+        staleRetry.j.openSearch();
+        staleRetry.screen.querySelector('input[type="search"]').value = "";
+        staleRetry.click("Search");
+        var emptyRetry = Array.from(staleRetry.screen.querySelectorAll("button")).find(function (button) {
+            return /Retry/.test(button.textContent);
+        });
+        assert(emptyRetry, "Search validation should keep its own route action");
+        emptyRetry.click();
+        await settle();
+        assert.deepStrictEqual(staleRetry.calls, ["getSectionItems"],
+            "Search Retry must never invoke the previous library's page loader");
+        var pagingAfterRetry = staleRetry.j.state();
+        assert.strictEqual(pagingAfterRetry.currentOffset, pagingBeforeSearch.currentOffset,
+            "Search Retry must not advance the previous library offset");
+        assert.strictEqual(pagingAfterRetry.currentItems.length, pagingBeforeSearch.currentItems.length,
+            "Search Retry must not mutate the previous library items");
+        assert(staleRetry.screen.className.indexOf("screen-search") !== -1,
+            "Search Retry must remain on Search");
+    } finally { staleRetry.dom.window.close(); }
     for (var route of routes) {
         var h = harness();
         try {

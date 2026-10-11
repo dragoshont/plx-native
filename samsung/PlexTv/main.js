@@ -1477,6 +1477,7 @@
 
     function openSearch(savedQuery) {
         var generation = ++viewGeneration;
+        retryView = null;
         clear(screen);
         resetImages();
         page(translate("Search your servers"), "search");
@@ -1484,6 +1485,7 @@
         input.type = "search";
         input.maxLength = 200;
         input.value = typeof savedQuery === "string" ? savedQuery : "";
+        retryView = function () { openSearch(input.value); };
         input.setAttribute("aria-label", "Search movies and television");
         screen.appendChild(input);
         var recents = element("section", "search-recents");

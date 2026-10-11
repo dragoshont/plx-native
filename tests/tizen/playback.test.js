@@ -12,7 +12,12 @@ function rig() {
     var position = 0;
     var adapter = {
         snapshot: function () { return { state: state, position: position, duration: item.duration }; },
-        open: function (url, offset) { calls.push(["open", url]); position = offset; state = "playing"; return Promise.resolve(); },
+        open: function (url, offset, paused) {
+            calls.push(["open", url, offset, paused]);
+            position = offset;
+            state = paused ? "paused" : "playing";
+            return Promise.resolve();
+        },
         close: function () { calls.push(["close"]); state = "idle"; },
         pause: function () { state = "paused"; },
         play: function () { state = "playing"; },
@@ -71,10 +76,25 @@ async function run() {
     var session = playback.create({ client: test.client, adapter: test.adapter, item: item, settings: { offset: 5000 } });
     assert.strictEqual(test.calls.length, 0, "Browsing/session construction must not mutate progress");
     await session.start();
+    await Promise.resolve();
+    var initialReport = test.calls.filter(function (call) { return call[0] === "timeline"; })[0];
+    assert(initialReport && initialReport[2] === "playing",
+        "An ordinary startup must send a playing state in its initial timeline request");
     assert.strictEqual(session.quality().source.width, 1920, "Original source quality must be separate from streaming quality");
     assert.strictEqual(session.quality().stream, null, "A requested transcode limit is not measured output quality");
     assert(!test.calls.some(function (call) { return call[0] === "streams"; }),
         "A default start must not PUT a stream selection: it would overwrite the account's language choice on PMS");
+    var pausedReplacement = rig();
+    var replacementSession = playback.create({ client: pausedReplacement.client, adapter: pausedReplacement.adapter,
+        item: item, settings: { offset: 5000, paused: true, audioId: 31, subtitleId: 0, quality: "720" } });
+    await replacementSession.start();
+    await Promise.resolve();
+    var replacementOpen = pausedReplacement.calls.filter(function (call) { return call[0] === "open"; })[0];
+    var replacementTimeline = pausedReplacement.calls.filter(function (call) { return call[0] === "timeline"; })[0];
+    assert.strictEqual(replacementOpen[3], true, "A stream replacement must preserve the paused adapter state");
+    assert.strictEqual(replacementTimeline[2], "paused",
+        "The first PMS timeline request after a paused replacement must remain paused");
+    await replacementSession.stop();
     var preferred = JSON.parse(JSON.stringify(item));
     preferred.Media[0].Part[0].Stream = [
         { id: 31, streamType: 2, languageCode: "eng" },

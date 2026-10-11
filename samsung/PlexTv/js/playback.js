@@ -220,7 +220,7 @@
                     started = true;
                     starting = false;
                     emit({ type: "source", mode: selection.direct ? "direct" : "transcode", session: selection.session });
-                    report("playing");
+                    report(adapter.snapshot().state);
                     interval = setInterval(function () {
                         var snapshot = adapter.snapshot();
                         if (snapshot.state === "paused" || snapshot.state === "playing" || snapshot.state === "buffering") {
