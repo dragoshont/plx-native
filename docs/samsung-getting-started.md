@@ -18,6 +18,104 @@ route needs a computer and a Samsung developer certificate containing **your** T
 An LG `.ipk` or Homebrew Channel package cannot install on Samsung. If you only want a supported
 one-click app today, this experimental build is not that yet.
 
+## Install PlexTv on your Samsung TV: step by step
+
+You need a computer on the same network as the TV, a free Samsung account and about 30 minutes.
+Commands are for macOS/Linux; on Windows run the same commands in Command Prompt, with the
+`tizen-studio\tools` folders on `PATH`.
+
+**A. Prepare the computer (once)**
+
+1. Download and install [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html).
+2. Open **Package Manager** → **Extension SDK**. Install **TV Extensions** and
+   **Samsung Certificate Extension**.
+3. Add the command-line tools to `PATH`:
+   ```sh
+   export PATH="$HOME/tizen-studio/tools:$HOME/tizen-studio/tools/ide/bin:$PATH"
+   ```
+4. Find the computer's IP address on the TV's network: `ipconfig getifaddr en0` on Mac
+   (`en1` if you use the other adapter), or `ipconfig` on Windows.
+
+**B. Prepare the TV (once)**
+
+5. On the TV open **Apps**. Press **1 2 3 4 5** on the remote.
+6. Switch **Developer Mode** to **On**. Enter the computer's IP from step 4. Press **OK**.
+7. Turn the TV fully off and on again. Hold the power button until it restarts.
+8. Note the TV's IP address: **Settings → General → Network → Network Status → IP Settings**.
+
+**C. Connect**
+
+9. In **Terminal** (on Mac use Terminal.app and allow the "Local Network" prompt):
+   ```sh
+   sdb connect TV_IP:26101
+   sdb devices
+   ```
+   `sdb devices` prints one line: the serial (`TV_IP:26101`), `device`, and the TV's name.
+   Use that name wherever this guide says `TV_NAME`.
+10. Read the TV's DUID:
+    ```sh
+    sdb -s TV_IP:26101 shell 0 getduid
+    ```
+
+**D. Create your certificate (once per set of TVs)**
+
+11. Open Tizen Studio → **Tools → Certificate Manager** → **+**.
+12. Choose **Samsung** → **TV**. Name the profile `plex`.
+13. **Create a new author certificate.** Enter a name and a password. Sign in with your
+    Samsung account.
+14. **Create a new distributor certificate.** Keep the privilege level **Public**. Check that the
+    DUID from step 10 is in the list; add it if it is missing. Click **Finish**.
+15. Close Certificate Manager.
+16. Allow the TV to accept apps signed with this certificate:
+    ```sh
+    tizen install-permit -t TV_NAME
+    ```
+
+**E. Build and install PlexTv**
+
+17. Get the source and copy the app out of the checkout:
+    ```sh
+    git clone --branch dragoshont-samsung-tizen-feasibility https://github.com/dragoshont/plx-native.git
+    cp -R plx-native/samsung/PlexTv ~/PlexTv
+    ```
+18. Choose a package ID of exactly 10 letters or digits, for example `Px7Q2m9KaB`. In
+    `~/PlexTv/config.xml`, change the `tizen:application` line to:
+    ```xml
+    <tizen:application id="Px7Q2m9KaB.PlexTv" package="Px7Q2m9KaB" required_version="3.0"/>
+    ```
+    Keep this ID for every future update.
+19. Build and sign:
+    ```sh
+    tizen build-web -- ~/PlexTv
+    tizen package -t wgt -s plex -- ~/PlexTv/.buildResult
+    ```
+    The last line prints the path of the signed `.wgt`.
+20. Install and start:
+    ```sh
+    tizen install -n /path/printed/above.wgt -t TV_NAME
+    tizen run -p Px7Q2m9KaB.PlexTv -t TV_NAME
+    ```
+21. On the TV, scan the QR code, or go to `plex.tv/link` and type the code shown. Pick your
+    profile and your server. Your libraries and watch progress come from your Plex Media Server.
+    The app stays in **Apps** as **Plex Tizen Development**.
+
+**F. Later**
+
+- **Update:** `git pull` in `plx-native`, copy `samsung/PlexTv` again and set the **same**
+  package ID. Then repeat steps 19–20. You stay signed in.
+- **Add another TV:** do steps 5–10 on it, then in Certificate Manager create a new distributor
+  certificate for the `plex` profile listing **all** DUIDs. Then run step 16 for the new TV and
+  steps 19–20.
+- **Certificate expired:** when signing or installing starts failing with a certificate error,
+  repeat steps 11–16, then steps 19–20.
+- **Remove:** on the TV, **Apps → Settings (gear) → Plex Tizen Development → Delete**.
+
+Problems at a step: connection (step 9) → [section 4](#4-turn-on-developer-mode-on-the-tv);
+certificate or `install failed[118]` (steps 11–16, 20) → [section 3](#3-signing-certificate);
+install and uninstall commands → [section 7](#7-signing-for-other-people-more-tvs-and-homebrew).
+
+The rest of this guide explains each step in detail.
+
 ## 1. Find out exactly which TV you have
 
 Write down, in a private note (not in git):
