@@ -247,7 +247,7 @@
                         "Content-Type": "application/x-www-form-urlencoded",
                         "X-Plex-Token": token,
                         "X-Plex-Client-Identifier": identifier,
-                        "X-Plex-Product": "Plex Tizen"
+                        "X-Plex-Product": "Plx"
                     },
                     body: body
                 }, method === "POST" ? null : scope);
@@ -293,7 +293,7 @@
             return timedFetch(fetchRequest, target, {
                 method: method || "GET", credentials: "omit", redirect: "error",
                 headers: { Accept: "application/json", "X-Plex-Token": token,
-                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Plex Tizen",
+                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Plx",
                     "X-Plex-Language": options.language || "en" }
             }, method && method !== "GET" ? null : scope).then(function (response) {
                 if (!response.ok) {
@@ -605,7 +605,7 @@
                 headers["X-Plex-Token"] = token;
             }
             headers["X-Plex-Client-Identifier"] = options.clientIdentifier || clientId();
-            headers["X-Plex-Product"] = "Plex Tizen";
+            headers["X-Plex-Product"] = "Plx";
             headers["X-Plex-Version"] = "0.2.1";
             headers["X-Plex-Platform"] = "Tizen";
             headers["X-Plex-Device"] = "TV";
@@ -847,7 +847,7 @@
                 var params = {};
                 Object.keys(query || {}).forEach(function (name) { params[name] = query[name]; });
                 params["X-Plex-Client-Identifier"] = options.clientIdentifier || clientId();
-                params["X-Plex-Product"] = "Plex Tizen";
+                params["X-Plex-Product"] = "Plx";
                 return baseUrl + path + "?" + Object.keys(params).map(function (name) {
                     return encodeURIComponent(name) + "=" + encodeURIComponent(params[name]);
                 }).concat(token ? ["X-Plex-Token=" + encodeURIComponent(token)] : []).join("&");

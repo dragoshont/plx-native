@@ -78,10 +78,10 @@ Commands are for macOS/Linux; on Windows run the same commands in Command Prompt
     git clone --branch dragoshont-samsung-tizen-feasibility https://github.com/dragoshont/plx-native.git
     cp -R plx-native/samsung/PlexTv ~/PlexTv
     ```
-18. Choose a package ID of exactly 10 letters or digits, for example `Px7Q2m9KaB`. In
+18. Choose a package ID of exactly 10 letters or digits (`<PKGID>` below). In
     `~/PlexTv/config.xml`, change the `tizen:application` line to:
     ```xml
-    <tizen:application id="Px7Q2m9KaB.PlexTv" package="Px7Q2m9KaB" required_version="3.0"/>
+    <tizen:application id="<PKGID>.Plx" package="<PKGID>" required_version="3.0"/>
     ```
     Keep this ID for every future update.
 19. Build and sign:
@@ -93,7 +93,7 @@ Commands are for macOS/Linux; on Windows run the same commands in Command Prompt
 20. Install and start:
     ```sh
     tizen install -n /path/printed/above.wgt -t TV_NAME
-    tizen run -p Px7Q2m9KaB.PlexTv -t TV_NAME
+    tizen run -p <PKGID>.Plx -t TV_NAME
     ```
 21. On the TV, scan the QR code, or go to `plex.tv/link` and type the code shown. Pick your
     profile and your server. Your libraries and watch progress come from your Plex Media Server.
