@@ -365,5 +365,6 @@
   "Auto": { "es": "Automático", "be": "Аўта" },
   "Direct play: {state}": { "es": "Reproducción directa: {state}", "be": "Прамое прайграванне: {state}" },
   "This TV could not play the original file. Asking Plex to convert it...": { "es": "Este televisor no pudo reproducir el archivo original. Pidiendo a Plex que lo convierta...", "be": "Гэты тэлевізар не змог прайграць арыгінальны файл. Просім Plex канвертаваць яго..." },
-  "Seek to {time}": {"es": "Ir a {time}", "be": "Перайсці да {time}"}
+  "Seek to {time}": {"es": "Ir a {time}", "be": "Перайсці да {time}"},
+  "No available libraries.": { "es": "No hay bibliotecas disponibles.", "be": "Няма даступных бібліятэк." }
 }

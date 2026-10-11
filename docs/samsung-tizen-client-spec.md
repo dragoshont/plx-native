@@ -607,7 +607,7 @@ after-fix acceptance remains separate from host checks and installation.
 - [ ] Verify pairing QR, shared grants, TLS/CORS and unavailable/denied-server recovery in the packaged TV app.
 - [x] Cancel view-owned reads and active response readers, including search/discovery clients; cancellation/deadline and signed-account journeys exercised on host.
 - [ ] Exercise repeated Back/search/sign-out under packaged-runtime network loss and retry.
-- [ ] Test and fix every screen's remote focus, scroll restoration, loading/empty/error and retry paths.
+- [ ] Verify every screen's remote focus, scroll restoration, loading/empty/error and retry paths on device. Host table-driven journeys cover 24 request routes (including nested DVR, catalogue and shared listing routes), Retry re-fetch and Back focus/scroll; five cached/local route families retain actions/exits. Player/photo resource journeys are separate host tests. No-library favorites, failed details, profile/server return ownership and nested DVR retries are fixed; physical-remote behavior remains unobserved.
 - [x] Join catalogue credits to this server's titles by GUID tail, as LG `person.rs` does; held credits open the local item. The compact index checks up to 10,000 titles, reports truncation and rejects incomplete/misaligned pages.
 - [x] Replace the 200-credit display cap with 50-credit Previous/Next pages; preserve the career page on return and exercise a 251-credit career. Remove the 500-title local-index cutoff; a 900-title synthetic index reaches its final title.
 - [x] Advance collection pages with explicit PMS offsets and retain the loader/remaining pages when returning from details; a 51-item collection regression exercises both behaviors.

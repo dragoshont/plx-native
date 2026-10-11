@@ -27,6 +27,7 @@
     var libraryFilters = {};
     var navigation = [];
     var restoreView = null;
+    var retryView = null;
     var imageGeneration = 0;
     var imageQueue = [];
     var imageActive = 0;
@@ -387,6 +388,14 @@
     }
 
     function setStatus(message, isError) {
+        var retry = Array.prototype.filter.call(screen.querySelectorAll("button"), function (control) {
+            return /(?:^| )route-retry(?: |$)/.test(control.className);
+        })[0];
+        if (retry && retry.parentNode && !isError) { retry.parentNode.removeChild(retry); }
+        if (isError && !player && retryView && !retry) {
+            var retryAction = retryView;
+            button(screen, "Retry", retryAction).className += " route-retry";
+        }
         status.textContent = translate(message || "");
         status.className = isError ? "status status-error" : "status";
         if (isError && player) { showHud(); cancelHudTimer(); }
@@ -506,6 +515,8 @@
     }
 
     function openProfiles(warning) {
+        restoreView = function () { openProfiles(); };
+        retryView = restoreView;
         stopAuthorization();
         var generation = ++viewGeneration;
         clear(screen);
@@ -518,6 +529,7 @@
             profiles.forEach(function (profile) {
                 if (profile.admin) { linkedProfile = profile; }
                 var identity = button(identities, profile.title || profile.username || "Profile", function () {
+                    retryView = null;
                     var selection = ++viewGeneration;
                     clear(screen);
                     page(profile.title || "Profile", "profile-pin");
@@ -621,9 +633,9 @@
 
     var cancelServerConnection = null;
     function openServers(warning) {
+        restoreView = function () { openServers(); };
+        retryView = restoreView;
         cancelServerConnection = null;
-        navigation = [];
-        restoreView = null;
         var generation = ++viewGeneration;
         clear(screen);
         page(translate("Choose a server"), "servers");
@@ -771,6 +783,7 @@
     }
 
     function addConnectForm(message) {
+        retryView = null;
         stopAuthorization();
         viewGeneration += 1;
         itemsLoading = false;
@@ -930,6 +943,7 @@
         clear(screen);
         resetImages();
         restoreView = function () { openFavorites(firstRun); };
+        retryView = restoreView;
         page(translate("Favorite libraries"), "favorites");
         setStatus("Loading libraries...");
         currentClient.getSections().then(function (sections) {
@@ -937,7 +951,10 @@
             sections = sections.filter(function (section) {
                 return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
             });
-            if (!sections.length) { loadHome(false); return; }
+            if (!sections.length) {
+                screen.appendChild(element("p", "empty-state", translate("No available libraries.")));
+                button(screen, "Back", backView); setStatus("No available libraries."); focusFirst(); return;
+            }
             var saved = favoriteKeys();
             var all = sections.map(function (section) { return String(section.key); });
             var chosen = (saved || all).filter(function (key) { return all.indexOf(key) !== -1; });
@@ -996,6 +1013,8 @@
     }
 
     function loadHome(showConnectOnError) {
+        restoreView = function () { loadHome(showConnectOnError); };
+        retryView = restoreView;
         var generation = ++viewGeneration;
         cancelViewRequests();
         itemsLoading = false;
@@ -1217,6 +1236,7 @@
             openSection(section, { items: currentItems.slice(), offset: currentOffset,
                 filters: JSON.parse(JSON.stringify(libraryFilters)) });
         };
+        retryView = function () { loadNextPage(); };
         page(section.title || "Library", "library");
         browseHeader(section);
         var toolbar = group(screen, "", "page-toolbar");
@@ -1287,6 +1307,7 @@
                 list.querySelector("button").focus();
             }
             sectionLandingFocus = null;
+            if (!currentItems.length) { list.appendChild(element("p", "empty-state", translate("No available items in this view."))); }
             var loadMore = document.getElementById("load-more");
             loadMore.disabled = currentOffset >= page.totalSize || page.items.length === 0;
             if (loadMore.disabled && document.activeElement === loadMore) {
@@ -1308,6 +1329,7 @@
         clear(screen);
         viewClients.push(client);
         resetImages();
+        retryView = function () { openListing(title, loader, client, offset, retained); };
         page(title, "listing");
         setStatus("Loading...");
         offset = offset || 0;
@@ -1341,6 +1363,7 @@
     function openBrowseOptions(section) {
         var generation = ++viewGeneration;
         restoreView = function () { openBrowseOptions(section); };
+        retryView = restoreView;
         var selected = JSON.parse(JSON.stringify(libraryFilters));
         clear(screen);
         page(translate("Sort and filters"), "filters");
@@ -1414,6 +1437,7 @@
     function openLetters(section) {
         var generation = ++viewGeneration;
         restoreView = function () { openLetters(section); };
+        retryView = restoreView;
         clear(screen);
         page(translate("Jump to a letter"), "alphabet");
         button(screen, "Back", backView);
@@ -1430,6 +1454,7 @@
                 });
                 offset += Number(letter.size) || 0;
             });
+            if (!(container.Directory || []).length) { letters.appendChild(element("p", "empty-state", translate("No available items in this view."))); }
             setStatus("Select a letter to jump within title order.");
             focusFirst();
         }).catch(function (error) {
@@ -1480,6 +1505,7 @@
             clear(results);
             resetImages();
             restoreView = function () { openSearch(query); };
+            retryView = restoreView;
             setStatus("Searching reachable Plex servers...");
             var targets = servers.length ? servers.slice() : [null];
             var index = 0;
@@ -1564,6 +1590,8 @@
     }
 
     function openDetail(id, client) {
+        retryView = function () { openDetail(id, client); };
+        restoreView = retryView;
         var generation = ++viewGeneration;
         clear(screen);
         viewClients.push(client);
@@ -1573,6 +1601,7 @@
         focusLoading();
         client.getMetadata(id).then(function (item) {
             if (generation !== viewGeneration) { return; }
+            if (!item) { throw new Error("This item is no longer on the server."); }
             renderDetail(item, client);
         }).catch(function (error) {
             if (generation !== viewGeneration) { return; }
@@ -1941,6 +1970,7 @@
         viewClients.push(client);
         resetImages();
         restoreView = function () { openPerson(person, client, careerStart); };
+        retryView = restoreView;
         page(person.tag || "Person", "person");
         var portrait = element("img", "person-portrait");
         portrait.alt = "";
@@ -1956,7 +1986,7 @@
             });
         });
         button(screen, "Back", backView);
-        setStatus("Person biography and catalogue credits require a linked Plex account.");
+        setStatus(accountClient && person.tagKey ? "Loading..." : "Person biography and catalogue credits require a linked Plex account.");
         if (accountClient && person.tagKey) {
             accountClient.personProfile(person.tagKey).then(function (container) {
                 if (generation !== viewGeneration) { return; }
@@ -1966,7 +1996,7 @@
                     screen.appendChild(element("p", "detail-meta", profile.bornAt + (profile.birthPlace ? " / " + profile.birthPlace : "")));
                 }
             }).catch(function (error) {
-                if (generation === viewGeneration) { screen.appendChild(element("p", "inline-error", error.message)); }
+                if (generation === viewGeneration) { setStatus(error.message, true); focusFirst(); }
             });
             var localIndex = client.personLibraryIndex(person.id).catch(function () { return null; });
             Promise.all([accountClient.personCredits(person.tagKey), localIndex]).then(function (results) {
@@ -2023,8 +2053,9 @@
                         translate("This server's titles could not be checked. Search libraries to find an available version."));
                 }
                 renderCareer(careerStart || 0);
+                focusFirst();
             }).catch(function (error) {
-                if (generation === viewGeneration) { screen.appendChild(element("p", "inline-error", error.message)); }
+                if (generation === viewGeneration) { setStatus(error.message, true); focusFirst(); }
             });
         }
         focusFirst();
@@ -2037,6 +2068,7 @@
         clear(screen);
         resetImages();
         restoreView = restore;
+        retryView = restore;
         page(translate(title), kind || "service");
         var toolbar = group(screen, "", "page-toolbar");
         button(toolbar, "Back", backView);
@@ -2115,6 +2147,7 @@
                             active -= 1; finished += 1;
                             if (generation !== viewGeneration) { return; }
                             if (finished === targets.length) {
+                                if (failed) { button(screen, "Retry", retryView); }
                                 setStatus(failed ? "Some libraries could not be checked. Availability is incomplete." :
                                     shown ? (options.labelled ? "Other copies of this title. Each copy keeps its own resume position." :
                                         "Exact Plex GUID matches in your libraries.") : "This title is not available in the checked libraries.");
@@ -2844,6 +2877,7 @@
     }
 
     function settingsChoices(title, values, current, choose) {
+        retryView = null;
         visit(function renderChoices() {
             viewGeneration += 1;
             clear(screen);
@@ -2860,6 +2894,7 @@
     }
 
     function openSettings() {
+        retryView = null;
         var focusedSetting = restoreView === openSettings ?
             Array.prototype.slice.call(screen.querySelectorAll("button")).indexOf(document.activeElement) : -1;
         viewGeneration += 1;

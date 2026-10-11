@@ -41,28 +41,30 @@
                     options.focus();
                 }).catch(function (error) { if (generation === options.generation()) { options.status(error.message, true); } });
                 options.button(options.screen, "Channel lineups", function () {
-                    options.visit(function () {
-                        var own = options.view("Channel lineups", function () { openGuide(provider); }, "lineups");
+                    options.visit(function openLineups() {
+                        var own = options.view("Channel lineups", openLineups, "lineups");
                         api.dvrs().then(function (dvrs) {
                             if (own !== options.generation()) { return; }
                             dvrs.slice(0, 50).forEach(function (dvr) {
                                 if (!dvr.lineup) { return; }
                                 options.button(options.screen, dvr.lineup, function () {
-                                    options.visit(function () {
-                                        var channelGeneration = options.view("Channels", function () { openGuide(provider); }, "channels");
+                                    options.visit(function openChannels() {
+                                        var channelGeneration = options.view("Channels", openChannels, "channels");
                                         api.channels(dvr.lineup).then(function (channels) {
                                             if (channelGeneration !== options.generation()) { return; }
                                             channels.slice(0, 200).forEach(function (channel) {
                                                 options.screen.appendChild(options.element("p", "channel-row", (channel.identifier || "") + " / " + (channel.callSign || "")));
                                             });
-                                            options.status("Channel list supplied by Plex. Live tuning requires a verified playback-session contract.");
+                                            options.status(channels.length ? "Channel list supplied by Plex. Live tuning requires a verified playback-session contract." : "No available items in this view.");
+                                            options.focus();
                                         }).catch(function (error) {
                                             if (channelGeneration === options.generation()) { options.status(error.message, true); }
                                         });
                                     });
                                 });
                             });
-                            options.status("Choose an existing DVR lineup. Tuner setup remains in Plex.");
+                            options.status(dvrs.some(function (dvr) { return !!dvr.lineup; }) ? "Choose an existing DVR lineup. Tuner setup remains in Plex." : "No available items in this view.");
+                            options.focus();
                         }).catch(function (error) { if (own === options.generation()) { options.status(error.message, true); } });
                     });
                 });
@@ -91,8 +93,8 @@
                     if (generation !== options.generation()) { return; }
                     templates.slice(0, 20).forEach(function (template) {
                         options.button(options.screen, options.translate("Record / {title}", { title: template.title || options.translate("Program") }), function () {
-                            options.visit(function () {
-                                var own = options.view("Schedule recording", function () { openProgram(program, provider); }, "recording-destination");
+                            options.visit(function openDestination() {
+                                var own = options.view("Schedule recording", openDestination, "recording-destination");
                                 options.client().getSections().then(function (sections) {
                                     if (own !== options.generation()) { return; }
                                     sections.filter(function (section) {
@@ -156,8 +158,8 @@
                                 function () { openRecordings(true); });
                         });
                         options.button(recording, "Recording preferences", function () {
-                            options.visit(function () {
-                                options.view("Recording preferences", function () { openRecordings(true); }, "recording-preferences");
+                            options.visit(function openRecordingPreferences() {
+                                options.view("Recording preferences", openRecordingPreferences, "recording-preferences");
                                 var fields = [];
                                 (item.Setting || []).filter(function (setting) { return !setting.hidden; }).slice(0, 50)
                                     .forEach(function (setting) {

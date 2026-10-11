@@ -71,10 +71,11 @@
                 options.button(options.screen, "Find in my libraries", function () {
                     options.visit(function () { options.find(item); });
                 });
-                options.status("Catalogue titles are not server media IDs. Licensed Plex streaming is not enabled; choose a matching server version.");
+                options.status("Loading details...");
                 options.focus();
                 Promise.resolve().then(function () { return account().catalogueDetails(item); }).then(function (details) {
                     if (generation !== options.generation()) { return; }
+                    options.status("Catalogue titles are not server media IDs. Licensed Plex streaming is not enabled; choose a matching server version.");
                     title.textContent = details.title || item.title;
                     summary.textContent = details.summary || options.translate("No synopsis is available.");
                 }).catch(function (error) {
