@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--
+THESIS: Content leads; remote actions remain explicit and quiet.
+OWN-WORLD: Near-black ground, neutral surfaces, white focus, system type and labelled capsules.
+STORY: Choose a Plex identity/server, find media, inspect it, then explicitly play or confirm changes.
+FIRST VIEWPORT: Full-bleed featured artwork, persistent capsule navigation, explicit play/info and poster shelves.
+FORM: Owner-pinned Apple-like simplicity with LG PlxNative as the reference; no randomized direction.
+-->
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Plx</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+</head>
+<body>
+    <object id="av-player" class="video-plane" type="application/avplayer"></object>
+    <div class="app-shell">
+        <header class="app-header">
+            <h1>plex</h1>
+        </header>
+        <main id="screen" class="screen"></main>
+        <footer id="status" class="status" role="status" aria-live="polite"></footer>
+    </div>
+    <script src="js/plex-api.js"></script>
+    <script src="$WEBAPIS/webapis/webapis.js"></script>
+    <script src="js/avplay.js"></script>
+    <script src="js/model-register.js"></script>
+    <script src="js/capabilities.js"></script>
+    <script src="js/playback.js"></script>
+    <script src="js/queue.js"></script>
+    <script src="js/television.js"></script>
+    <script src="js/television-ui.js"></script>
+    <script src="js/catalogue-ui.js"></script>
+    <script src="js/photos.js"></script>
+    <script src="js/subtitles.js"></script>
+    <script src="js/subtitle-search.js"></script>
+    <script src="js/preferences.js"></script>
+    <script src="js/session.js"></script>
+    <script src="js/favorites.js"></script>
+    <script src="js/recents.js"></script>
+    <script src="js/item-menu.js"></script>
+    <script src="js/file-info.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

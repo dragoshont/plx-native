@@ -1,15 +1,46 @@
 # PlxNative
 
-A fast, unofficial [Plex](https://www.plex.tv/) client for LG webOS televisions. Native, not a web
-page — the interface is drawn straight on the GPU at 60 fps, and video plays on the TV's own decoder.
+This fork contains the **LG webOS native client** and a separate, **experimental Samsung Tizen
+TV client**. Both keep Plex Media Server as the library and watch-progress authority; neither
+requires a replacement server.
 
-**Website: [plxnative.com](https://plxnative.com/)** · [Install guide](https://plxnative.com/install/) ·
-[Troubleshooting](https://plxnative.com/troubleshooting/)
+| Your TV | Application | Installation and status |
+|---|---|---|
+| LG webOS | Native Rust application, GPU-rendered UI and LG decoder, packaged as `.ipk` | [LG installation](docs/install-and-verify.md); existing LG app is unchanged |
+| Samsung Tizen | Separate ES5 Web application using AVPlay, packaged as `.wgt` | [Samsung installation](docs/samsung-getting-started.md#install-the-current-samsung-client); developer install/launch and native sign-in capture observed on one 2017 UE55MU6172; full acceptance still in progress |
 
 <a href="https://trendshift.io/repositories/244171?utm_source=repository-badge&utm_medium=badge&utm_campaign=badge-repository-244171" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/244171" alt="GLinnik21/plx-native | Trendshift" width="250" height="55"/></a>
 
-*In daily use on a 2019 LG set. PlxNative is an independent project and is not affiliated with Plex, Inc.
-or LG. The same install steps are in the repo: [installation guide](docs/install-and-verify.md).*
+**LG upstream:** [GLinnik21/plx-native](https://github.com/GLinnik21/plx-native) ·
+[plxnative.com](https://plxnative.com/) · [LG troubleshooting](docs/troubleshooting.md).
+The website, screenshots below, native/60-fps claims, `.ipk` releases and Homebrew Channel
+instructions describe **LG**, not Samsung. Samsung has no Store listing or general-purpose
+signed download: developer signing must include your TV's DUID. The LG demo loop is a visual
+reference, not proof of Samsung performance or pixel parity.
+
+PlxNative is independent and is not affiliated with Plex, LG or Samsung.
+
+## Samsung: what is actually ready?
+
+| Capability | Honest inventory |
+|---|---|
+| Sign-in and browsing | QR/code sign-in, profiles/PIN, owned/shared servers, Home, libraries, search and details are implemented and host-tested. Owner sign-in and developer install/launch are observed on the named 2017 set; the full remote loop is being recorded and audited |
+| Navigation and artwork | LG-inspired feature/shelves/navigation, profiles, collections, people and return paths; profile-photo and extra-step fixes are tracked in the [issue ledger](docs/samsung-tizen-client-spec.md#real-tv-navigation-issue-ledger). Not every screen has native acceptance |
+| Playback | AVPlay/PMS negotiation, resume/progress, tracks, captions, chapters/markers, versions and Up Next have source and synthetic tests. Earlier selected 2017 AVPlay clip probes do **not** certify current-app playback, HDR/audio, watch progress or every codec |
+| Additional Plex features | Music, photos, Watchlist/catalogue browsing and parts of guide/DVR have host implementations. Live tuning and licensed catalogue playback remain unresolved |
+| Sign-in storage | Saved automatically on this TV in unencrypted Web Storage; Settings opt-out and sign-out deletion. No remember-me step on the sign-in screen |
+| Capture and performance | Fresh native renderer layers can be captured at about one frame per second. They are not the panel, do not include the hardware video plane, and do not prove 60-fps UI performance |
+| Models | One 2017 development target is observed. Newer TVs, including The Frame, need their own model/firmware, codec, remote and lifecycle checks; a newer year is not a support guarantee |
+
+Read the [capability and acceptance inventory](docs/samsung-upstream-readiness.md),
+[beginner setup/install guide](docs/samsung-getting-started.md), and
+[model/probe register](docs/samsung-tizen-poc.md) before installing.
+
+## LG native client
+
+The following is the upstream LG description, including its author's daily-use and hardware
+claims. The app is reported to be in daily use on a 2019 LG set; this Samsung branch has not
+independently reproduced those LG claims.
 
 ## Why this exists
 

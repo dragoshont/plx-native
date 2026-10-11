@@ -132,6 +132,8 @@ python3 tools/prune-gh-caches.py --selftest
 # that serve the catalog skip, and say so, where the derived artwork cache is absent.
 python3 tests/test_demo_library.py
 python3 tests/test_image_cache_stress.py
+# The Samsung installer: no automatic uninstall when the TV refuses a signature (host-only, fake sdb).
+python3 tests/test_samsung_install.py
 # Host-only halves of the opt-in live diagnostics: /proc/interrupt parsing, rate normalization,
 # stack aggregation and folded output. Neither command resolves a TV or takes its lock.
 tools/profile-graphics --selftest

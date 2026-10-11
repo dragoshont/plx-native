@@ -1,0 +1,128 @@
+name: Samsung Tizen
+
+# WHAT A GREEN RUN HERE MEANS: the Samsung web app under samsung/PlexTv parses as strict ES5 (the
+# 2018 Chromium 56 floor), its generated locale bundles match their sources, and its host contract
+# tests (Plex API, playback negotiation, timeline parity with the LG client, UI state) pass
+# against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
+# AVPlay plays anything, or that any Samsung model is supported. Those claims need observed TV
+# evidence (docs/samsung-upstream-readiness.md). No Rust, no ARM build, no LG artifact is touched.
+# The wgt job builds and signs Plx-VERSION.wgt with the Tizen CLI (samsung/build.py) and uploads it
+# as an artifact; on a samsung-v* tag it signs with the release author certificate (secrets
+# SAMSUNG_AUTHOR_P12_B64, SAMSUNG_AUTHOR_PW) and publishes the release.
+
+on:
+  push:
+    branches: [main, 'release/v*', 'dragoshont-samsung-tizen-feasibility']
+    # A samsung-vX.Y.Z tag publishes Plx-X.Y.Z.wgt as a prerelease (path filters do not apply to tags).
+    tags: ['samsung-v*']
+    paths:
+      - 'samsung/**'
+      - 'tests/tizen/**'
+      - 'tools/tizen/**'
+      - '.github/workflows/samsung.yml'
+  pull_request:
+    paths:
+      - 'samsung/**'
+      - 'tests/tizen/**'
+      - 'tools/tizen/**'
+      - '.github/workflows/samsung.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: samsung-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned test dependencies (jsdom, acorn)
+        run: npm ci --prefix tests/tizen --no-audit --no-fund
+      - name: Contract tests, ES5 parse and locale build
+        run: tools/tizen/test.sh
+      - name: Generated locale bundles are committed
+        run: git diff --exit-code -- samsung/
+
+  wgt:
+    needs: host
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      TIZEN_VERSION: '6.1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Cache Tizen Studio CLI
+        id: tizen-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/tizen-studio
+          key: tizen-web-cli-${{ env.TIZEN_VERSION }}-ubuntu-v1
+      - name: Install Tizen Studio CLI
+        if: steps.tizen-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL --connect-timeout 20 --max-time 600 --retry 3 --retry-delay 5 -o /tmp/web-cli.bin "https://download.tizen.org/sdk/Installer/tizen-studio_${TIZEN_VERSION}/web-cli_Tizen_Studio_${TIZEN_VERSION}_ubuntu-64.bin"
+          chmod +x /tmp/web-cli.bin
+          /tmp/web-cli.bin --accept-license "$HOME/tizen-studio"
+      - name: Point the CLI at its data directory
+        run: |
+          mkdir -p "$HOME/tizen-studio-data/profile"
+          grep -q '^TIZEN_SDK_DATA_PATH=' "$HOME/tizen-studio/sdk.info" \
+            || echo "TIZEN_SDK_DATA_PATH=$HOME/tizen-studio-data" >> "$HOME/tizen-studio/sdk.info"
+          "$HOME/tizen-studio/tools/ide/bin/tizen" version
+      - name: Choose version and signing certificate
+        id: plan
+        env:
+          AUTHOR_P12_B64: ${{ secrets.SAMSUNG_AUTHOR_P12_B64 }}
+          AUTHOR_PW: ${{ secrets.SAMSUNG_AUTHOR_PW }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/samsung-v* ]]; then
+            version="${GITHUB_REF#refs/tags/samsung-v}"
+            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag $GITHUB_REF"; exit 1; }
+            if [ -z "$AUTHOR_P12_B64" ] || [ -z "$AUTHOR_PW" ]; then
+              echo "::error::release secrets SAMSUNG_AUTHOR_P12_B64 / SAMSUNG_AUTHOR_PW are not set"; exit 1
+            fi
+            umask 077
+            echo "$AUTHOR_P12_B64" | base64 -d > "$RUNNER_TEMP/author.p12"
+            echo "PLX_AUTHOR_P12=$RUNNER_TEMP/author.p12" >> "$GITHUB_ENV"
+            echo "PLX_AUTHOR_PW=$AUTHOR_PW" >> "$GITHUB_ENV"
+            echo "publish=1" >> "$GITHUB_OUTPUT"
+          else
+            # Test build: signed with a throwaway author certificate, so it cannot update a
+            # release install on the TV (delete Plx first).
+            version="0.0.$GITHUB_RUN_NUMBER"
+            echo "publish=0" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Install pinned test dependencies
+        run: npm ci --prefix tests/tizen --no-audit --no-fund
+      - name: Build and sign
+        run: python3 samsung/build.py "${{ steps.plan.outputs.version }}"
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/author.p12"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Plx-${{ steps.plan.outputs.version }}
+          path: samsung/dist/Plx-${{ steps.plan.outputs.version }}.wgt*
+          if-no-files-found: error
+      - name: Publish release
+        if: steps.plan.outputs.publish == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          if gh release view "samsung-v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release samsung-v$VERSION already exists (published by samsung/release.py); leaving it."
+            exit 0
+          fi
+          gh release create "samsung-v$VERSION" samsung/dist/Plx-$VERSION.wgt samsung/dist/Plx-$VERSION.wgt.sha256 \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
+            --title "Plx for Samsung $VERSION" \
+            --notes "Install: see docs/install-samsung.md. Signed for Developer Mode TVs (no Samsung account needed)."
