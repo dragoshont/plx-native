@@ -59,34 +59,32 @@
     var suspendedView = null;
     var foregroundRecovery = null;
     var subtitleSearchGeneration = 0;
-    var preferences = { quality: "1080", autoNext: false, language: "en", continueAction: "details",
+    var preferences = { quality: "original", nextEpisode: "countdown", language: "en", continueAction: "details",
         skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low", subtitleColor: "white",
         subtitleDelayMs: 0, directPlay: "auto" };
     var preferenceError = "";
     function directPlayProfile() {
         if (preferences.directPlay === "off" || !window.PlexCapabilities) { return null; }
         return window.PlexCapabilities.detect({ userAgent: navigator.userAgent,
-            productinfo: window.webapis && window.webapis.productinfo });
+            productinfo: window.webapis && window.webapis.productinfo,
+            avinfo: window.webapis && window.webapis.avinfo });
     }
     function directPlaySummary() {
         if (preferences.directPlay === "off") { return translate("Direct play: {state}", { state: translate("Off") }); }
         var profile = directPlayProfile();
         if (!profile) { return translate("Direct play: {state}", { state: translate("Off") }); }
-        if (profile.status === "unknown") {
-            var reasons = {
-                model: "Model field did not match the observed register",
-                family: "Family field did not match the observed register",
-                firmware: "Firmware field did not match the observed register",
-                tizen: "Tizen field did not match the observed register",
-                throw: "Product information could not be read"
-            };
-            return translate("Unverified model ({reason}). Plex will convert unverified formats.", {
-                reason: translate(reasons[profile.reason] || reasons.throw) });
+        var formats = profile.video.join("/").toUpperCase() + ", " + profile.audio.join("/").toUpperCase() + ", " +
+            profile.maxWidth + "x" + profile.maxHeight + ", " + translate("up to {fps} fps", { fps: profile.maxFrameRate || 60 }) +
+            (profile.hdr === "hdr10" ? ", HDR10/HLG" : "");
+        var text = preferences.directPlay === "force" ?
+            translate("Direct play: {state}", { state: translate("Force") }) + " (" + formats + "). " +
+                translate("The original file is always sent; if this TV cannot decode it, playback stops instead of converting.") :
+            translate("Direct play: {state}", { state: translate("Auto") }) + " (" + formats + "). " +
+                translate("From Samsung's published media specifications; other formats convert on the server.");
+        if (profile.status === "observed" && profile.model) {
+            text += " " + translate("Confirmed on this TV model: {model}.", { model: profile.model });
         }
-        if (profile.status === "observed") { return translate("Observed video only: {model}. Audio, HDR and other formats remain unverified; Plex converts them.", { model: profile.model }); }
-        return translate("Direct play: {state}", { state: translate("Auto") }) + " (" +
-            profile.video.join("/").toUpperCase() + ", " + profile.audio.join("/").toUpperCase() + ", " +
-            profile.maxWidth + "x" + profile.maxHeight + "). " + profile.evidence;
+        return text;
     }
     var pendingRestore = null;
     if (window.PlexPreferences) {
@@ -2312,6 +2310,37 @@
         if (controls.length) { controls[controls.length - 1].focus(); }
     }
 
+    var QUALITY_NAMES = { "1080h": ["1080", "20"], "1080": ["1080", "8"], "720": ["720", "4"],
+        "720l": ["720", "2"], "480": ["480", "0.7"] };
+    var SUBTITLE_COLORS = ["white", "grey_85", "grey_70", "grey_55", "grey_40", "grey_28", "yellow"];
+    function colorName(value) {
+        return { white: "White", grey_85: "Silver", grey_70: "Light gray", grey_55: "Gray",
+            grey_40: "Dark gray", grey_28: "Charcoal", yellow: "Yellow" }[value] || value;
+    }
+    function qualityLadder() {
+        return (window.PlexPreferences && window.PlexPreferences.qualities) ||
+            ["original", "1080h", "1080", "720", "720l", "480"];
+    }
+    function qualityName(quality) {
+        var rung = QUALITY_NAMES[quality];
+        if (quality === "original" || !rung) { return translate("Original quality"); }
+        return translate("{height}p · {mbps} Mbps (converts)", { height: rung[0], mbps: rung[1] });
+    }
+    function reasonName(reason) {
+        return translate({
+            profile: "this TV's formats are not known", "video-codec": "video format not supported by this TV",
+            container: "file type not supported for this format", "audio-codec": "audio format not supported by this TV",
+            "audio-container": "audio format not supported in this file type", resolution: "resolution too high for this TV",
+            quality: "quality limit chosen", bitrate: "bitrate too high for this TV", "bit-depth": "colour depth not supported",
+            "frame-rate": "frame rate above 60 fps", level: "H.264 level too high for this TV",
+            hdr: "HDR not supported by this panel", "dolby-vision": "Dolby Vision not supported",
+            subtitle: "subtitles are burned in", multipart: "the file is split into parts", settings: "Direct play is off in Settings", "server": "the server declined the original file",
+            "decoder": "this TV could not decode the original"
+        }[reason] || "converted by the server");
+    }
+    function modeName(mode) {
+        return translate(mode === "direct" ? "Direct Play" : mode === "directstream" ? "Direct Stream" : "Transcode");
+    }
     function qualityLabel(media) {
         if (!media) { return translate("Not reported by server"); }
         return [media.height ? media.height + "p" : media.videoResolution || "",
@@ -2367,10 +2396,12 @@
         button(menu, "Playback information", function () {
             information.hidden = false;
             var quality = player.quality();
-            information.textContent = translate("Original source") + ": " + qualityLabel(quality.source) + ". " +
-                translate(quality.mode === "direct" ? "Direct play" : "Server transcode") + ". " +
-                translate("Server stream") + ": " + qualityLabel(quality.stream) + ". " +
-                (quality.mode === "direct" ? "" : translate("Transcode limit") + ": " + quality.limit + "p.");
+            information.textContent = translate("Original file") + ": " + qualityLabel(quality.source) + ". " +
+                translate("Playback") + ": " + modeName(quality.mode) +
+                (quality.mode === "direct" ? " (" + translate("the original file, untouched") + ")" :
+                    quality.reason ? " (" + reasonName(quality.reason) + ")" : "") + ". " +
+                (quality.mode === "direct" ? "" : translate("Server stream") + ": " + qualityLabel(quality.stream) + ". ") +
+                translate("Quality") + ": " + qualityName(quality.limit) + ".";
         });
         menu.appendChild(information);
         if (playerItem.type === "track") {
@@ -2412,7 +2443,7 @@
             subtitleId: trackOptions ? trackOptions.subtitleId : undefined,
             overlaySubtitle: !!(trackOptions && trackOptions.cues),
             paused: !!(trackOptions && trackOptions.paused),
-            profile: directPlayProfile()
+            profile: directPlayProfile(), directPlay: preferences.directPlay
         };
         externalCues = trackOptions && trackOptions.cues || null;
         document.body.className = "playing";
@@ -2477,6 +2508,26 @@
             controls.insertBefore(control, moreControl);
             control.className += " skip-marker";
             skip.control = control;
+            // LG's Up Next: on the final credits marker of an episode, a 10 second countdown
+            // that finishes the episode and starts its successor unless the viewer acts.
+            if (next.action === "finish" && item.type === "episode" && preferences.nextEpisode === "countdown" &&
+                    !document.hidden) {
+                var remaining = 10;
+                var label = function () {
+                    control.textContent = translate("Up Next in {seconds}s / Skip Credits", { seconds: remaining });
+                };
+                label();
+                var tick = setInterval(function () {
+                    if (!player || player !== ownPlayer || playerClosing || skip.control !== control) {
+                        clearInterval(tick); return;
+                    }
+                    remaining -= 1;
+                    if (remaining > 0) { label(); return; }
+                    clearInterval(tick);
+                    skip.skipped[next.key] = true;
+                    finishEpisode(true);
+                }, 1000);
+            }
             if (!document.getElementById("player-menu")) {
                 showHud();
                 control.focus();
@@ -2853,9 +2904,10 @@
                 }
             }, false, "settings");
         }
-        cycleAppearance("Text size", "subtitleSize", ["small", "medium", "large"], function (value) { return value; });
+        cycleAppearance("Text size", "subtitleSize", ["small", "medium", "large", "extra_large"],
+            function (value) { return { small: "Small", medium: "Medium", large: "Large", extra_large: "Extra large" }[value]; });
         cycleAppearance("Text position", "subtitlePosition", ["low", "middle", "high"], function (value) { return value; });
-        cycleAppearance("Text color", "subtitleColor", ["white", "yellow"], function (value) { return value; });
+        cycleAppearance("Text color", "subtitleColor", SUBTITLE_COLORS, colorName);
         cycleAppearance("Subtitle delay", "subtitleDelayMs", [-2000, -1000, -500, 0, 500, 1000, 2000],
             function (value) { return (value > 0 ? "+" : "") + value + " ms"; });
         var nativeTracks = element("div", "native-tracks");
@@ -2903,24 +2955,40 @@
             preferences.quality = quality;
             stopPlayer(function () { startPlayer(item, client, position, version, tracks); });
         }
-        ["720", "1080"].forEach(function (quality) {
-            button(menu, translate("{quality}p server transcode", { quality: quality }), function () { change(quality, playerSettings.mediaIndex); })
-                .setAttribute("aria-pressed", String(playerSettings.quality === quality));
+        var current = player.quality();
+        var originalDirect = window.PlexPlayback && window.PlexPlayback.plan(playerItem, {
+            mediaIndex: playerSettings.mediaIndex, quality: "original", profile: playerSettings.profile,
+            overlaySubtitle: playerSettings.overlaySubtitle, audioId: playerSettings.audioId,
+            subtitleId: playerSettings.subtitleId }).direct;
+        menu.appendChild(element("p", "help-text", translate("Now playing") + ": " + modeName(current.mode) + " · " +
+            qualityLabel(current.mode === "direct" ? current.source : current.stream)));
+        if (preferences.directPlay === "force") {
+            menu.appendChild(element("p", "help-text",
+                translate("Direct play is set to Force in Settings, so the original file is always used.")));
+        }
+        qualityLadder().forEach(function (quality) {
+            if (preferences.directPlay === "force" && quality !== "original") { return; }
+            var label = quality === "original" ? translate("Original quality") + " · " + qualityLabel(current.source) + " · " +
+                translate(originalDirect ? "Direct Play" : "Converts on server") : qualityName(quality);
+            var row = button(menu, (playerSettings.quality === quality ? "✓ " : "") + label,
+                function () { change(quality, playerSettings.mediaIndex); });
+            row.setAttribute("aria-pressed", String(playerSettings.quality === quality));
         });
         (playerItem.Media || []).forEach(function (media, version) {
             if (playerItem.Media.length < 2) { return; }
-            button(menu, translate("Version {number} / {quality}", { number: version + 1, quality: qualityLabel(media) }),
+            button(menu, (playerSettings.mediaIndex === version ? "✓ " : "") +
+                translate("Version {number} / {quality}", { number: version + 1, quality: qualityLabel(media) }) +
+                    (Number(media.proxyType) === 42 ? " · " + translate("Optimized version") : ""),
                 function () { change(preferences.quality, version); })
                 .setAttribute("aria-pressed", String(playerSettings.mediaIndex === version));
         });
-        menu.appendChild(element("p", "help-text", translate("Original direct play is not available on this model profile.")));
         button(menu, "Playback options", openPlaybackOptions);
         button(menu, "Close menu", closePlayerMenu);
         screen.appendChild(menu);
         menu.querySelectorAll("button")[0].focus();
     }
 
-    function finishEpisode() {
+    function finishEpisode(startNow) {
         if (playerItem.type === "track" && musicQueue) { skipMusic(1, true); return; }
         var item = playerItem;
         var client = playerClient;
@@ -2935,7 +3003,11 @@
                     if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
                     openDetail(next.ratingKey, client);
                 });
-                if (preferences.autoNext && !document.hidden) {
+                if (startNow === true && !document.hidden) {
+                    client.getMetadata(next.ratingKey).then(function (metadata) {
+                        if (generation === viewGeneration && !player) { startPlayer(metadata, client, 0); }
+                    }).catch(showPlayerError);
+                } else if (preferences.nextEpisode !== "off" && !document.hidden) {
                     setStatus("Next episode starts in 10 seconds. Back cancels.");
                     nextTimer = setTimeout(function () {
                         nextTimer = null;
@@ -2968,7 +3040,7 @@
             clear(screen);
             page(translate(title), "settings");
             values.forEach(function (value) {
-                button(screen, value.label, function () { choose(value.value); }).setAttribute("aria-pressed",
+                button(screen, value.label, function () { choose(value.value); }, value.literal).setAttribute("aria-pressed",
                     String(current === value.value));
             });
             button(screen, "Back", backView);
@@ -2976,6 +3048,115 @@
             setStatus("");
             focusFirst();
         });
+    }
+
+    var accountAudio = { client: null, state: "idle", value: null, error: null };
+
+    function accountAudioError(error) {
+        return translate(error && (error.status === 401 || error.status === 403) ?
+            "Sign in to this Plex profile again to edit its account preferences." :
+            "Plex account preferences are unavailable.") + " " + translate("Select Retry.");
+    }
+
+    function loadAccountAudio(refresh) {
+        var client = accountClient;
+        accountAudio = { client: client, state: "loading", value: null, error: null };
+        refresh();
+        client.accountPreferences().then(function (payload) {
+            if (accountAudio.client !== client) { return; }
+            accountAudio.value = window.PlexAccountPreferences.parse(payload);
+            accountAudio.state = "ready";
+            refresh();
+        }).catch(function (error) {
+            if (accountAudio.client !== client) { return; }
+            if (error && error.code === "cancelled") { accountAudio.state = "idle"; return; }
+            accountAudio.state = "error";
+            accountAudio.error = accountAudioError(error);
+            refresh();
+        });
+    }
+
+    function saveAccountAudio(change) {
+        var client = accountClient;
+        var update = window.PlexAccountPreferences.update(accountAudio.value, change);
+        setStatus(translate("Saving to your Plex account…"));
+        client.saveAccountPreferences(update.query).then(function () {
+            if (accountAudio.client !== client) { return; }
+            accountAudio.value = update.next;
+            setStatus("");
+            backView();
+        }).catch(function (error) {
+            if (accountAudio.client !== client) { return; }
+            setStatus(accountAudioError(error), true);
+        });
+    }
+
+    function accountAudioGroup(menu) {
+        var section = group(menu, translate("Audio & subtitles"), "settings-group");
+        var generation = viewGeneration;
+        function refresh() {
+            if (generation !== viewGeneration || !section.parentNode) { return; }
+            var focused = section.contains(document.activeElement);
+            renderAccountAudio(section, refresh);
+            if (focused && !section.contains(document.activeElement)) {
+                var first = section.querySelector("button");
+                if (first) { first.focus(); }
+            }
+        }
+        if (accountAudio.client !== accountClient || accountAudio.state === "idle") {
+            loadAccountAudio(refresh);
+        } else {
+            renderAccountAudio(section, refresh);
+        }
+    }
+
+    function renderAccountAudio(section, refresh) {
+        var api = window.PlexAccountPreferences;
+        while (section.childNodes.length > 1) { section.removeChild(section.lastChild); }
+        section.appendChild(element("p", "help-text", translate("Language preferences synced with your Plex account.")));
+        if (accountAudio.state === "loading") {
+            section.appendChild(element("p", "help-text", translate("Loading your Plex account preferences…")));
+            return;
+        }
+        if (accountAudio.state === "error") {
+            section.appendChild(element("p", "inline-error", accountAudio.error));
+            button(section, "Retry", function () { loadAccountAudio(refresh); }, false, "refresh");
+            return;
+        }
+        var value = accountAudio.value;
+        var subtitleModes = ["Off (manual selection)", "When audio isn't in the subtitle language", "Always"];
+        var forcedModes = ["Prefer non-forced subtitles", "Prefer forced subtitles", "Only forced subtitles", "Only non-forced subtitles"];
+        function languageOptions(none) {
+            return [{ value: "", label: translate(none) }].concat(api.picker().map(function (language) {
+                return { value: language.code, label: language.name, literal: true };
+            }));
+        }
+        function row(title, label, open) {
+            button(section, translate("{setting}: {value}", { setting: translate(title), value: label }), open, true, "settings");
+        }
+        row("Preferred audio language", value.audioLanguage ? api.label(value.audioLanguage) : translate("Original"), function () {
+            settingsChoices("Preferred audio language", languageOptions("Original"),
+                value.autoSelectAudio === false ? null : api.canonical(value.audioLanguage || ""),
+                function (code) { saveAccountAudio({ audioLanguage: code }); });
+        });
+        if (value.autoSelectAudio === false) {
+            section.appendChild(element("p", "help-text", translate("Automatic selection is off. Choosing a language enables it.")));
+        }
+        row("Subtitles", translate(subtitleModes[value.subtitleMode]), function () {
+            settingsChoices("Subtitles", api.SUBTITLE_MODES.map(function (mode) {
+                return { value: mode, label: translate(subtitleModes[mode]) };
+            }), value.subtitleMode, function (mode) { saveAccountAudio({ subtitleMode: mode }); });
+        });
+        row("Subtitle language", value.subtitleLanguage ? api.label(value.subtitleLanguage) : translate("No preference"), function () {
+            settingsChoices("Subtitle language", languageOptions("No preference"), api.canonical(value.subtitleLanguage || ""),
+                function (code) { saveAccountAudio({ subtitleLanguage: code }); });
+        });
+        row("Forced subtitles", translate(forcedModes[value.subtitleForced]), function () {
+            settingsChoices("Forced subtitles", api.FORCED_MODES.map(function (mode) {
+                return { value: mode, label: translate(forcedModes[mode]) };
+            }), value.subtitleForced, function (mode) { saveAccountAudio({ subtitleForced: mode }); });
+        });
+        section.appendChild(element("p", "help-text", translate("Saved to this Plex profile and shared with your other Plex apps. Changes may take time to affect playback; selections already made for an item still take priority.")));
     }
 
     function openSettings() {
@@ -2990,9 +3171,9 @@
         screen.appendChild(menu);
         var playbackSettings = group(menu, translate("Playback"), "settings-group");
         playbackSettings.appendChild(element("p", "help-text", directPlaySummary()));
-        button(playbackSettings, translate("Transcode quality: {quality}p", { quality: preferences.quality }), function () {
-            settingsChoices("Transcode quality", ["720", "1080"].map(function (quality) {
-                return { value: quality, label: translate("{quality}p server transcode", { quality: quality }) };
+        button(playbackSettings, translate("Quality: {quality}", { quality: qualityName(preferences.quality) }), function () {
+            settingsChoices("Quality", qualityLadder().map(function (quality) {
+                return { value: quality, label: qualityName(quality) };
             }), preferences.quality, function (quality) {
                 preferences.quality = quality;
                 if (savePreferences()) { backView(); }
@@ -3000,28 +3181,25 @@
         }, false, "settings");
         preferenceChoice(playbackSettings, "Skip interval", "skipInterval", [5, 10, 15, 30, 60],
             function (seconds) { return seconds + " seconds"; });
-        var autoNext = button(playbackSettings, translate("Auto-play next episode: {state}", { state: translate(preferences.autoNext ? "On" : "Off") }), function () {
-            preferences.autoNext = !preferences.autoNext;
-            if (savePreferences()) { openSettings(); }
-        }, false, "play");
-        autoNext.setAttribute("aria-pressed", preferences.autoNext ? "true" : "false");
-        button(playbackSettings, translate("Direct play: {state}", {
-            state: translate(preferences.directPlay === "off" ? "Off" : "Auto")
-        }), function () {
-            preferences.directPlay = preferences.directPlay === "off" ? "auto" : "off";
-            if (savePreferences()) { openSettings(); }
-        }, false, "play");
+        preferenceChoice(playbackSettings, "Next episode", "nextEpisode", ["countdown", "after_credits", "off"],
+            function (value) {
+                return { countdown: "Countdown during credits", after_credits: "Play after credits", off: "Off" }[value];
+            });
+        preferenceChoice(playbackSettings, "Direct play", "directPlay", ["auto", "force", "off"],
+            function (value) { return { auto: "Auto", force: "Force", off: "Off" }[value]; });
         button(playbackSettings, translate("Continue Watching: {state}", {
             state: translate(preferences.continueAction === "play" ? "Play" : "Open details")
         }), function () {
             preferences.continueAction = preferences.continueAction === "play" ? "details" : "play";
             if (savePreferences()) { openSettings(); }
         }, false, "play");
+        if (accountClient && window.PlexAccountPreferences) { accountAudioGroup(menu); }
         var subtitleSettings = group(menu, translate("Text overlay appearance"), "settings-group");
         subtitleSettings.appendChild(element("p", "help-text", translate("These settings apply only to the app-rendered SRT/WebVTT text overlay, not device-native or burned subtitles.")));
-        preferenceChoice(subtitleSettings, "Text size", "subtitleSize", ["small", "medium", "large"], function (value) { return value; });
+        preferenceChoice(subtitleSettings, "Text size", "subtitleSize", ["small", "medium", "large", "extra_large"],
+            function (value) { return { small: "Small", medium: "Medium", large: "Large", extra_large: "Extra large" }[value]; });
         preferenceChoice(subtitleSettings, "Text position", "subtitlePosition", ["low", "middle", "high"], function (value) { return value; });
-        preferenceChoice(subtitleSettings, "Text color", "subtitleColor", ["white", "yellow"], function (value) { return value; });
+        preferenceChoice(subtitleSettings, "Text color", "subtitleColor", SUBTITLE_COLORS, colorName);
         preferenceChoice(subtitleSettings, "Subtitle delay", "subtitleDelayMs", [-2000, -1000, -500, 0, 500, 1000, 2000],
             function (value) { return (value > 0 ? "+" : "") + value + " ms"; });
         if (currentClient && currentServerId) {

@@ -274,9 +274,15 @@ body.playing {
 .subtitle-text.subtitle-size-small { font-size: 28px; }
 .subtitle-text.subtitle-size-medium { font-size: 38px; }
 .subtitle-text.subtitle-size-large { font-size: 50px; }
+.subtitle-text.subtitle-size-extra_large { font-size: 64px; }
 .subtitle-text.subtitle-position-middle { top: 45%; bottom: auto; }
 .subtitle-text.subtitle-position-high { top: 18%; bottom: auto; }
 .subtitle-text.subtitle-color-yellow { color: #ffe66b; }
+.subtitle-text.subtitle-color-grey_85 { color: #d9d9d9; }
+.subtitle-text.subtitle-color-grey_70 { color: #b3b3b3; }
+.subtitle-text.subtitle-color-grey_55 { color: #8c8c8c; }
+.subtitle-text.subtitle-color-grey_40 { color: #666666; }
+.subtitle-text.subtitle-color-grey_28 { color: #474747; }
 
 .file-info-panel {
     position: fixed;

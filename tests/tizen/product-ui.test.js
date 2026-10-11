@@ -127,7 +127,7 @@ async function run() {
         });
     };
     ["js/plex-api.js", "js/avplay.js", "js/playback.js", "js/subtitles.js", "js/preferences.js",
-        "js/session.js", "js/recents.js", "js/item-menu.js", "js/skip-markers.js", "js/file-info.js", "js/i18n.js", "main.js"].forEach(function (file) {
+        "js/session.js", "js/recents.js", "js/item-menu.js", "js/skip-markers.js", "js/account-preferences.js", "js/file-info.js", "js/i18n.js", "main.js"].forEach(function (file) {
         window.eval(fs.readFileSync(path.join(app, file), "utf8"));
     });
     function click(text) {
@@ -236,18 +236,21 @@ async function run() {
         click("Account");
         click("Settings");
         assert(window.document.querySelector(".settings-menu"), "Settings uses a grouped menu surface");
-        assert(window.document.querySelector('.settings-menu button[aria-pressed]'),
-            "Toggle state must be visible independently of focus");
         assert.strictEqual(Array.from(window.document.querySelectorAll(".settings-menu button")).filter(function (node) {
-            return node.textContent.indexOf("Transcode quality:") === 0;
+            return node.textContent.indexOf("Quality:") === 0;
         }).length, 1, "Settings must show one quality value, not every alternative");
-        click("Transcode quality: 1080p");
-        assert.strictEqual(window.document.querySelector('button[aria-pressed="true"]').textContent, "1080p server transcode");
-        click("720p server transcode");
+        click("Quality: Original quality");
+        assert.deepStrictEqual(Array.from(window.document.querySelectorAll(".screen button")).map(function (node) {
+            return node.textContent; }).slice(0, 6), ["Original quality", "1080p · 20 Mbps (converts)",
+            "1080p · 8 Mbps (converts)", "720p · 4 Mbps (converts)", "720p · 2 Mbps (converts)", "480p · 0.7 Mbps (converts)"],
+            "Settings offers the LG quality ladder, Original first");
+        assert.strictEqual(window.document.querySelector('button[aria-pressed="true"]').textContent, "Original quality",
+            "Choice state must be visible independently of focus");
+        click("720p · 4 Mbps (converts)");
         assert(window.document.querySelector(".settings-menu"), "Selecting quality must return to Settings");
-        assert.strictEqual(window.document.activeElement.textContent, "Transcode quality: 720p", "Choice pages restore parent focus");
-        click("Transcode quality: 720p");
-        click("1080p server transcode");
+        assert.strictEqual(window.document.activeElement.textContent, "Quality: 720p · 4 Mbps (converts)", "Choice pages restore parent focus");
+        click("Quality: 720p · 4 Mbps (converts)");
+        click("Original quality");
         var skipInterval = Array.from(window.document.querySelectorAll(".settings-menu button")).find(function (node) {
             return node.textContent === "Skip interval: 10 seconds";
         });
@@ -255,15 +258,20 @@ async function run() {
         skipInterval.click();
         click("15 seconds");
         assert.strictEqual(window.document.activeElement.textContent, "Skip interval: 15 seconds");
-        var autoNext = Array.from(window.document.querySelectorAll(".settings-menu button")).find(function (node) {
-            return node.textContent === "Auto-play next episode: Off";
+        var nextEpisode = Array.from(window.document.querySelectorAll(".settings-menu button")).find(function (node) {
+            return node.textContent === "Next episode: Countdown during credits";
         });
-        autoNext.focus();
-        autoNext.click();
-        assert.strictEqual(window.document.activeElement.textContent, "Auto-play next episode: On",
+        nextEpisode.focus();
+        nextEpisode.click();
+        assert.deepStrictEqual(Array.from(window.document.querySelectorAll(".screen button")).map(function (node) {
+            return node.textContent; }).slice(0, 3), ["Countdown during credits", "Play after credits", "Off"]);
+        click("Play after credits");
+        assert.strictEqual(window.document.activeElement.textContent, "Next episode: Play after credits",
             "Changing a preference must retain remote focus on that row");
-        assert.strictEqual(window.document.activeElement.getAttribute("aria-pressed"), "true");
-        click("Auto-play next episode: On");
+        click("Direct play: Auto");
+        assert.deepStrictEqual(Array.from(window.document.querySelectorAll(".screen button")).map(function (node) {
+            return node.textContent; }).slice(0, 3), ["Auto", "Force", "Off"]);
+        click("Auto");
         click("Back");
         await settle();
         click("Movies");
@@ -580,8 +588,8 @@ async function run() {
         assert(!requests.some(function (request) { return request.method === "PUT" && /^\/library\/parts\//.test(request.path); }),
             "Starting playback with no track choice must not overwrite the PMS stream selection");
         click("Audio and subtitles");
-        click("Text size: medium");
-        assert(window.document.querySelector(".player-menu").textContent.includes("Text size: large"),
+        click("Text size: Medium");
+        assert(window.document.querySelector(".player-menu").textContent.includes("Text size: Large"),
             "Caption style controls update the persisted selection");
         click("Text overlay / English");
         await settle();

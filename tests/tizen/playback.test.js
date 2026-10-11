@@ -257,13 +257,59 @@ async function run() {
             return Promise.resolve(answer(query));
         };
         session = playback.create({ client: test.client, adapter: test.adapter, item: sourceItem,
-            settings: { profile: tvProfile, quality: "1080" } });
+            settings: { profile: tvProfile, quality: "original" } });
         await session.start();
         assert.strictEqual(session.mode(), "direct", source.videoCodec + " " + source.width + "x" + source.height +
             " " + source.audioCodec + " at " + source.bitrate + " kbps must direct play, not inherit the transcode cap");
         assert(test.calls.some(function (call) { return call[0] === "open" && /library\/parts\/4/.test(call[1]); }));
         await session.stop();
     }
+
+    // The LG ladder: any rung below Original converts a source above it, by height or bitrate.
+    function ladderPlan(media, quality, streams, profile) {
+        var item = { ratingKey: "50", Media: [Object.assign({ Part: [{ id: "5", key: "/library/parts/5/file.mkv",
+            Stream: streams || [] }] }, media)] };
+        return playback.plan(item, { profile: profile || documentedProfile, quality: quality || "original" });
+    }
+    var documentedProfile = { evidence: "Samsung media specifications", containers: ["mkv", "mp4", "mov", "mpegts"],
+        videoContainers: { h264: ["mkv", "mp4", "mov", "mpegts"], hevc: ["mkv", "mp4", "mpegts"] },
+        audioContainers: { opus: ["mkv"] }, video: ["h264", "hevc"], audio: ["aac", "ac3", "eac3", "mp3", "opus"],
+        maxWidth: 3840, maxHeight: 2160, maxFrameRate: 60, maxBitrate: 60000, h264Level1080: 41, hdr: "hdr10" };
+    var uhdHevc = { container: "mkv", videoCodec: "hevc", audioCodec: "eac3", width: 3840, height: 1600, bitrate: 14500 };
+    assert.strictEqual(ladderPlan(uhdHevc, "original").direct, true, "Original plays the 1600-line HEVC as-is");
+    var converted = ladderPlan(uhdHevc, "1080");
+    assert.strictEqual(converted.direct, false); assert.strictEqual(converted.reason, "quality");
+    assert.strictEqual(converted.query.directStream, 0, "A smaller rung re-encodes the video");
+    assert.strictEqual(ladderPlan({ container: "mkv", videoCodec: "h264", audioCodec: "aac", width: 1920, height: 1080,
+        bitrate: 12000 }, "1080").reason, "quality", "A rung's bitrate cap converts a heavier 1080p file");
+    assert.strictEqual(ladderPlan({ container: "mkv", videoCodec: "h264", audioCodec: "aac", width: 1920, height: 1080,
+        bitrate: 12000 }, "1080h").direct, true, "1080p 20 Mbps keeps a 12 Mbps original");
+    var mov = ladderPlan({ container: "mov", videoCodec: "hevc", audioCodec: "aac", width: 1920, height: 1080, bitrate: 5000 });
+    assert.strictEqual(mov.reason, "container", "HEVC is never direct from MOV");
+    assert.strictEqual(mov.query.directStream, 1, "A container refusal remuxes and keeps the video");
+    var opus = ladderPlan({ container: "mp4", videoCodec: "h264", audioCodec: "opus", width: 1920, height: 1080, bitrate: 5000 });
+    assert.strictEqual(opus.reason, "audio-container", "Opus in MP4 waits for Tizen 6");
+    assert.strictEqual(ladderPlan({ container: "mkv", videoCodec: "h264", audioCodec: "aac", width: 1920, height: 1080,
+        bitrate: 5000 }, "original", [{ streamType: 1, frameRate: "119.88" }]).reason, "frame-rate", "Nothing above 60 fps is direct");
+    assert.strictEqual(ladderPlan({ container: "mkv", videoCodec: "h264", audioCodec: "aac", width: 1920, height: 1080,
+        bitrate: 5000 }, "original", [{ streamType: 1, frameRate: "59.94" }]).direct, true, "59.94 fps plays direct");
+    assert.strictEqual(ladderPlan({ container: "mkv", videoCodec: "h264", audioCodec: "aac", width: 1920, height: 1080,
+        bitrate: 5000 }, "original", [{ streamType: 1, level: 51 }]).reason, "level", "H.264 level 5.1 at 1080p exceeds a 2017 set");
+    var dv = { container: "mkv", videoCodec: "hevc", audioCodec: "eac3", width: 3840, height: 2160, bitrate: 30000,
+        videoDynamicRange: "Dolby Vision" };
+    assert.strictEqual(ladderPlan(dv, "original", [{ streamType: 1, DOVIPresent: true, DOVIProfile: 5 }]).reason,
+        "dolby-vision", "DV profile 5 has no base layer");
+    assert.strictEqual(ladderPlan(dv, "original", [{ streamType: 1, DOVIPresent: true, DOVIProfile: 8,
+        DOVIBLCompatID: 1 }]).direct, true, "DV profile 8.1 plays its HDR10 base layer");
+    var forced = playback.plan({ ratingKey: "51", Media: [Object.assign({ Part: [{ id: "6", key: "/library/parts/6/f.mkv",
+        Stream: [] }] }, uhdHevc)] }, { profile: documentedProfile, quality: "720", directPlay: "force" });
+    assert.strictEqual(forced.direct, true, "Force always sends the original");
+    assert.strictEqual(forced.force, true);
+    var off = playback.plan({ ratingKey: "52", Media: [Object.assign({ Part: [{ id: "7", key: "/library/parts/7/f.mkv",
+        Stream: [] }] }, uhdHevc)] }, { profile: documentedProfile, quality: "original", directPlay: "off" });
+    assert.strictEqual(off.direct, false, "Direct play Off always converts");
+    assert.strictEqual(playback.streamMode(false, { Part: [{ Stream: [{ streamType: 1, decision: "copy" }] }] }), "directstream");
+    assert.strictEqual(playback.streamMode(false, { Part: [{ Stream: [{ streamType: 1, decision: "transcode" }] }] }), "transcode");
 
     // When PMS still answers transcode, the HLS start must carry the transcode caps again.
     test = rig();

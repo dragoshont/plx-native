@@ -524,12 +524,14 @@ Each row compares source behaviour; Samsung evidence is host-only.
 | Video server PlayQueue (`timeline.rs` `create_play_queue`) | **Added:** `createVideoPlayQueue` POSTs `/playQueues` (`type=video`, continuous for episodes); timelines carry `playQueueID`/`playQueueItemID`. A queue failure falls back to plain playback. Creating a queue is a server write: fakes only until an authorized test profile exists |
 | Alternate sources across servers (`/library/all?guid=…`) | **Added:** "Other servers" on movie/show detail, which excludes the current server and labels each copy with server, library and resolution. OK opens that server's detail page; the playing copy is never swapped |
 | Favorite libraries onboarding (`screens/src/onboard.rs` first-run step, then Settings) | **Added:** `js/favorites.js`. First visit to each server offers the step; Skip writes nothing and at least one library stays selected; hidden libraries also drop their Home shelves. Sign-in is the existing plex.tv PIN link and profile picker |
+| Quality ladder and Force direct play (`settings/playback.rs`, `media/src/player` decision) | **Added:** Original marks the source version (Direct Play/Direct Stream when the TV can take it); lower rungs ask PMS to transcode. Force pins Original with no transcode fallback and is now passed to negotiation (it was stored but unused before). The capability table follows AVPlay specs (HEVC only in MP4/MKV/TS; H.264 level 4.1 on Tizen 3, 4.2 on Tizen 4+). Frame-rate matching has no AVPlay API and stays a TV picture setting. Direct Play is host-tested only, not yet observed on a television |
+| Account audio & subtitles (`plex/src/plex/account/preferences.rs`) | **Added:** `js/account-preferences.js` and Settings > Audio & subtitles read and write the profile's preferred audio language, subtitle mode, subtitle language and forced-subtitle policy on `clients.plex.tv/api/v2/user/profile`; only changed fields are sent, and picking an audio language enables automatic selection as on LG. `account-preferences.test.js`, `account-preferences-ui.test.js`. Not exercised against plex.tv from a television |
 
 The [source parity review](samsung-upstream-readiness.md#follow-up-feature-parity-review) tracks
 the remaining movie/show differences. Host code now provides show/season card-menu episode
 routing, a metadata-qualified trailer shortcut, preferences for the app-rendered SRT/WebVTT
-overlay, a configurable seek interval, and a read-only PMS file/track inspector. Subtitle
-provider search, account track policies and audio enhancements remain source gaps; none of these
+overlay, a configurable seek interval, and a read-only PMS file/track inspector. Audio
+enhancements remain a source gap; none of these
 host changes certifies Samsung native playback, subtitle composition or model support.
 
 ### Remaining work by dependency

@@ -8,10 +8,30 @@ function product(model, firmware, family) { return {
     getModel: function () { return family || "UMU6100"; }, isUdPanelSupported: function () { return true; }
 }; }
 var unknown = capabilities.detect({ userAgent: tizen3, productinfo: product("OTHER2017", "T-KTMDEUC-1410.1") });
-assert.strictEqual(unknown.status, "unknown", "An unobserved 2017 model must not inherit the observed TV's capabilities");
+assert.strictEqual(unknown.status, "documented", "An unobserved model plays from Samsung's published specifications");
+assert.strictEqual(unknown.measured, false, "A documented profile must never claim a measurement");
 assert.strictEqual(unknown.reason, "model", "A model mismatch should be diagnosable without revealing the model code");
-assert.deepStrictEqual(unknown.video, []);
-assert.deepStrictEqual(unknown.audio, []);
+assert.deepStrictEqual(unknown.video, ["h264", "hevc"], "Tizen 3 has no AV1");
+assert(unknown.audio.includes("dts"), "2017 sets decode DTS");
+assert(!unknown.audio.includes("truehd") && !unknown.audio.includes("flac"));
+assert.deepStrictEqual(unknown.videoContainers.hevc, ["mkv", "mp4", "mpegts"], "HEVC is never direct from MOV");
+assert.deepStrictEqual(unknown.audioContainers.opus, ["mkv"], "Opus only from MKV before Tizen 6");
+assert.strictEqual(unknown.h264Level1080, 41);
+assert.strictEqual(unknown.maxFrameRate, 60);
+assert.strictEqual(unknown.maxWidth, 3840, "A UHD panel decodes 2160p");
+assert.strictEqual(unknown.hdr, "hdr10", "Without avinfo, a UHD panel is assumed HDR-capable");
+function avinfo(value) { return { isHdrTvSupport: function () { return value; } }; }
+assert.strictEqual(capabilities.detect({ userAgent: tizen3, productinfo: product("OTHER2017", "x"), avinfo: avinfo(false) }).hdr,
+    "none", "avinfo.isHdrTvSupport decides HDR");
+assert.strictEqual(capabilities.detect({ userAgent: tizen3, productinfo: product("OTHER2017", "x"),
+    avinfo: { isHdrTvSupport: function () { throw new Error("x"); } } }).hdr, "hdr10", "A throwing avinfo falls back to the panel");
+var fhd = capabilities.detect({ userAgent: tizen3, productinfo: Object.assign(product("OTHER2017", "x"),
+    { isUdPanelSupported: function () { return false; } }) });
+assert.strictEqual(fhd.maxHeight, 1080); assert.strictEqual(fhd.maxBitrate, 20000, "FHD panels are held to 20 Mbps");
+var tizen7 = capabilities.detect({ userAgent: "SMART-TV Tizen 7.0", productinfo: product("QE65Q80C", "x") });
+assert(tizen7.video.includes("av1") && tizen7.audio.includes("flac") && !tizen7.audio.includes("dts"));
+assert.deepStrictEqual(tizen7.audioContainers.opus, ["mkv", "mp4"]);
+assert.strictEqual(tizen7.h264Level1080, 42);
 var samsungProductInfo = {
     getModelCode: function () { return "UE55MU6172"; },
     getFirmware: function () { return "T-KTMDEUC-1410.1"; },
@@ -19,17 +39,15 @@ var samsungProductInfo = {
 };
 var observed = capabilities.detect({ userAgent: tizen3, productinfo: product("UE55MU6172", "T-KTMDEUC-1410.1") });
 assert.strictEqual(observed.status, "observed");
+assert.strictEqual(observed.measured, true);
 assert.strictEqual(observed.model, "UE55MU6172");
 assert.strictEqual(capabilities.detect({ userAgent: tizen3, productinfo: samsungProductInfo }).status, "observed",
     "Samsung ProductInfo's synchronous DOMString getters should match the registered tuple");
 assert.deepStrictEqual(observed.observations.map(function (row) { return [row.videoCodec,row.width,row.height]; }),
     [["h264",1920,1080],["hevc",3840,1600]]);
-assert.strictEqual(observed.hdr, "unknown", "Direct-play success is not panel HDR evidence");
-assert.deepStrictEqual(observed.audio, [], "No audio codec can be marked observed by a video-only ledger");
-assert.strictEqual(observed.maxHeight, 1600, "A 1600-line observation cannot claim 2160-line decoding");
 [product("UE55MU6172", "T-KTMDEUC-9999.0"), product("UE55MU6172", "T-KTMDEUC-1410.1", "OTHER"),
  product("UMU6100", "T-KTMDEUC-1410.1"), {}].forEach(function (info) {
-    assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:info}).status, "unknown", "Firmware/family/read mismatch stays unknown");
+    assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:info}).status, "documented", "Firmware/family/read mismatch stays unmeasured");
 });
 assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:product("UE55MU6172","T-KTMDEUC-9999.0")}).reason,
     "firmware", "Firmware mismatch diagnostics must identify only the mismatching field");
@@ -40,23 +58,23 @@ assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:product("UE
     "family", "Family mismatch diagnostics must identify only the field");
 assert.strictEqual(capabilities.detect({userAgent:"SMART-TV Tizen 4.0",productinfo:samsungProductInfo}).reason,
     "tizen", "A different Tizen version must remain unverified");
-assert.strictEqual(capabilities.detect({userAgent:"SMART-TV Tizen 4.0",productinfo:product("UE55MU6172","T-KTMDEUC-1410.1")}).status,"unknown");
-assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:{getModelCode:function(){throw new Error("SecurityError");}}}).status,"unknown");
 assert.strictEqual(capabilities.detect({ userAgent: "Mozilla/5.0 (Macintosh)" }), null);
 assert.strictEqual(capabilities.detect({ userAgent: "SMART-TV Tizen 2.4" }), null);
-for (var media of [
-    { container:"mkv",videoCodec:"hevc",audioCodec:"aac",width:3840,height:2160 },
-    { container:"mkv",videoCodec:"h264",audioCodec:"dca",width:1920,height:1080 },
-    { container:"mkv",videoCodec:"hevc",audioCodec:"aac",width:3840,height:1600,videoDynamicRange:"HDR10" }
-]) {
-    var item = { ratingKey:"1", Media:[Object.assign({},media,{Part:[{id:"1",key:"/library/parts/1/file"}]})] };
-    [unknown,observed].forEach(function(profile){
-        var plan=playback.plan(item,{profile:profile});
-        assert.strictEqual(plan.direct,false,"Unknown UHD/HDR/audio capabilities must request transcode");
-        assert.strictEqual(plan.query.directPlay,0);assert.strictEqual(plan.query.videoResolution,"1920x1080");
-        assert(!plan.query["X-Plex-Client-Profile-Extra"].includes("add-direct-play-profile"));
-    });
+function plan(media, profile, quality, streams) {
+    var item = { ratingKey:"1", type:"movie", Media:[Object.assign({},media,{Part:[{id:"1",key:"/library/parts/1/file",Stream:streams||[]}]})] };
+    return playback.plan(item,{profile:profile,quality:quality||"original"});
 }
+var direct = plan({ container:"mkv",videoCodec:"hevc",audioCodec:"aac",width:3840,height:2160 }, unknown);
+assert.strictEqual(direct.direct, true, "Documented UHD HEVC in MKV plays the original");
+assert(direct.query["X-Plex-Client-Profile-Extra"].includes("add-direct-play-profile"));
+assert.strictEqual(plan({ container:"mkv",videoCodec:"h264",audioCodec:"dca",width:1920,height:1080 }, unknown).direct, true,
+    "DTS is direct on a 2017 set");
+var dts7 = plan({ container:"mkv",videoCodec:"h264",audioCodec:"dca",width:1920,height:1080 }, tizen7);
+assert.strictEqual(dts7.direct, false); assert.strictEqual(dts7.reason, "audio-codec");
+assert.strictEqual(dts7.query.directStream, 1, "Only the audio is wrong, so the video may be copied");
+var noHdr = capabilities.detect({ userAgent: tizen3, productinfo: product("OTHER2017", "x"), avinfo: avinfo(false) });
+var hdrPlan = plan({ container:"mkv",videoCodec:"hevc",audioCodec:"aac",width:3840,height:1600,videoDynamicRange:"HDR10" }, noHdr);
+assert.strictEqual(hdrPlan.reason, "hdr"); assert.strictEqual(hdrPlan.query.directStream, 0, "Pixel refusals always re-encode");
 observed.video.push("mutated");
 assert(!capabilities.detect({userAgent:tizen3,productinfo:product("UE55MU6172","T-KTMDEUC-1410.1")}).video.includes("mutated"));
 console.log("Tizen exact model/firmware capability register and conservative PMS policy: passed");
@@ -84,9 +102,7 @@ function settingsJourney(info, language, expected) {
         assert(!text.includes("private detail"),"Settings must not expose getter exception details");
     } finally { dom.window.close(); }
 }
-settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"en","Model field did not match the observed register");
-settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"es","El campo del modelo no coincide con el registro observado");
-settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"be","Поле мадэлі не супадае з назіраным рэестрам");
-settingsJourney({getModelCode:function(){throw new Error("private detail");}},"en","Product information could not be read");
-settingsJourney(product("UE55MU6172","T-KTMDEUC-1410.1"),"en","Observed video only: UE55MU6172");
+settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"en","From Samsung's published media specifications");
+settingsJourney({getModelCode:function(){throw new Error("private detail");}},"en","up to 60 fps");
+settingsJourney(product("UE55MU6172","T-KTMDEUC-1410.1"),"en","Confirmed on this TV model: UE55MU6172");
 console.log("Tizen browser-loaded register and Settings uncertainty journeys: passed");

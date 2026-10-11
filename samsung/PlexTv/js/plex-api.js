@@ -308,6 +308,29 @@
                 });
             });
         }
+        function profilePreferences(method, query) {
+            var target = "https://clients.plex.tv/api/v2/user/profile";
+            var keys = Object.keys(query || {});
+            if (keys.length) {
+                target += "?" + keys.map(function (key) {
+                    return encodeURIComponent(key) + "=" + encodeURIComponent(query[key]);
+                }).join("&");
+            }
+            return timedFetch(fetchRequest, target, {
+                method: method, credentials: "omit", redirect: "error",
+                headers: { Accept: "application/json", "X-Plex-Token": token,
+                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Plx" }
+            }, method === "GET" ? scope : null).then(function (response) {
+                if (!response.ok) {
+                    var error = new Error(response.status === 401 || response.status === 403 ?
+                        "Plex refused this profile. Sign in to this Plex profile again to edit its account preferences." :
+                        "Plex account preferences are unavailable (HTTP " + response.status + ").");
+                    error.status = response.status; error.scope = "account";
+                    throw error;
+                }
+                return method === "GET" ? readJson(response) : {};
+            });
+        }
         function catalogueId(guid) {
             var match = /^plex:\/\/(?:movie|show)\/([0-9a-f]{24})$/i.exec(String(guid || ""));
             if (!match) { throw new Error("This item has no valid Plex catalogue identifier."); }
@@ -324,6 +347,18 @@
                     if (!response.ok) { throw new Error("Profile artwork is unavailable (HTTP " + response.status + ")."); }
                     return response.blob();
                 });
+            },
+            accountPreferences: function () { return profilePreferences("GET"); },
+            saveAccountPreferences: function (query) {
+                var allowed = ["autoSelectAudio", "defaultAudioLanguage", "defaultSubtitleLanguage",
+                    "autoSelectSubtitle", "defaultSubtitleForced"];
+                if (!query || typeof query !== "object" || Object.keys(query).some(function (key) {
+                    return allowed.indexOf(key) === -1 || typeof query[key] !== "string";
+                })) {
+                    return Promise.reject(new Error("Invalid account preference."));
+                }
+                if (!Object.keys(query).length) { return Promise.resolve({}); }
+                return profilePreferences("PUT", query);
             },
             watchlist: function (filter, start) {
                 if (["all", "available", "released"].indexOf(filter) === -1 || !isNonNegativeInteger(start || 0)) {
