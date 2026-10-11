@@ -797,7 +797,7 @@
         var serverInput = element("input", "remote-input");
         serverInput.type = "url";
         serverInput.name = "server";
-        serverInput.value = "http://127.0.0.1:32499";
+        serverInput.placeholder = "https://192.168.1.10:32400";
         serverInput.autocomplete = "url";
         serverLabel.appendChild(serverInput);
 
