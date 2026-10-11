@@ -98,6 +98,29 @@ implemented movie/show behaviors to their actual source.
 | Artwork concurrency ended at download, and the 61st URL could revoke an undecoded visible image | Include decode in the three-job limit, revoke after decode, timeout failed decodes and cancel on view exit | Synthetic 73-image lifetime/cancellation journey |
 | Account icons overlapped labels; generic choices looked like More actions | Separate static leading icon slots; semantic refresh/clock/sort icons, no generic ellipsis fallback, localized sort directions | Failing-then-passing DOM/CSS regressions; inspected 1280x720 and 1920x1080 host captures; included in the installed package, Account-screen native acceptance pending |
 
+## Device-observed browse fixes
+
+A read-only LG-parity walk on the developer TV found six browse gaps. Each was fixed behind a
+failing-then-passing host regression, and the signed package of `bb340ab8` was then installed and
+re-observed on the same TV. The captures are renderer paint-layer replays read over the web
+inspector, not photographs of the panel. No card was activated and no media or household writes
+were made.
+
+| Gap found on the TV | Fix | Observed on `bb340ab8` |
+|---|---|---|
+| Quality badges clipped at the left of library posters | Library posters use the 2:3 artwork aspect | Full `4K UHD` / `1080P FHD` badges; posters measured 262x393 |
+| Up from the grid landed on the account avatar with no focus indicator | White ring outside the avatar | Ring visible; the first Up from the grid reaches Sort and filters, the second reaches Account |
+| Library card focus was subtle compared with Home | Library cards use Home's ring and 1.06 scale | Ring visible, computed `matrix(1.06, …)` |
+| Profile picker showed only the initial | The plex.tv avatar redirect is followed with credentials omitted, and the final URL must be an `assets.plex.tv/avatars/` filename (the observed shape is `<id>.`) | Photo decoded (180 px wide) |
+| Search had no recent searches and showed developer copy | Local recent searches with Clear; footer removed | Recents created and retained across reinstall; no footer |
+| A posterless card showed a grey placeholder | Fall back to the item's background art | Art decoded (640 px wide) |
+
+While the on-screen keyboard is up, the window is 604 px tall and the lower edge of the recent
+searches sits below the Search scroll area. Arrowing off the input dismissed it (the Search area
+grew to 1016 px), and the focused recent term and Clear button were then fully visible. This is
+why the layout was left unchanged. The guarded walk skipped Seasons, playback, trailers,
+the More menu, typing in Search and Settings toggles; those remain unobserved.
+
 The LG-inspired Home/detail changes are documented in the [loop analysis](samsung-lg-loop-analysis.md).
 They are not a substitute for closing the following runtime gates.
 
