@@ -584,7 +584,7 @@ after-fix acceptance remains separate from host checks and installation.
 - [ ] Install evidence-bound model capability profiles in the UI; reject model/firmware mismatches and expose unknown capabilities.
 - [ ] Exercise direct-play, fallback and quality changes for H.264/HEVC/UHD/HDR per named model; preserve aspect ratio and verify panel/audio output.
 - [ ] Complete queue/PlayQueue handling, shuffle, repeat and playback ordering where applicable.
-- [ ] Test progress retries, final stop/read-back, server restart, network loss and long sessions.
+- [ ] Test progress retries, final stop/read-back, server restart, network loss and long sessions. Final stop/read-back passed on the 2017 device (build `c9cb6895`: 92 s of play from 40%, readback within 1.5 s, original offset restored); retries, server restart, network loss and long sessions remain.
 - [ ] Verify audio track defaults, selection and failures on device, including model-specific DTS limitations.
 - [ ] Verify embedded/external SRT/WebVTT and server-rendered ASS/SSA/PGS/VobSub individually.
 - [ ] Test subtitle/audio/version changes while preparing, paused, seeking and completing; prevent stale callbacks.
@@ -647,7 +647,7 @@ evidence; it is not replaced by another media server.
 - [ ] Automate emulator install/launch/readiness/keys/logs/capture/teardown on a supported host. *Implemented in the workbench (`tizen.py emulator`) and tested against fakes; a real run is unobserved because the x86_64 TV emulator needs HAXM/WHPX/KVM and cannot run on Apple Silicon.*
 - [ ] Automate authorized lock-aware retail install/test/capture/teardown with explicit target identity. *Implemented in the workbench (`tizen.py identify`/`retail`: lane lock, DUID-hash fingerprint match before install, signed package required, owned-forward cleanup); a real retail run on the next TV is unobserved.*
 - [x] Prove the reusable workflow on a generated second app, not just Plex. The workbench CI scaffolds a non-Plex app and runs its tests, audit, deterministic double pack, package check, an unsigned-refusal check, a planted-credential failure and the budget harness on Ubuntu and Windows; a real SDK build and signing of a generated app passed `check-package --require-signed` locally.
-- [ ] Establish cold-start/first-Home/first-frame/memory/latency/long-session numeric budgets per tier.
+- [ ] Establish cold-start/first-Home/first-frame/memory/latency/long-session numeric budgets per tier. First device attempt (build `c9cb6895`): three cold debug launches timed out before Inspector attached, so no budget sample was observed.
 - [ ] Run current-app acceptance and populate the model/firmware support register; earlier probes do not count.
 - [ ] Validate signing/update/uninstall, separate Store/branding/legal feasibility, and release packaging.
 - [ ] Finish developer/user onboarding and publish only after runtime acceptance and explicit release authorization.
