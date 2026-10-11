@@ -4,18 +4,16 @@ var capabilities = require("../../samsung/PlexTv/js/capabilities.js");
 var playback = require("../../samsung/PlexTv/js/playback.js");
 var tizen3 = "Mozilla/5.0 (SMART-TV; LINUX; Tizen 3.0)";
 function product(model, firmware, family) { return {
-    getModelCode: function () { return "17_MUSEM_UHD_BASIC"; },
-    getRealModel: function () { return model; }, getFirmware: function () { return firmware; },
+    getModelCode: function () { return model; }, getFirmware: function () { return firmware; },
     getModel: function () { return family || "UMU6100"; }, isUdPanelSupported: function () { return true; }
 }; }
 var unknown = capabilities.detect({ userAgent: tizen3, productinfo: product("OTHER2017", "T-KTMDEUC-1410.1") });
 assert.strictEqual(unknown.status, "unknown", "An unobserved 2017 model must not inherit the observed TV's capabilities");
-assert.strictEqual(unknown.reason, "model-name-mismatch", "A model mismatch should be diagnosable without revealing either model name");
+assert.strictEqual(unknown.reason, "model", "A model mismatch should be diagnosable without revealing the model code");
 assert.deepStrictEqual(unknown.video, []);
 assert.deepStrictEqual(unknown.audio, []);
 var samsungProductInfo = {
-    getModelCode: function () { return "17_MUSEM_UHD_BASIC"; },
-    getRealModel: function () { return "UE55MU6172"; },
+    getModelCode: function () { return "UE55MU6172"; },
     getFirmware: function () { return "T-KTMDEUC-1410.1"; },
     getModel: function () { return "UMU6100"; }
 };
@@ -34,16 +32,16 @@ assert.strictEqual(observed.maxHeight, 1600, "A 1600-line observation cannot cla
     assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:info}).status, "unknown", "Firmware/family/read mismatch stays unknown");
 });
 assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:product("UE55MU6172","T-KTMDEUC-9999.0")}).reason,
-    "firmware-mismatch", "Firmware mismatch diagnostics must identify only the mismatching field");
-assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:{getRealModel:function(){throw new Error("private detail");}}}).reason,
-    "model-name-unavailable", "Getter exceptions must not expose exception text");
-assert.strictEqual(capabilities.detect({userAgent:tizen3}).reason, "productinfo-unavailable");
-assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:{getModelCode:function(){return "UE55MU6172";}}}).reason,
-    "model-name-unavailable", "An internal model-code getter cannot substitute for the full model-name getter");
+    "firmware", "Firmware mismatch diagnostics must identify only the mismatching field");
+assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:{getModelCode:function(){throw new Error("private detail");}}}).reason,
+    "throw", "Getter exceptions must not expose exception text");
+assert.strictEqual(capabilities.detect({userAgent:tizen3}).reason, "throw");
+assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:product("UE55MU6172","T-KTMDEUC-1410.1","OTHER")}).reason,
+    "family", "Family mismatch diagnostics must identify only the field");
 assert.strictEqual(capabilities.detect({userAgent:"SMART-TV Tizen 4.0",productinfo:samsungProductInfo}).reason,
-    "tizen-version-mismatch", "A different Tizen version must remain unverified");
+    "tizen", "A different Tizen version must remain unverified");
 assert.strictEqual(capabilities.detect({userAgent:"SMART-TV Tizen 4.0",productinfo:product("UE55MU6172","T-KTMDEUC-1410.1")}).status,"unknown");
-assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:{getRealModel:function(){throw new Error("SecurityError");}}}).status,"unknown");
+assert.strictEqual(capabilities.detect({userAgent:tizen3,productinfo:{getModelCode:function(){throw new Error("SecurityError");}}}).status,"unknown");
 assert.strictEqual(capabilities.detect({ userAgent: "Mozilla/5.0 (Macintosh)" }), null);
 assert.strictEqual(capabilities.detect({ userAgent: "SMART-TV Tizen 2.4" }), null);
 for (var media of [
@@ -83,10 +81,12 @@ function settingsJourney(info, language, expected) {
         var text = w.document.body.textContent;
         assert(text.includes(expected),"Settings exposes localized capability uncertainty: "+language);
         assert(!text.includes("OTHER2017"),"Settings must not expose raw device identity values");
+        assert(!text.includes("private detail"),"Settings must not expose getter exception details");
     } finally { dom.window.close(); }
 }
-settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"en","Model name did not match the observed register");
-settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"es","El nombre del modelo no coincide con el registro observado");
-settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"be","Назва мадэлі не супадае з назіраным рэестрам");
+settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"en","Model field did not match the observed register");
+settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"es","El campo del modelo no coincide con el registro observado");
+settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"be","Поле мадэлі не супадае з назіраным рэестрам");
+settingsJourney({getModelCode:function(){throw new Error("private detail");}},"en","Product information could not be read");
 settingsJourney(product("UE55MU6172","T-KTMDEUC-1410.1"),"en","Observed video only: UE55MU6172");
 console.log("Tizen browser-loaded register and Settings uncertainty journeys: passed");
