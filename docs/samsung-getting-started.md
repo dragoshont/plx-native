@@ -330,6 +330,24 @@ Delete. Confirm removal by re-listing apps, not by the CLI's exit status:
 `sdb -s <ip>:26101 shell 0 vd_applist` worked on both the 2017 and 2019 sets and prints
 "apps count: N" followed by one `app_tizen_id` entry per app.
 
+Other developers have reported the same behaviour, so it is not specific to our set. No vendor
+documentation or affected-model list was found:
+
+- A Stack Overflow question about a 2019 UA43RU7100 (same RU7 series) reports that uninstalling
+  from Tizen Studio fails while removing the app on the TV works
+  ([77222543](https://stackoverflow.com/questions/77222543)).
+- The Appium Tizen driver found that `tizen uninstall`, `sdb uninstall` and `0 vd_appuninstall`
+  "end silently" on some models, treated it as a device-side fault, and now re-checks the app list
+  and asks for manual removal
+  ([headspinio/appium-tizen-tv-driver#603](https://github.com/headspinio/appium-tizen-tv-driver/issues/603),
+  [#604](https://github.com/headspinio/appium-tizen-tv-driver/pull/604),
+  [#690](https://github.com/headspinio/appium-tizen-tv-driver/pull/690)).
+- A 2018 report against the Tizen VS Code extension shows `sdb uninstall` returning "closed" on
+  one TV while `0 vd_appuninstall` worked
+  ([chunhua-liu/vscode-extension-tizentv#5](https://github.com/chunhua-liu/vscode-extension-tizentv/issues/5)).
+- Apps2Samsung probes `0 vd_appuninstall` before installing and treats "FAILED" as a TV that
+  cannot delete apps.
+
 **Troubleshooting.**
 
 | Symptom | Likely cause |
