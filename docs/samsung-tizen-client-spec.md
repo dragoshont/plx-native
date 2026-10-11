@@ -172,6 +172,21 @@ No row becomes complete solely because the source builds or a fake adapter retur
   separately consented to, revocable in settings, and constrained to the current PlxNative privacy
   schema. It must never include titles, search terms, subtitle text, server names or addresses.
 
+### Package-time origin policy
+
+`config.xml` intentionally keeps `<access origin="*" subdomains="true"/>`. A user's PMS
+origins are arbitrary: LAN IPs, `*.plex.direct` hosts and custom domains cannot be enumerated
+at package time. The manifest permits networking; it does not authorize sending credentials
+anywhere. Account tokens are sent only to `plex.tv` (including the fixed Plex-owned
+`discover.provider.plex.tv` and `metadata.provider.plex.tv` endpoints); server tokens are sent
+only to user-selected PMS servers or the user's explicitly selected/discovered server grants.
+Token-bearing fetches keep credentials in headers, omit cookies and use `redirect: "error"`
+so a redirect cannot forward a token to a different origin. External profile-artwork requests
+carry no Plex token. The AVPlay stream-URL exception and its separate token-exposure control
+remain as described in AUTH-4; this fetch policy is not a claim that AVPlay can enforce redirects.
+Host manifest, account and transport tests pin these constraints; packaged-runtime TLS/CORS
+and redirect behavior still require named-device acceptance.
+
 ### 4.2 Browse, search and metadata
 
 - **BROWSE-1:** Home presents useful Plex-backed hubs/shelves, including continue-watching and
@@ -648,7 +663,7 @@ evidence; it is not replaced by another media server.
 
 - [x] Decide the legacy-engine HTTP transport without weakening token/redirect/TLS policy. Streaming fetch is observed on the oldest owned engine (2017 Tizen 3 / M47); engines without it fail closed. An XHR fallback is rejected because it cannot refuse redirects carrying the token (§ runtime notes above).
 - [ ] Verify fetch/Promise/URL/UTF-8/blob and CSS API support on the oldest supported engine. Host: the existing ES5 gate now rejects post-M47 runtime APIs, NodeList.forEach and CSS gap/custom properties, including planted regressions; shipped sources already avoid them, so no unsafe transport polyfill is added. Optional AbortController remains feature-detected; its absence cannot prove physical socket cancellation. Samsung [Web Engine Specifications](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html), Table 1, maps 2017 / Tizen 3.0 to Chromium M47 (checked 2026-10-11). Source scans do not establish native API behavior.
-- [x] Add automatic manifest/package privilege/identifier and credential-leak checks. `tests/tizen/manifest.test.js` pins the justified privilege set, keeps the signed app/package ID out of the tree and allows exactly one wildcard `<access>` rule (PMS origins are per-user). The unused `application.launch` privilege was removed. The workbench `tizen.py audit` (dragoshont/tizen-tv-builder) adds privilege-use, ES5 and credential-leak scans and blocks packaging on failure; on this app it passes with no errors, and its remaining warnings are the required wildcard, a heuristic miss for `internet` (XHR) and the example IP in a validation message.
+- [x] Add automatic manifest/package privilege/identifier and credential-leak checks. `tests/tizen/manifest.test.js` pins the justified privilege set, keeps the signed app/package ID out of the tree and allows exactly one wildcard `<access>` rule (PMS origins are per-user). The wildcard rationale and token scope/redirect policy are now documented near AUTH and pinned by the host manifest test; package-time PMS origins cannot be enumerated. The unused `application.launch` privilege was removed. The workbench `tizen.py audit` (dragoshont/tizen-tv-builder) adds privilege-use, ES5 and credential-leak scans and blocks packaging on failure; on this app it passes with no errors, and its remaining warnings are the required wildcard, a heuristic miss for `internet` (XHR) and the example IP in a validation message.
 - [x] Wire Samsung host/mock/ES5/source gates into CI, keeping LG recipes unchanged. `.github/workflows/samsung.yml` (path-filtered) runs `tools/tizen/test.sh`, and checks generated locales are committed. Generic workbench/inspector tests run in the separate toolkit's CI.
 - [ ] Automate emulator install/launch/readiness/keys/logs/capture/teardown on a supported host. *Implemented in the workbench (`tizen.py emulator`) and tested against fakes; a real run is unobserved because the x86_64 TV emulator needs HAXM/WHPX/KVM and cannot run on Apple Silicon.*
 - [ ] Automate authorized lock-aware retail install/test/capture/teardown with explicit target identity. *Implemented in the workbench (`tizen.py identify`/`retail`: lane lock, DUID-hash fingerprint match before install, signed package required, owned-forward cleanup); a real retail run on the next TV is unobserved.*
