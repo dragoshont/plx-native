@@ -25,7 +25,10 @@ function rig() {
         },
         request: function (path, method, query) { calls.push(["decision", query]); return Promise.resolve({ generalDecisionCode: 1001 }); },
         streamUrl: function (path) { return "https://synthetic.invalid" + path; },
-        timeline: function (media, time, phase) { calls.push(["timeline", time, phase]); return Promise.resolve(); },
+        timeline: function (media, time, phase, session, queue, tracks) {
+            calls.push(["timeline", time, phase, session, tracks]);
+            return Promise.resolve();
+        },
         stopTranscode: function () { calls.push(["cleanup"]); return Promise.resolve(); },
         getMetadata: function () { calls.push(["readback"]); return Promise.resolve(item); }
     };
@@ -114,7 +117,10 @@ async function run() {
     assert.strictEqual(measured.quality().stream.height, 720, "The PMS decision must not be replaced by the requested limit");
     assert.strictEqual(measured.quality().limit, "1080");
     await measured.stop();
-    assert(test.calls.some(function (call) { return call[0] === "timeline" && call[1] === 15000 && call[2] === "stopped"; }));
+    var stoppedReport = test.calls.filter(function (call) { return call[0] === "timeline" && call[2] === "stopped"; })[0];
+    assert(stoppedReport && stoppedReport[1] === 15000);
+    assert(stoppedReport[3], "The stopped report carries the decision session");
+    assert(stoppedReport[4] && "audioId" in stoppedReport[4], "The stopped report carries the selected streams");
     assert(test.calls.some(function (call) { return call[0] === "cleanup"; }));
     assert(test.calls.some(function (call) { return call[0] === "readback"; }));
     assert.strictEqual(test.adapter.snapshot().state, "idle");

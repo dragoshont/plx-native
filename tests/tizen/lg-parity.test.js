@@ -161,6 +161,15 @@ async function run() {
     assert.strictEqual(calls[2].url.searchParams.get("playQueueID"), null, "An invalid queue is never reported");
     await client.timeline(item, 10, "playing", "session-1");
     assert.strictEqual(calls[3].url.searchParams.get("playQueueItemID"), null);
+    // LG's timeline contract (rust-modules/plex/src/plex/timeline.rs): the session rides as the
+    // same X-Plex-Session-Identifier the decision used, with the SELECTED streams.
+    assert.strictEqual(calls[3].url.searchParams.get("X-Plex-Session-Identifier"), "session-1");
+    await client.timeline(item, 10, "stopped", "session-1", null, { audioId: 41, subtitleId: 0 });
+    assert.strictEqual(calls[4].url.searchParams.get("audioStreamID"), "41");
+    assert.strictEqual(calls[4].url.searchParams.get("subtitleStreamID"), null, "Subtitles off is not a stream id");
+    await client.timeline(item, 10, "stopped", "session-1", null, { audioId: "x", subtitleId: 7 });
+    assert.strictEqual(calls[5].url.searchParams.get("audioStreamID"), null, "An invalid stream id is never reported");
+    assert.strictEqual(calls[5].url.searchParams.get("subtitleStreamID"), "7");
     console.log("Tizen favorite libraries, card menu and video PlayQueue contracts: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

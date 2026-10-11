@@ -129,7 +129,8 @@
                 var next = pendingReport;
                 pendingReport = null;
                 return Promise.resolve().then(function () {
-                    return client.timeline(item, next.position, next.state, selection.session, settings.playQueue || null);
+                    return client.timeline(item, next.position, next.state, selection.session,
+                        settings.playQueue || null, selection.tracks);
                 }).catch(function () {
                     emit({ type: "progress-error", message: "Plex progress could not be saved. Check the server and retry." });
                 }).then(function () {

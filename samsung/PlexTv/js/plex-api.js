@@ -907,7 +907,9 @@
             removeContinueWatching: function (id) {
                 return get("/actions/removeFromContinueWatching", "PUT", { ratingKey: key(id) }, true);
             },
-            timeline: function (item, position, state, session, playQueue) {
+            // Mirrors the LG contract (rust-modules/plex/src/plex/timeline.rs): the decision's
+            // X-Plex-Session-Identifier and the selected streams ride with every report.
+            timeline: function (item, position, state, session, playQueue, tracks) {
                 if (["playing", "paused", "stopped", "buffering"].indexOf(state) === -1 ||
                         !isNonNegativeInteger(position)) {
                     return Promise.reject(new Error("Invalid playback timeline."));
@@ -915,12 +917,19 @@
                 var query = {
                     ratingKey: key(item.ratingKey), key: "/library/metadata/" + key(item.ratingKey),
                     identifier: "com.plexapp.plugins.library", time: position,
-                    duration: item.duration || 0, state: state, session: session
+                    duration: item.duration || 0, state: state, session: session,
+                    "X-Plex-Session-Identifier": session
                 };
                 if (playQueue && /^[1-9][0-9]*$/.test(String(playQueue.id)) &&
                         /^[1-9][0-9]*$/.test(String(playQueue.itemId))) {
                     query.playQueueID = String(playQueue.id);
                     query.playQueueItemID = String(playQueue.itemId);
+                }
+                if (tracks && /^[1-9][0-9]*$/.test(String(tracks.audioId))) {
+                    query.audioStreamID = String(tracks.audioId);
+                }
+                if (tracks && /^[1-9][0-9]*$/.test(String(tracks.subtitleId))) {
+                    query.subtitleStreamID = String(tracks.subtitleId);
                 }
                 return get("/:/timeline", "POST", query, true);
             },
