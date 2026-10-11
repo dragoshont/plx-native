@@ -26,6 +26,8 @@ Write down, in a private note (not in git):
 - Software version: Settings > Support > About This TV.
 - The Frame: note that it is The Frame; Art Mode and standby are tested separately.
 - The TV's Unique Device ID (DUID): Menu > Support > Contact Samsung > Unique Device ID [samsung].
+  **Not** the `duid` field of `http://<tv-ip>:8001/api/v2/`: that is a SmartThings-space UUID
+  and is not valid in a certificate ([tizen-cert-cli](https://github.com/gifflet/tizen-cert-cli)).
 
 Why: Samsung's support depends on model group and firmware, not only the year. Never put the DUID,
 serial number, IP address or account name in a commit, issue or screenshot.
@@ -239,7 +241,70 @@ off in Settings on shared or untrusted TVs; the opt-out remains until explicitly
 Sign-out deletes the saved token; if deletion fails the app warns that its data must be cleared.
 Never include a saved token in a developer package, test fixture or screenshot.
 
-## 7. Rules for device and account tests
+## 7. Signing for other people, more TVs, and "homebrew"
+
+Research checked 2026-10-11 from public sources; only the Tizen Studio route below was observed
+in this project. Community tools listed here were **not** run or tested with PlexTv.
+
+**Why every person signs their own build.** A Samsung distributor certificate can only be issued
+by Samsung's servers after a Samsung-account sign-in, and it lists the DUIDs allowed to install the
+package ([Samsung](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/creating-certificates.html),
+[tizen-cert-cli FAQ](https://tizen-cert-cli.vercel.app)). We therefore cannot publish one `.wgt`
+that installs on everyone's TV. Each person either signs the source with their own certificate
+(section 6), or re-signs a released `.wgt` with their profile:
+`tizen package -t wgt -s <profile> -o <out-dir> -- <app>.wgt`
+(the same command Dolby's [SPOTT guide](https://ott.dolby.com/spott_releases/samsung_tizen_installation.html)
+and [TizenBrew](https://github.com/reisxd/TizenBrew/blob/main/docs/README.md) document).
+Never share your `.p12` files, passwords or a package signed for your DUIDs.
+
+**Adding a TV.** Collect its DUID, then re-create (or renew) the distributor certificate with
+the complete DUID list; Dolby recommends keeping a private DUID list file for this. Re-sign, run
+`install-permit` on the new TV, install. Keep the same author certificate so updates match the
+installed app (section 6). A 50-TV limit per certificate is stated by tizen-cert-cli's
+documentation; Samsung's own page read here gives no number.
+
+**Expiry.** The Samsung certificates expire; when signing or installing starts failing with a
+certificate error after months of working, renew the profile (Certificate Manager, or
+tizen-cert-cli's *Renew*, which reuses the old DUIDs). No primary source for the exact validity
+period was verified, so check the dates in Certificate Manager.
+
+**Certificate without Tizen Studio's GUI.** [gifflet/tizen-cert-cli](https://github.com/gifflet/tizen-cert-cli)
+(MIT) is a terminal wizard that performs the same Samsung sign-in and writes a normal profile to
+`~/tizen-studio-data/profile/profiles.xml`; you still need the Tizen CLI to package and install.
+Its FAQ notes Tizen's Java signer rejects AES-encrypted `.p12` files with a misleading
+"Invalid password" error.
+
+**Is there "homebrew" for Samsung, like LG's Homebrew Channel?** Not in the LG sense. LG's Homebrew
+Channel relies on a rooted TV; no public root route is used or proposed here. What exists are
+**community installers that automate the same official Developer Mode + Samsung-certificate flow**:
+
+| Project | What it is | Relevance |
+|---|---|---|
+| [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) (MIT; formerly Jellyfin2Samsung) | Desktop/Android installer: network scan, Samsung sign-in, per-TV certificates, installs catalog apps or your own `.wgt`/`.tpk` | Possible friendlier install path for PlexTv; untested |
+| [TizenBrew](https://github.com/reisxd/TizenBrew) + [TizenBrewInstaller](https://github.com/reisxd/TizenBrewInstaller) | An app that loads modules (modded websites/apps) after one install; Tizen 7+ asks for Samsung sign-in to sign it | A loader, not a root channel; not a target for PlexTv now |
+
+All of them still require Developer Mode with your computer's IP and, at least on Tizen 7+, a
+Samsung account. Community reports say older Tizen accepted generic-signed packages; this project's
+2017 set still needed `install-permit` (section 3), so do not rely on that. TizenBrew notes Samsung
+shut down the USB demo-package service, so a USB-only route is not available.
+
+**Troubleshooting.**
+
+| Symptom | Likely cause |
+|---|---|
+| `install failed[118]` | `install-permit` not run for this TV/certificate (section 3) |
+| Signing says "Invalid password" | AES-encrypted `.p12` (see tizen-cert-cli above) or a wrong password |
+| `sdb connect` fails but `nc -vz <tv-ip> 26101` works | macOS Local Network permission (section 4) |
+| TV refuses the connection | Host PC IP in Developer Mode is not the address the computer actually uses (section 4) |
+| Certificate rejected for a new TV | Its DUID is not in the distributor certificate, or the REST-API `duid` was used |
+
+**Baseline to beat.** Plex's support page says the official app runs on 2016+ Tizen Samsung sets,
+and that most Samsung models cannot make secure connections to a personal server, so insecure
+connections must be allowed
+([Plex support](https://support.plex.tv/articles/204080173-which-smart-tv-models-are-supported/)).
+Test against the official app on the same TV before claiming an improvement.
+
+## 8. Rules for device and account tests
 
 - Use a throwaway test server with lawful sample media. Use a guest or test account, never a household's real profile or watch history.
 - Do not disable TLS verification as a shortcut. Record what happens instead.
