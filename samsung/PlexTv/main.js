@@ -85,6 +85,7 @@
     }
 
     function visit(action) {
+        pendingRestore = null;
         if (restoreView) {
             var controls = Array.prototype.slice.call(screen.querySelectorAll("button, input, select"));
             navigation.push({ restore: restoreView, focus: controls.indexOf(document.activeElement), scroll: screen.scrollTop });
@@ -370,6 +371,16 @@
         status.textContent = translate(message || "");
         status.className = isError ? "status status-error" : "status";
         if (isError && player) { showHud(); cancelHudTimer(); }
+    }
+
+    // A loading placeholder holds focus without consuming a pending Back restore, which belongs
+    // to the controls the view renders once its data arrives.
+    function focusLoading() {
+        if (!pendingRestore) { focusFirst(); return; }
+        var controls = screen.querySelectorAll("button, input, select");
+        for (var i = 0; i < controls.length; i += 1) {
+            if (!controls[i].disabled && !insideHidden(controls[i])) { controls[i].focus(); return; }
+        }
     }
 
     function focusFirst() {
@@ -1529,7 +1540,7 @@
         resetImages();
         button(screen, "Back", backView);
         setStatus("Loading details...");
-        focusFirst();
+        focusLoading();
         client.getMetadata(id).then(function (item) {
             if (generation !== viewGeneration) { return; }
             renderDetail(item, client);
@@ -2000,7 +2011,7 @@
         var toolbar = group(screen, "", "page-toolbar");
         button(toolbar, "Back", backView);
         setStatus("Loading...");
-        focusFirst();
+        focusLoading();
         return generation;
     }
 

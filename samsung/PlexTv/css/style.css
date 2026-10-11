@@ -2242,6 +2242,27 @@ select:focus {
     min-height: 0;
 }
 
+/* Children listings: the item list spans 100vw - 156px (shell, screen and list padding), so a
+   six-column poster is (100vw - 300px) / 6 wide and a three-column still (100vw - 228px) / 3. */
+.screen-listing .item-list .poster {
+    height: calc((100vw - 300px) / 4);
+}
+
+.screen-listing .item-list .media-card[data-shape="landscape"] .poster {
+    height: calc((100vw - 228px) * 3 / 16);
+    min-height: 0;
+}
+
+.screen-listing .item-list .media-card[data-shape="square"] .poster {
+    height: 240px;
+}
+
+@media (max-width: 1400px) {
+    .screen-listing .item-list .poster { height: calc((100vw - 204px) * 3 / 8); }
+    .screen-listing .item-list .media-card[data-shape="landscape"] .poster { height: calc((100vw - 180px) * 3 / 16); }
+    .screen-listing .item-list .media-card[data-shape="square"] .poster { height: 240px; }
+}
+
 .detail-hero {
     min-height: 82vh;
     padding: 28vh 5vw 4vh;

@@ -27,4 +27,13 @@ assert(/box-shadow:\s*0 0 0 4px #ffffff/.test(rule(".browse-header .account-cont
 var library = rule(".item-list .media-card:focus .poster");
 assert(/box-shadow:\s*0 0 0 4px #ffffff/.test(library), "Focused library poster needs a visible ring");
 assert(/scale\(1\.06\)/.test(rule(".item-list .media-card:focus")), "Focused library card scales like Home cards");
+
+// Children listings (Seasons, Episodes, Collection items) measured 270x350 season posters and
+// 564x214 episode stills on a 1920-wide TV: posters must be 2:3 and stills 16:9 of their card width.
+assert.strictEqual(rule(".screen-listing .item-list .poster").replace(/\s+/g, " ").trim(),
+    "height: calc((100vw - 300px) / 4);", "Listing posters are 1.5x the (100vw - 300px) / 6 card width (2:3)");
+assert.strictEqual(rule(".screen-listing .item-list .media-card[data-shape=\"landscape\"] .poster").replace(/\s+/g, " ").trim(),
+    "height: calc((100vw - 228px) * 3 / 16); min-height: 0;", "Listing stills are 9/16 of the (100vw - 228px) / 3 card width");
+assert(/height:\s*240px/.test(rule(".screen-listing .item-list .media-card[data-shape=\"square\"] .poster")),
+    "Square listing covers keep their fixed 240px size");
 console.log("Tizen card/avatar focus and library poster aspect: passed");
