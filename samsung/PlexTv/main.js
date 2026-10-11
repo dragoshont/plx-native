@@ -3150,9 +3150,11 @@
             showHud();
             if (wasHidden && [13, 37, 38, 39, 40].indexOf(key) !== -1) {
                 event.preventDefault();
-                if (hudFocus && hud.contains(hudFocus)) { hudFocus.focus(); }
-                else { focusFirst(); }
-                return;
+                if (key !== 37 && key !== 39) {
+                    if (hudFocus && hud.contains(hudFocus)) { hudFocus.focus(); }
+                    else { focusFirst(); }
+                    return;
+                }
             }
         }
         var editing = active && ((active.tagName === "INPUT" && active.type !== "checkbox") || active.tagName === "TEXTAREA");
@@ -3218,9 +3220,13 @@
             return;
         }
         if (player && !document.getElementById("player-menu") && (key === 37 || key === 39)) {
-            event.preventDefault();
-            scrubPlayer(key === 39 ? 1 : -1);
-            return;
+            var hud = screen.querySelector(".player-hud");
+            var playerControls = hud && hud.querySelector(".playback-controls");
+            if (!hud || hud.hidden || !playerControls || !playerControls.contains(document.activeElement)) {
+                event.preventDefault();
+                scrubPlayer(key === 39 ? 1 : -1);
+                return;
+            }
         }
         if (editing && (key === 37 || key === 39)) {
             return;

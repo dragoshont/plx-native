@@ -419,6 +419,47 @@ async function run() {
         assert.strictEqual(window.document.body.className, "playing");
         assert.strictEqual(window.document.querySelector(".playback-controls").querySelectorAll("button").length, 4,
             "Playback should expose only transport and More on the main overlay");
+        function remote(type, key, repeat) {
+            window.document.dispatchEvent(new window.KeyboardEvent(type, { keyCode: key, repeat: !!repeat, bubbles: true }));
+        }
+        var playerControls = Array.from(window.document.querySelectorAll(".playback-controls button"));
+        assert.strictEqual(window.document.activeElement, playerControls[0], "Playback starts with rewind focused");
+        playerControls[1].focus();
+        var seeksBeforeNavigation = seekTargets.length;
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[2],
+            "Right from focused Pause / Play must focus Forward rather than scrub");
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[3],
+            "Right from Forward must reach More");
+        remote("keydown", 37);
+        assert.strictEqual(window.document.activeElement, playerControls[2], "Left from More returns to Forward");
+        remote("keydown", 37);
+        assert.strictEqual(window.document.activeElement, playerControls[1], "Left from Forward returns to Pause / Play");
+        remote("keydown", 37);
+        assert.strictEqual(window.document.activeElement, playerControls[0], "Left from Pause / Play reaches rewind");
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[1], "Right returns from rewind to Pause / Play");
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[2], "Right from Pause / Play reaches Forward");
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[3],
+            "Right traverses Pause / Play and Forward to More");
+        assert.strictEqual(state, "PLAYING", "Directional traversal must not toggle playback");
+        assert.strictEqual(seekTargets.length, seeksBeforeNavigation, "Focused HUD navigation must not seek");
+        var seeksBeforeOptions = seekTargets.length;
+        remote("keydown", 13);
+        assert(window.document.getElementById("player-menu"), "OK on More must open playback options");
+        assert.strictEqual(seekTargets.length, seeksBeforeOptions, "Opening More must not seek");
+        var firstOption = window.document.activeElement;
+        remote("keydown", 39);
+        assert.notStrictEqual(window.document.activeElement, firstOption,
+            "Directional arrows inside playback options must continue menu navigation");
+        assert.strictEqual(seekTargets.length, seeksBeforeOptions, "Menu navigation must not seek");
+        remote("keydown", 27);
+        assert(!window.document.getElementById("player-menu"), "Back closes playback options");
+        assert.strictEqual(window.document.activeElement, playerControls[3],
+            "Back from playback options restores focus to More");
         var pauseControl = Array.from(window.document.querySelectorAll("button")).find(function (node) {
             return node.textContent === "Pause / Play";
         });
@@ -426,11 +467,14 @@ async function run() {
         function arrow(type, key, repeat) {
             window.document.dispatchEvent(new window.KeyboardEvent(type, { keyCode: key, repeat: !!repeat, bubbles: true }));
         }
+        hideHud();
         var seekCount = seekTargets.length, originalPosition = position;
         arrow("keydown", 39);
         for (var repeat = 0; repeat < 7; repeat++) { arrow("keydown", 39, true); }
         assert.strictEqual(seekTargets.length, seekCount, "A held arrow must not issue a seek per repeat");
         arrow("keyup", 39); await settle();
+        assert.strictEqual(window.document.querySelector(".player-hud").hidden, false,
+            "A hidden-HUD seek reveals the controls without redirecting the held input");
         assert.strictEqual(seekTargets.length, seekCount + 1, "Held Right must commit ONE seek on keyup");
         assert(position > originalPosition + 80000, "Held repeats accelerate the pending target");
         for (repeat = 0; repeat < 100; repeat++) { arrow("keydown", 39, repeat > 0); }
@@ -439,11 +483,12 @@ async function run() {
         arrow("keyup", 39);
         assert.strictEqual(position, movie.duration, "Scrub is bounded to duration");
         assert.strictEqual(seekTargets.length, seekCount + 2, "Idle followed by keyup cannot double-commit");
+        hideHud();
         for (repeat = 0; repeat < 100; repeat++) { arrow("keydown", 37, repeat > 0); }
         arrow("keyup", 37); await settle();
-        assert.strictEqual(position, 0, "Scrub is bounded to zero");
-        hideHud(); arrow("keydown", 39); arrow("keyup", 39); await settle();
-        assert.strictEqual(position, 0, "The first arrow reveals hidden controls without seeking");
+        assert.strictEqual(position, 0, "Hidden-HUD reverse scrub remains bounded to zero");
+        assert.strictEqual(seekTargets.length, seekCount + 3,
+            "Hidden-HUD reverse repeats commit one bounded seek");
         pauseControl.focus();
         hideHud();
         assert.strictEqual(window.document.querySelector(".player-hud").hidden, true,
