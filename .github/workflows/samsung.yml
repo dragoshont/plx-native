@@ -44,5 +44,7 @@ jobs:
         run: tools/tizen/test.sh
       - name: Generated locale bundles are committed
         run: git diff --exit-code -- samsung/
+      - name: Install pinned inspector dependencies (ws)
+        run: npm ci --prefix tools/tizen/inspector --no-audit --no-fund
       - name: Inspector tooling tests
         run: node --test tests/tizen-inspector/*.test.js
