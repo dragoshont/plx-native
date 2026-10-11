@@ -50,7 +50,7 @@
             duration = 0;
             transition("idle");
         }
-        function open(url, offset) {
+        function open(url, offset, paused) {
             if (!avplay) { return Promise.reject(new Error("Samsung AVPlay is unavailable. Use an authorized Samsung TV runtime.")); }
             close();
             if (!/^https?:\/\//.test(url) || /[\r\n]/.test(url)) {
@@ -65,6 +65,7 @@
                     clearTimeout(timer);
                     timer = null;
                     pending = null;
+                    generation += 1;
                     transition("error");
                     reject(error(operation));
                 }
@@ -93,6 +94,9 @@
                         },
                         onstreamcompleted: function () {
                             if (ownGeneration === generation) {
+                                generation += 1;
+                                cancelPending();
+                                if (pendingSeek) { pendingSeek(new Error("Seek cancelled.")); }
                                 position = Math.max(position, duration);
                                 transition("ended");
                                 notify("ended");
@@ -101,7 +105,11 @@
                         onerror: function () {
                             if (ownGeneration !== generation) { return; }
                             if (pending) { failed("prepare"); }
-                            else { transition("error"); notify("error", error("stream").message); }
+                            else {
+                                generation += 1;
+                                if (pendingSeek) { pendingSeek(new Error("Seek cancelled.")); }
+                                transition("error"); notify("error", error("stream").message);
+                            }
                         }
                     });
                     timer = setTimeout(function () { failed("prepare-timeout"); }, options.prepareTimeout || 25000);
@@ -115,11 +123,12 @@
                                 if (ownGeneration !== generation || !pending) { return; }
                                 try {
                                     avplay.play();
+                                    if (paused) { avplay.pause(); }
                                     position = Math.max(0, Math.round(Number(avplay.getCurrentTime()) || 0));
                                     clearTimeout(timer);
                                     timer = null;
                                     pending = null;
-                                    transition("playing");
+                                    transition(paused ? "paused" : "playing");
                                     resolve();
                                 } catch (failure) { failed("play"); return; }
                                 if (!resumed) { seekWhilePlaying(); }

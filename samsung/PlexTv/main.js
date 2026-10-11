@@ -2339,6 +2339,7 @@
             audioId: trackOptions ? trackOptions.audioId : undefined,
             subtitleId: trackOptions ? trackOptions.subtitleId : undefined,
             overlaySubtitle: !!(trackOptions && trackOptions.cues),
+            paused: !!(trackOptions && trackOptions.paused),
             profile: directPlayProfile()
         };
         externalCues = trackOptions && trackOptions.cues || null;
@@ -2377,7 +2378,7 @@
             var adapter = window.PlexAvplay.create({
                 avplay: window.webapis && window.webapis.avplay,
                 onEvent: function (event) {
-                    if (!player || player !== ownPlayer) { return; }
+                    if (!player || player !== ownPlayer || playerClosing) { return; }
                     if (event.type === "time") {
                         var label = document.getElementById("playback-time");
                         if (label) { label.textContent = timeLabel(event.position) + " / " + timeLabel(event.duration || item.duration); }
@@ -2466,15 +2467,20 @@
 
     function seekPlayer(delta) {
         if (!player) { return; }
+        var selectedPlayer = player;
         player.seek(player.snapshot().position + delta).then(function (position) {
+            if (player !== selectedPlayer || playerClosing) { return; }
             setStatus("Seek landed at " + timeLabel(position) + ".");
             showHud();
-        }).catch(showPlayerError);
+        }).catch(function (error) {
+            if (player === selectedPlayer && !playerClosing) { showPlayerError(error); }
+        });
     }
 
     function stopPlayer(after) {
         if (!player || playerClosing) { return Promise.resolve(); }
         playerClosing = true;
+        subtitleSearchGeneration += 1;
         cancelHudTimer();
         if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
         if (subtitleTimer !== null) { clearTimeout(subtitleTimer); subtitleTimer = null; }
@@ -2532,18 +2538,21 @@
         var client = playerClient;
         var position = player.snapshot().position;
         var version = playerSettings.mediaIndex;
-        var options = { audioId: audioId, subtitleId: subtitleId };
+        var options = { audioId: audioId, subtitleId: subtitleId, paused: player.snapshot().state === "paused" };
         if (cues) { options.cues = cues; }
         stopPlayer(function () { startPlayer(item, client, position, version, options); });
     }
 
     function useTextOverlay(stream, audioId) {
         var selectedPlayer = player;
+        var generation = ++subtitleSearchGeneration;
         setStatus("Loading text subtitles...");
         playerClient.subtitleText(stream.id, stream.codec).then(function (text) {
-            if (player !== selectedPlayer) { return; }
+            if (player !== selectedPlayer || playerClosing || generation !== subtitleSearchGeneration) { return; }
             reloadTracks(audioId, stream.id, window.PlexSubtitles.parse(text));
-        }).catch(showPlayerError);
+        }).catch(function (error) {
+            if (player === selectedPlayer && !playerClosing && generation === subtitleSearchGeneration) { showPlayerError(error); }
+        });
     }
 
     function subtitleSearchLanguages(first) {
@@ -2734,7 +2743,8 @@
             var item = playerItem;
             var client = playerClient;
             var position = player.snapshot().position;
-            var tracks = { audioId: playerSettings.audioId, subtitleId: playerSettings.subtitleId, cues: externalCues };
+            var tracks = { audioId: playerSettings.audioId, subtitleId: playerSettings.subtitleId, cues: externalCues,
+                paused: player.snapshot().state === "paused" };
             preferences.quality = quality;
             stopPlayer(function () { startPlayer(item, client, position, version, tracks); });
         }

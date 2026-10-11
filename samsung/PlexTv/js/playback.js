@@ -190,7 +190,7 @@
                     "/:/transcode/universal/start." + (selection.kind === "music" ? "mp3" : "m3u8");
                 var url = client.streamUrl(path, selection.direct ? {} : selection.query);
                 allocated = true;
-                return adapter.open(url, settings.offset || 0).catch(function (error) {
+                return adapter.open(url, settings.offset || 0, settings.paused).catch(function (error) {
                     if (!selection.direct || closed || stopping) { throw error; }
                     // The capability profile is a prediction; the decoder has the last word.
                     emit({ type: "direct-fallback", message: error && error.message });

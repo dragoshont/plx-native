@@ -593,7 +593,7 @@ after-fix acceptance remains separate from host checks and installation.
 - [ ] Test progress retries, final stop/read-back, server restart, network loss and long sessions. Final stop/read-back passed on the 2017 device (build `c9cb6895`: 92 s of play from 40%, readback within 1.5 s, original offset restored); retries, server restart, network loss and long sessions remain.
 - [ ] Verify audio track defaults, selection and failures on device, including model-specific DTS limitations.
 - [ ] Verify embedded/external SRT/WebVTT and server-rendered ASS/SSA/PGS/VobSub individually.
-- [ ] Test subtitle/audio/version changes while preparing, paused, seeking and completing; prevent stale callbacks.
+- [ ] Test subtitle/audio/version changes while preparing, paused, seeking and completing on device. Host: a 12-journey generation matrix rejects superseded prepare/seek/listener callbacks; terminal events retire pending resumes, replacement preserves pause intent, and view-owned subtitle/seek results are guarded. Native AVPlay timing/output remains unobserved.
 - [ ] Complete held-key scrub/repeat handling. The player HUD now hides after five seconds of
   uninterrupted playing; navigation/OK first reveals controls without activating them. Media
   keys still act while hidden. Pausing, buffering, errors and open menus retain visible controls;
