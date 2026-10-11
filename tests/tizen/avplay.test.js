@@ -93,6 +93,30 @@ async function run() {
     completeSeek();
     assert.strictEqual(adapter.snapshot().position, 0, "A timed-out seek must not later mutate the playhead");
     adapter.close();
+    // Tizen 3.0 (UE55MU6172): reopening a transcode at 6690 s after an audio switch left AVPlay
+    // READY forever, because a READY-state seekTo on HLS never called back.
+    native = fake();
+    var seeks = [];
+    native.seekTo = function (target, success) {
+        seeks.push(native.getState());
+        if (native.getState() === "PLAYING") { success(); }
+    };
+    adapter = av.create({ avplay: native, resumeSeekTimeout: 5 });
+    await adapter.open("https://synthetic.invalid/stream", 6690000);
+    assert.strictEqual(adapter.snapshot().state, "playing", "A silent READY seek must not strand the player in READY");
+    assert.deepStrictEqual(seeks, ["READY", "PLAYING"], "The resume seek must be retried once playback has started");
+    assert.strictEqual(native.getState(), "PLAYING");
+    adapter.close();
+
+    native = fake();
+    native.seekTo = function () {};
+    events = [];
+    adapter = av.create({ avplay: native, resumeSeekTimeout: 5, onEvent: function (event) { events.push(event); } });
+    await adapter.open("https://synthetic.invalid/stream", 6690000);
+    assert.strictEqual(adapter.snapshot().state, "playing", "A resume that never lands still plays rather than hanging");
+    await new Promise(function (done) { setTimeout(done, 30); });
+    assert(events.some(function (event) { return event.type === "resume-failed"; }), "A lost resume position must be reported");
+    adapter.close();
     console.log("Tizen AVPlay state/cancellation/seek tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exitCode = 1; });

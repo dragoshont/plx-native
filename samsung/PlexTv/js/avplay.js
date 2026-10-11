@@ -110,8 +110,9 @@
                         try {
                             duration = Math.max(0, Number(avplay.getDuration()) || 0);
                             transition("ready");
-                            function play() {
-                                if (ownGeneration !== generation) { return; }
+                            var resumeWait = options.resumeSeekTimeout || 8000;
+                            function play(resumed) {
+                                if (ownGeneration !== generation || !pending) { return; }
                                 try {
                                     avplay.play();
                                     position = Math.max(0, Math.round(Number(avplay.getCurrentTime()) || 0));
@@ -120,11 +121,46 @@
                                     pending = null;
                                     transition("playing");
                                     resolve();
-                                } catch (failure) { failed("play"); }
+                                } catch (failure) { failed("play"); return; }
+                                if (!resumed) { seekWhilePlaying(); }
+                            }
+                            // A READY-state seek is unreliable for HLS on Tizen: on a UE55MU6172 it never
+                            // called back. Retry the resume from PLAYING, which Samsung documents as safe.
+                            function seekWhilePlaying() {
+                                var done = false;
+                                function lost() {
+                                    if (done || ownGeneration !== generation) { return; }
+                                    done = true;
+                                    notify("resume-failed", offset);
+                                }
+                                var guard = setTimeout(lost, resumeWait);
+                                try {
+                                    avplay.seekTo(offset, function () {
+                                        if (done || ownGeneration !== generation) { return; }
+                                        done = true;
+                                        clearTimeout(guard);
+                                        position = offset;
+                                        notify("time");
+                                    }, function () { clearTimeout(guard); lost(); });
+                                } catch (failure) { clearTimeout(guard); lost(); }
                             }
                             if (offset > 0) {
-                                avplay.seekTo(offset, play, function () { failed("resume"); });
-                            } else { play(); }
+                                var readySettled = false;
+                                var readyGuard = setTimeout(function () {
+                                    if (readySettled) { return; }
+                                    readySettled = true;
+                                    play(false);
+                                }, resumeWait);
+                                var settleReady = function (resumed) {
+                                    if (readySettled) { return; }
+                                    readySettled = true;
+                                    clearTimeout(readyGuard);
+                                    play(resumed);
+                                };
+                                try {
+                                    avplay.seekTo(offset, function () { settleReady(true); }, function () { settleReady(false); });
+                                } catch (failure) { settleReady(false); }
+                            } else { play(true); }
                         } catch (failure) { failed("prepare"); }
                     }, function () { failed("prepare"); });
                 } catch (failure) { failed("open"); }

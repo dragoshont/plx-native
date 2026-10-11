@@ -952,8 +952,25 @@
                 });
             },
             getHomeHubs: function () {
-                return get("/hubs/promoted?count=12&excludeContinueWatching=0").then(function (container) {
-                    return listFrom(container, "Hub");
+                // removeFromContinueWatching hides an item from /hubs/continueWatching and home.ondeck
+                // but not from home.continue, so the deck comes from the dedicated hub. A server
+                // without that hub keeps the promoted rows.
+                var deck = get("/hubs/continueWatching?count=12").then(function (container) {
+                    return listFrom(container, "Hub").filter(function (hub) {
+                        return Array.isArray(hub && hub.Metadata) && hub.Metadata.length > 0;
+                    }).slice(0, 1);
+                }).catch(function () { return null; });
+                return Promise.all([get("/hubs/promoted?count=12&excludeContinueWatching=0"), deck]).then(function (results) {
+                    var hubs = listFrom(results[0], "Hub");
+                    if (!results[1]) { return hubs; }
+                    var at = -1;
+                    var rest = hubs.filter(function (hub, index) {
+                        var deckRow = hub.hubIdentifier === "home.continue" || hub.hubIdentifier === "home.ondeck";
+                        if (deckRow && at === -1) { at = index; }
+                        return !deckRow;
+                    });
+                    rest.splice(at === -1 ? 0 : at, 0, results[1][0]);
+                    return rest.filter(Boolean);
                 });
             },
             getSectionItems: function (sectionKey, start, size, filters) {

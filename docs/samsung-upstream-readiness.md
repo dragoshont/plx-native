@@ -136,6 +136,19 @@ trailers, the More menu, typing in Search and Settings toggles remain unobserved
 The LG-inspired Home/detail changes are documented in the [loop analysis](samsung-lg-loop-analysis.md).
 They are not a substitute for closing the following runtime gates.
 
+## Phase 1 device pass (build `93e947a8`)
+
+Run on one TV: UE55MU6172. The system build reports Tizen 3.0 (`TIZEN-3.0-TRUNK2017-KantM-RELEASE_20260225.1`); the firmware API that would give the exact version is privilege-blocked.
+Every tested app JS file matched the installed build. The run ended on Home with AVPlay `NONE`, preferences and recents restored and the lease released. Request-level write ledgers are private session evidence.
+
+| Result | Cases |
+|---|---|
+| Observed passing | Playback start, resume, seek, stop and restart; both Continue Watching modes; auto-next off and on (the successor's timeline proves the next episode played); intro and credits marker seeks; watched/unwatched pairs; subtitle search and download (5 results, metadata stream count +1); restoring local settings |
+| Observed failing, host-fixed | (a) After an audio-stream switch AVPlay stayed `READY`. The reopen at ~6690 s prepared, but the READY-state `seekTo` never called back; no timeline was sent for 62 s. `avplay.js` now limits that seek to `resumeSeekTimeout` (8 s by default). If the seek fails or times out, it starts playback and retries the seek from `PLAYING`, which Samsung documents as the safe state for seeking HLS. If the retry also fails, it emits `resume-failed`, which the player shows as a status message instead of hanging. Covered by `avplay.test.js`. (b) Remove from Continue Watching left the item on a freshly reloaded Home. Home built its deck from the promoted `home.continue`/`home.ondeck` hubs, which PMS does not filter after removal. `getHomeHubs` now takes the deck from `/hubs/continueWatching`, as LG does (`plex/src/plex/hubs.rs`); if that call fails it falls back to the promoted rows. Covered by `home-deck.test.js`. **Both fixes still need re-verification on the device** |
+| Unverified | Subtitle cue rendering on the panel; PGS/ASS (none in the sampled media); exact firmware and HDR; physical remote; full-panel capture |
+
+Follow-up: LG restarts the transcode with `offset=` and treats the stream as starting at 0 plus a display base (`plex/src/plex/transcoder.rs`). Samsung still sends `offset: 0` and relies on AVPlay seeking. The PLAYING-state retry fixes the hang. Moving to server-side offsets would avoid a long first seek, but it means remapping positions in timelines and markers.
+
 ## Follow-up feature parity review
 
 Compared the current checked-out LG sources, not the historical official-Plex gap inventory

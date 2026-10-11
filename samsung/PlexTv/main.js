@@ -2395,6 +2395,9 @@
                         pauseControl.className = pauseControl.className.replace(/menu-icon-(pause|play)/,
                             event.state === "paused" ? "menu-icon-play" : "menu-icon-pause");
                         showHud();
+                    } else if (event.type === "resume-failed") {
+                        setStatus("Couldn't return to where you left off. Playing from the start.");
+                        showHud();
                     } else if (event.type === "error") {
                         showPlayerError({ message: event.detail });
                     } else if (event.type === "ended") {

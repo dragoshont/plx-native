@@ -59,10 +59,10 @@ function run() {
     }).then(function (page) {
         assert.strictEqual(page.items[0].ratingKey, "10");
         assert.strictEqual(page.totalSize, 51);
-        assert.strictEqual(calls[2].url,
+        assert.strictEqual(calls[calls.length - 1].url,
             "http://localhost:32400/library/sections/1/all?X-Plex-Container-Start=0&X-Plex-Container-Size=50");
         return client.getMetadata("10").then(function () {
-            assert(new URL(calls[3].url).searchParams.get("includeOnDeck") === "1",
+            assert(new URL(calls[calls.length - 1].url).searchParams.get("includeOnDeck") === "1",
                 "Show detail must request the server-selected episode");
         }).then(function () {
             return client.getSectionItems("../identity", 0, 50);
