@@ -146,6 +146,12 @@ def build(version, out_dir=HERE / "dist"):
             cert, pw = author_cert(tizen, work)
             app = work / "app"
             stage(app, version)
+            if backup is None:
+                # A fresh data directory (e.g. a CI cache hit on the CLI alone) has no
+                # profiles.xml, and `security-profiles add` refuses to create one.
+                profiles.parent.mkdir(parents=True, exist_ok=True)
+                profiles.write_text('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
+                                    '<profiles active="" version="3.1"/>\n', encoding="utf-8")
             # A temporary signing profile; the previous profiles.xml is restored below.
             run(tizen, "security-profiles", "add", "-n", "plx-build", "-a", cert, "-p", pw,
                 "-d", dist / "tizen-distributor-signer.p12", "-dp", "tizenpkcs12passfordsigner",
