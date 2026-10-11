@@ -264,6 +264,9 @@ async function run() {
         await settle();
         click("Movies");
         await settle();
+        assert(window.document.activeElement.classList.contains("media-card"),
+            "Opening a library must land on its first title, not the Account control");
+        assert.strictEqual(window.document.activeElement, window.document.querySelector(".item-list .media-card"));
         click("Account");
         assert(!window.document.querySelector(".home-utilities").hidden,
             "Account must open the same utility panel in a library, not jump to Settings");

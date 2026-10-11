@@ -13,6 +13,7 @@
     var currentOffset = 0;
     var viewGeneration = 0;
     var itemsLoading = false;
+    var sectionLandingFocus = null;
     var authClient = null;
     var authPin = null;
     var authTimer = null;
@@ -1237,7 +1238,15 @@
         loadMore.id = "load-more";
         var back = button(screen, "Back to Home", backView);
         back.id = "home-back";
+        var restoringFocus = !!pendingRestore;
         focusFirst();
+        sectionLandingFocus = null;
+        if (!restoringFocus && document.activeElement === screen.querySelector(".account-control")) {
+            // Hold focus on this library's tab while titles load, then hand it to the first title.
+            sectionLandingFocus = screen.querySelector('.home-navigation button[aria-current="page"]') ||
+                screen.querySelector(".page-toolbar button");
+            sectionLandingFocus.focus();
+        }
         if (!saved) { loadNextPage(); }
     }
 
@@ -1270,7 +1279,10 @@
             });
             if (focusedKey) {
                 (restored || list.querySelector("button") || document.getElementById("home-back")).focus();
+            } else if (sectionLandingFocus && document.activeElement === sectionLandingFocus && list.querySelector("button")) {
+                list.querySelector("button").focus();
             }
+            sectionLandingFocus = null;
             var loadMore = document.getElementById("load-more");
             loadMore.disabled = currentOffset >= page.totalSize || page.items.length === 0;
             if (loadMore.disabled && document.activeElement === loadMore) {
