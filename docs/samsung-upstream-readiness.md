@@ -5,6 +5,30 @@ The separate Samsung client has a broad source/host baseline; developer installa
 Neither implies that its playback, account lifecycle and runtime constraints match the LG app.
 LG remains unchanged. Plex Media Server remains the library/watch-state authority.
 
+## Store and service authorization checkpoint (2026-10-11)
+
+**B2 and B3 remain blocked, not implementation tasks that can be closed by a green test.**
+The sources below were read directly on this date. This is a distribution-risk checklist,
+not legal advice or approval from Samsung or Plex. Developer sideloading and the mock film
+do not establish Store eligibility or permission to stream Plex's licensed catalogue.
+
+| Question | Confirmed source requirement | Remaining decision or evidence |
+|---|---|---|
+| Seller membership and region | Samsung's [membership guide](https://developer.samsung.com/tv-seller-office/guides/membership/becoming-seller-office-member.html) starts accounts as Public Sellers, limited to U.S. distribution. Partner status requires a Samsung Content Manager approval and an offline contract; countries are those agreed in that contract. | Choose distribution countries. Individual-versus-company eligibility for this publisher has not been established; the guide requests company-location information, and the [partner guide](https://developer.samsung.com/tv-seller-office/guides/membership/becoming-partner.html) requires a seller group/company information. Obtain an explicit answer through Seller Office before promising availability. |
+| Submission and model targeting | Samsung's [publication process](https://developer.samsung.com/tv-seller-office/application-publication-process.html) requires package upload/pre-test, application information, release request, review and verification before service starts. The [distribution guide](https://developer.samsung.com/tv-seller-office/guides/applications/distributing-application.html) selects model groups and service countries, not an unconditional year range. | No Store submission or approval is recorded. Use only accepted model/firmware rows; the guide's 2018+ .NET rule is not evidence for this Web client's support. |
+| Signing and update identity | The [launch checklist](https://developer.samsung.com/tv-seller-office/checklists-for-distribution/launch-checklist.html) requires a manifest, author-signature.xml and signature1.xml; updates retain Tizen ID and author signature and increase package version. Partner APIs require permission. | Signed developer install/update/uninstall belongs to D13. Store pre-test, privilege review and certification remain separate. No release version or tag is authorized here. |
+| Review assets and backend access | The launch checklist requests UI-description material, icons, four JPEG screenshots, localized title/description, contact information, privacy-policy URL when collecting personal information and sufficient test credentials. The distribution guide requires enough test accounts for concurrent model-group testing; FCC-targeted groups require Caption and TTS support. | Prepare disposable reviewer accounts and a lawful, reachable test library, never household credentials. No explicit policy approving a personal-PMS-only client was found. Confirm that service model with Samsung and assess Caption/TTS before targeting affected groups. |
+| Name, logo and look | Plex's [trademark guidelines](https://www.plex.tv/about/privacy-legal/plex-trademarks-and-guidelines/) permit a unique product name followed by "for Plex", but prohibit Plex/derivatives in the product name, derivative trademark icons, confusing endorsement and copying Plex's look and feel. Uses outside the guidelines need written permission. | Review the actual public title, icons and marketing. An "unofficial" disclaimer alone does not satisfy these rules. Do not rename the app or change an installed identity silently; owner/legal decision is required. |
+| PMS interfacing and entitlements | Plex's [Terms of Service](https://www.plex.tv/about/privacy-legal/plex-terms-of-service/) (page revised October 30, 2025) explicitly discuss client applications as "Interfacing Software", privacy notices, copyright notices and associated grants, alongside broad license restrictions and restrictions on exclusive Plex Pass functionality. | Reconcile these provisions and the project's source license with qualified advice or Plex clarification before public distribution. A functional PMS endpoint or a trademark guideline is not a blanket API/service license. Preserve account entitlements; do not bypass Plex Pass or content controls. |
+| Licensed/ad-supported catalogue | The same terms describe third-party content as non-transferable and subject to its licensors' terms; they do not grant general copying/distribution rights. | No third-party-client streaming authorization, playable-source agreement, DRM or advertising contract is recorded. B3 stays blocked; local-PMS playback must not be substituted as proof. |
+
+**Go/no-go:** continued bounded developer testing of personal-PMS behavior is separate from
+public release. Store distribution and licensed catalogue streaming are **no-go until their
+specific external requirements are resolved**. No numeric Samsung startup limit, general
+individual-publisher entitlement or personal-server-only approval is asserted from these sources.
+The app's existing remote/lifecycle/performance gates remain necessary but are not a substitute
+for the current Samsung certification requirements.
+
 ## Deployment and follow-up evidence
 
 The currently observed install is `9db91e36`, installed on 2026-10-11 after the baseline below.
