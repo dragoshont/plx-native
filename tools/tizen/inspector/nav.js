@@ -68,7 +68,9 @@ const STATE = '(' + function () {
 // trailers, watch state, watchlist, DVR, sign-out, profile switching and settings writes.
 const BROWSE = new Set(['Open details', 'Next featured title', 'Read more', 'Read less', 'More', 'Back',
     'Back to Home', 'Home', 'Search', 'Settings', 'Account', 'Change profile', 'Close menu', 'Cancel',
-    'Collections', 'All titles', 'Recently added', 'Load more', 'Next page', 'Previous page', 'Favorite libraries']);
+    'Collections', 'All titles', 'Recently added', 'Load more', 'Next page', 'Previous page', 'Favorite libraries',
+    // Detail-page child listings: each only GETs the item's children or collection members.
+    'Seasons', 'Episodes', 'Collection items']);
 const DENY = /play|continue|resume|start|trailer|watch|record|dvr|delete|remove|sign|shuffle|confirm|use this|reset|linked|server|rate|mark|queue|stop/i;
 // Exact pre-Home routing controls that only read: "Use linked account" opens the server list
 // without the profile-switch request, and a server choice only connects and loads Home.

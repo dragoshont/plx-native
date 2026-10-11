@@ -27,7 +27,8 @@ test('OK refuses every playback, account and state-changing control', () => {
 });
 
 test('OK allows browse-only buttons and library names in the Home capsule', () => {
-    for (const label of ['Open details', 'Back', 'Home', 'Search', 'Settings', 'Read more', 'Next featured title']) {
+    for (const label of ['Open details', 'Back', 'Home', 'Search', 'Settings', 'Read more', 'Next featured title',
+        'Seasons', 'Episodes', 'Collection items']) {
         assert.equal(refuseOk(sanitizeState(button(label))), null, label);
     }
     assert.equal(refuseOk(sanitizeState(button('Movies', { nav: true }))), null);
