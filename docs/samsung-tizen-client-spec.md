@@ -308,8 +308,13 @@ not a Rust/Wasm port. Acorn parses every shipped JavaScript file with `ecmaVersi
 syntax only, not availability of fetch/Promise/URL or other APIs on an old TV. Host-only npm
 dependencies live under `tests/tizen/` and are not packaged in the application.
 The HTTP path also requires response streaming (`body.getReader()`), UTF-8 decoding and blobs.
-That is a separate runtime gate, especially for the intended 2017 engine; the ES5 check alone
-does not establish this target. A bounded legacy-engine transport remains an implementation gap.
+That is a separate runtime gate; the ES5 check alone does not establish it. The owner's 2017
+Tizen 3.0 (Chromium M47) set — older than every 2018+ target — runs this streaming path on device
+for sign-in, browsing, artwork and playback negotiation. An `XMLHttpRequest` fallback was
+considered and rejected: XHR follows redirects silently and re-sends custom headers, which would
+weaken the `redirect: "error"` policy that keeps `X-Plex-Token` from reaching a redirect target.
+An engine without streaming fetch therefore fails closed with "This TV runtime is not supported
+yet" (`tests/tizen/response-limits.test.js`) instead of downgrading transport security.
 
 Music libraries now navigate artists/albums/tracks and use the universal music transcoder with
 an HTTP MP3 request. Album queues are local, capped at 200 tracks, with shuffle and repeat
@@ -635,7 +640,7 @@ evidence; it is not replaced by another media server.
 
 ### Baseline runtime and reusable development process
 
-- [ ] Provide a bounded legacy-engine HTTP transport without weakening token/redirect/TLS policy; current stream requirement can block the intended oldest engine.
+- [x] Decide the legacy-engine HTTP transport without weakening token/redirect/TLS policy. Streaming fetch is observed on the oldest owned engine (2017 Tizen 3 / M47); engines without it fail closed. An XHR fallback is rejected because it cannot refuse redirects carrying the token (§ runtime notes above).
 - [ ] Verify fetch/Promise/URL/UTF-8/blob and CSS API support on the oldest supported engine; add required compatibility implementation.
 - [x] Add automatic manifest/package privilege/identifier and credential-leak checks. `tests/tizen/manifest.test.js` pins the justified privilege set, keeps the signed app/package ID out of the tree and allows exactly one wildcard `<access>` rule (PMS origins are per-user). The unused `application.launch` privilege was removed. The workbench `tizen.py audit` (dragoshont/tizen-tv-builder) adds privilege-use, ES5 and credential-leak scans and blocks packaging on failure; on this app it passes with no errors, and its remaining warnings are the required wildcard, a heuristic miss for `internet` (XHR) and the example IP in a validation message.
 - [x] Wire Samsung host/mock/ES5/source gates into CI, keeping LG recipes unchanged. `.github/workflows/samsung.yml` (path-filtered) runs `tools/tizen/test.sh`, and checks generated locales are committed. Generic workbench/inspector tests run in the separate toolkit's CI.
