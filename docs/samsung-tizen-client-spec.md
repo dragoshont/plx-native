@@ -594,7 +594,7 @@ after-fix acceptance remains separate from host checks and installation.
 - [ ] Verify audio track defaults, selection and failures on device, including model-specific DTS limitations.
 - [ ] Verify embedded/external SRT/WebVTT and server-rendered ASS/SSA/PGS/VobSub individually.
 - [ ] Test subtitle/audio/version changes while preparing, paused, seeking and completing on device. Host: a 12-journey generation matrix rejects superseded prepare/seek/listener callbacks; terminal events retire pending resumes, replacement preserves pause intent, and view-owned subtitle/seek results are guarded. Native AVPlay timing/output remains unobserved.
-- [ ] Complete held-key scrub/repeat handling. The player HUD now hides after five seconds of
+- [ ] Verify held-key scrub/repeat on device. Host journeys prove accelerated Left/Right targets bounded to zero/duration, one seek on keyup or 300 ms idle, no double commit, and hidden-HUD reveal without activation. The player HUD hides after five seconds of
   uninterrupted playing; navigation/OK first reveals controls without activating them. Media
   keys still act while hidden. Pausing, buffering, errors and open menus retain visible controls;
   menu closure and resume restart the timer, and teardown cancels it. Synthetic host journeys

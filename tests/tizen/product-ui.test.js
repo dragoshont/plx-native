@@ -27,14 +27,18 @@ async function run() {
     var position = 0;
     var listener;
     var hudTimers = new Map();
+    var scrubTimers = new Map();
+    var seekTargets = [];
     var hudTimerId = 100000;
     var realSetTimeout = window.setTimeout.bind(window);
     var realClearTimeout = window.clearTimeout.bind(window);
     window.setTimeout = function (callback, delay) {
+        if (delay === 300) { scrubTimers.set(++hudTimerId, callback); return hudTimerId; }
         if (delay === 5000) { hudTimers.set(++hudTimerId, callback); return hudTimerId; }
         return realSetTimeout(callback, delay);
     };
     window.clearTimeout = function (id) {
+        if (scrubTimers.has(id)) { scrubTimers.delete(id); return; }
         if (hudTimers.has(id)) { hudTimers.delete(id); } else { realClearTimeout(id); }
     };
     function hideHud() {
@@ -55,7 +59,7 @@ async function run() {
         getCurrentTime: function () { return position; },
         play: function () { nativeCalls.push("play"); state = "PLAYING"; },
         pause: function () { nativeCalls.push("pause"); state = "PAUSED"; },
-        seekTo: function (time, success) { position = time; success(); },
+        seekTo: function (time, success) { seekTargets.push(time); position = time; success(); },
         getTotalTrackInfo: function () { return [{ type: "AUDIO", index: 0 }]; },
         setSelectTrack: function () {}, setSilentSubtitle: function () {}
     } };
@@ -418,6 +422,28 @@ async function run() {
         var pauseControl = Array.from(window.document.querySelectorAll("button")).find(function (node) {
             return node.textContent === "Pause / Play";
         });
+        pauseControl.focus();
+        function arrow(type, key, repeat) {
+            window.document.dispatchEvent(new window.KeyboardEvent(type, { keyCode: key, repeat: !!repeat, bubbles: true }));
+        }
+        var seekCount = seekTargets.length, originalPosition = position;
+        arrow("keydown", 39);
+        for (var repeat = 0; repeat < 7; repeat++) { arrow("keydown", 39, true); }
+        assert.strictEqual(seekTargets.length, seekCount, "A held arrow must not issue a seek per repeat");
+        arrow("keyup", 39); await settle();
+        assert.strictEqual(seekTargets.length, seekCount + 1, "Held Right must commit ONE seek on keyup");
+        assert(position > originalPosition + 80000, "Held repeats accelerate the pending target");
+        for (repeat = 0; repeat < 100; repeat++) { arrow("keydown", 39, repeat > 0); }
+        var idleCommit = Array.from(scrubTimers.values())[0];
+        assert(idleCommit, "An idle fallback is armed when keyup is lost"); idleCommit(); await settle();
+        arrow("keyup", 39);
+        assert.strictEqual(position, movie.duration, "Scrub is bounded to duration");
+        assert.strictEqual(seekTargets.length, seekCount + 2, "Idle followed by keyup cannot double-commit");
+        for (repeat = 0; repeat < 100; repeat++) { arrow("keydown", 37, repeat > 0); }
+        arrow("keyup", 37); await settle();
+        assert.strictEqual(position, 0, "Scrub is bounded to zero");
+        hideHud(); arrow("keydown", 39); arrow("keyup", 39); await settle();
+        assert.strictEqual(position, 0, "The first arrow reveals hidden controls without seeking");
         pauseControl.focus();
         hideHud();
         assert.strictEqual(window.document.querySelector(".player-hud").hidden, true,

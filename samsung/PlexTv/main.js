@@ -43,6 +43,10 @@
     var nextTimer = null;
     var playerClosing = false;
     var lastAction = 0;
+    var scrubTarget = null;
+    var scrubRepeats = 0;
+    var scrubTimer = null;
+    var scrubOwner = null;
     var externalCues = null;
     var musicQueue = null;
     var musicLoading = false;
@@ -2282,6 +2286,7 @@
 
     function openPlaybackOptions() {
         if (!player) { return; }
+        cancelScrub();
         cancelHudTimer();
         var old = document.getElementById("player-menu");
         if (old) { old.parentNode.removeChild(old); }
@@ -2467,8 +2472,13 @@
 
     function seekPlayer(delta) {
         if (!player) { return; }
+        seekToPlayer(player.snapshot().position + delta);
+    }
+
+    function seekToPlayer(target) {
+        if (!player || playerClosing) { return; }
         var selectedPlayer = player;
-        player.seek(player.snapshot().position + delta).then(function (position) {
+        player.seek(target).then(function (position) {
             if (player !== selectedPlayer || playerClosing) { return; }
             setStatus("Seek landed at " + timeLabel(position) + ".");
             showHud();
@@ -2477,9 +2487,36 @@
         });
     }
 
+    function cancelScrub() {
+        if (scrubTimer !== null) { clearTimeout(scrubTimer); scrubTimer = null; }
+        scrubTarget = null; scrubRepeats = 0; scrubOwner = null;
+    }
+
+    function commitScrub() {
+        var target = scrubTarget;
+        var owner = scrubOwner;
+        cancelScrub();
+        if (target !== null && player === owner && !playerClosing) { seekToPlayer(target); }
+    }
+
+    function scrubPlayer(direction) {
+        var snapshot = player.snapshot();
+        if (["playing", "paused"].indexOf(snapshot.state) === -1 || playerClosing) { return; }
+        if (scrubOwner !== player || scrubTarget === null) {
+            cancelScrub(); scrubOwner = player; scrubTarget = snapshot.position;
+        }
+        scrubRepeats += 1;
+        var step = preferences.skipInterval * 1000 * Math.min(4, 1 + Math.floor((scrubRepeats - 1) / 3));
+        scrubTarget = Math.max(0, Math.min(snapshot.duration || playerItem.duration || 0, scrubTarget + direction * step));
+        setStatus(translate("Seek to {time}", { time: timeLabel(scrubTarget) }));
+        if (scrubTimer !== null) { clearTimeout(scrubTimer); }
+        scrubTimer = setTimeout(commitScrub, 300);
+    }
+
     function stopPlayer(after) {
         if (!player || playerClosing) { return Promise.resolve(); }
         playerClosing = true;
+        cancelScrub();
         subtitleSearchGeneration += 1;
         cancelHudTimer();
         if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
@@ -3128,6 +3165,11 @@
             else { togglePlayer(); }
             return;
         }
+        if (player && !document.getElementById("player-menu") && (key === 37 || key === 39)) {
+            event.preventDefault();
+            scrubPlayer(key === 39 ? 1 : -1);
+            return;
+        }
         if (editing && (key === 37 || key === 39)) {
             return;
         }
@@ -3165,6 +3207,9 @@
     }
 
     function onKeyUp(event) {
+        if ((event.keyCode === 37 || event.keyCode === 39) && scrubTarget !== null) {
+            event.preventDefault(); commitScrub(); return;
+        }
         if (event.keyCode !== 13 || !holdCard) { return; }
         var target = holdCard;
         var short = holdTimer !== null;
@@ -3179,6 +3224,7 @@
     screen.addEventListener("click", function () { if (player) { showHud(); } });
     document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
+            cancelScrub();
             cancelHold();
             if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
             if (player) {
