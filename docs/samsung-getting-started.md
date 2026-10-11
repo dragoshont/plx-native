@@ -284,16 +284,53 @@ Channel relies on a rooted TV; no public root route is used or proposed here. Wh
 | [TizenBrew](https://github.com/reisxd/TizenBrew) + [TizenBrewInstaller](https://github.com/reisxd/TizenBrewInstaller) | An app that loads modules (modded websites/apps) after one install; Tizen 7+ asks for Samsung sign-in to sign it | A loader, not a root channel; not a target for PlexTv now |
 
 All of them still require Developer Mode with your computer's IP and, at least on Tizen 7+, a
-Samsung account. Community reports say older Tizen accepted generic-signed packages; this project's
-2017 set still needed `install-permit` (section 3), so do not rely on that. TizenBrew notes Samsung
-shut down the USB demo-package service, so a USB-only route is not available.
+Samsung account. TizenBrew notes Samsung shut down the USB demo-package service, so a USB-only
+route is not available.
+
+**Observed: installing without a Samsung account (2017 and 2019 sets, 2026-10-11).** The test
+started in a clean directory. The only TV-side setup was Developer Mode with this computer's IP.
+The Tizen CLI ran from the public `vitalets/tizen-webos-sdk` Docker image under Colima. The test
+app was a synthetic hello `.wgt`, not PlexTv. It was signed with a self-made author certificate
+(`tizen certificate ...`) and the SDK's stock **Tizen default distributor**
+(`tools/certificate-generator/certificates/distributor/tizen-distributor-signer.p12` with
+`tizen-distributor-ca.cer`). The TV's DUID was never used. Results:
+
+| TV | Install | Launch | Uninstall |
+|---|---|---|---|
+| UE43RU7092 (2019, Tizen 5.0) | pass, about 4 s | pass | pass with `-p <app-id> -t <name>` |
+| UE55MU6172 (2017, Tizen 3.0) | pass, about 4 s | pass | pass with `-p <app-id> -t <name>` |
+
+- The 2017 set had earlier run `install-permit` for a different, Samsung-issued certificate. No
+  permit was run in this test.
+- Not yet tested:
+  - a 2018 set;
+  - Tizen 6.5 or newer;
+  - a TV that has never had a developer install;
+  - whether Developer Mode turning off later removes or disables such apps;
+  - PlexTv itself.
+
+Until those are tested, the Samsung-certificate route (section 3) remains the documented path.
+
+Exact commands, where `<name>` is the third column of `sdb devices`, not the `ip:port` serial:
+
+```sh
+tizen package -t wgt -s <profile> -- <app-dir>
+tizen install -n <app>.wgt -t <name>
+tizen run -p <package-id>.<app-name> -t <name>
+tizen uninstall -p <package-id>.<app-name> -t <name>
+```
+
+`tizen uninstall` needs the full **application** ID. Given only the package ID it fails with "The
+package is not exist", and without `-t` it exits silently without removing anything.
 
 **Troubleshooting.**
 
 | Symptom | Likely cause |
 |---|---|
 | `install failed[118]` | `install-permit` not run for this TV/certificate (section 3) |
-| Signing says "Invalid password" | AES-encrypted `.p12` (see tizen-cert-cli above) or a wrong password |
+| Signing says "Invalid password" | AES-encrypted `.p12` (see tizen-cert-cli above), a wrong password, or Linux/Docker with no keyring: `security-profiles add` stores masked passwords. Write `profiles.xml` with the plain passwords instead. The real error is in `~/tizen-studio-data/cli/logs/cli.log` |
+| `tizen uninstall` says "package is not exist" or does nothing | Use the app ID (`<pkg>.<name>`) and `-t <device name>` (above) |
+| Port 26101 open but `sdb connect` fails | Developer Mode's Host PC IP points at another computer |
 | `sdb connect` fails but `nc -vz <tv-ip> 26101` works | macOS Local Network permission (section 4) |
 | TV refuses the connection | Host PC IP in Developer Mode is not the address the computer actually uses (section 4) |
 | Certificate rejected for a new TV | Its DUID is not in the distributor certificate, or the REST-API `duid` was used |
