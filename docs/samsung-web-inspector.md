@@ -331,6 +331,36 @@ The viewer is genuinely live: a capture changes when the page repaints. It is
 not a frame-accurate recording of compositor animation, the video plane or
 the panel.
 
+## Workbench: preview and live on one page
+
+`workbench` serves a loopback web page with two panes side by side: the desktop
+preview of `samsung/PlexTv` scaled from 1920x1080, and the live TV viewer.
+Open it in any browser on this Mac; it does not need the Copilot app.
+
+```sh
+node tools/tizen/inspector.js workbench --port 47800
+```
+
+The URL is printed as `{"status":"live","view":"http://127.0.0.1:47800/<token>/"}`.
+Without `--endpoint` the page shows the preview only, needs no lease and never
+connects to a TV; the live pane says how to connect and whether the device lane
+is in use. It serves until Ctrl-C. The preview is the real app source served
+from disk, so `webapis.js` and AVPlay are absent and playback cannot work there.
+
+With `--endpoint` the same rules as `live` apply: `--allow-private-pixels` is
+required, the device lease is taken, and `--interactive`, `--interval-ms` and
+`--duration-ms` are accepted. Only one lane may drive the TV.
+
+```sh
+node tools/tizen/inspector.js workbench --port 47800 \
+  --endpoint http://127.0.0.1:<forwarded-port> --allow-private-pixels --interactive
+```
+
+Both servers bind `127.0.0.1` only, require the random token in the path and an
+exact `Host` header, accept only GET and HEAD, and serve `samsung/PlexTv` with
+dot segments and dotfiles refused. The live viewer permits framing only by the
+workbench origin; run alone, it still refuses all framing.
+
 ## Guarded navigation
 
 `state` and `key` drive the app through the remote-key path for read-only

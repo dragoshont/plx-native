@@ -118,8 +118,20 @@ were made.
 While the on-screen keyboard is up, the window is 604 px tall and the lower edge of the recent
 searches sits below the Search scroll area. Arrowing off the input dismissed it (the Search area
 grew to 1016 px), and the focused recent term and Clear button were then fully visible. This is
-why the layout was left unchanged. The guarded walk skipped Seasons, playback, trailers,
-the More menu, typing in Search and Settings toggles; those remain unobserved.
+why the layout was left unchanged. Recent-search focus never needed `revealControl` to scroll
+(`scrollTop` stayed 0), so that branch is host-tested only.
+
+A second guarded walk on `bb340ab8` opened a show's Seasons and one season's episode listing.
+It found two more gaps, fixed in `614aa555` and re-observed on the TV:
+
+| Gap found on the TV | Fix | Observed on `614aa555` |
+|---|---|---|
+| Season posters about 270x350 and episode stills about 2.64:1 | Listing artwork uses the item's own aspect | Seasons 270x405 (2:3), episodes 564x317.25 (16:9); focused cards scale 1.06 |
+| Back from the episode listing reset show-detail focus to Read more | Detail restores the action that opened the listing | Back restores the season, then Seasons, then the original show card |
+
+No episode was opened, played or marked. The viewer twice ended with `protocol_error` after
+repeated capture failures around a route change; one reconnect completed each walk. Playback,
+trailers, the More menu, typing in Search and Settings toggles remain unobserved.
 
 The LG-inspired Home/detail changes are documented in the [loop analysis](samsung-lg-loop-analysis.md).
 They are not a substitute for closing the following runtime gates.

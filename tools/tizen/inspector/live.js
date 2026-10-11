@@ -36,12 +36,12 @@ function page(nonce, intervalMs, interactive) {
 <span class="sep"></span><button id="refresh">Refresh now</button><button id="pause">Pause</button></div>
 <div id="command">input: idle</div>` : '<div id="command">input disabled (view only)</div>';
     return `<!doctype html><html><head><meta charset="utf-8"><title>Samsung native layers (not panel)</title>
-<style>body{background:#111;color:#eee;font:14px system-ui,sans-serif;margin:16px}
-#label{background:#7a1f1f;padding:8px 12px;font-weight:600}#status,#command,#focus,#meta{margin:6px 0;font-family:monospace}
+<style>body{background:#141414;color:#ececec;font:14px system-ui,sans-serif;margin:16px}
+#label{background:#2a2a2a;border-left:3px solid #d6a740;padding:8px 12px;font-weight:600}#status,#command,#focus,#meta{margin:6px 0;font-family:monospace}
 #stale{display:none;background:#b8860b;color:#000;padding:6px 12px;font-weight:700}
 #controls button{margin:2px;padding:6px 12px}.sep{display:inline-block;width:16px}
-#surface{outline:2px solid #555;padding:6px;margin-top:8px}#surface:focus{outline:3px solid #4aa3ff}
-figure{display:inline-block;vertical-align:top;margin:0 12px 12px 0;border:1px dashed #888;padding:6px;max-width:100%}
+#surface{outline:2px solid #555;padding:6px;margin-top:8px}#surface:focus{outline:3px solid #fff}
+figure{display:inline-block;vertical-align:top;margin:0 12px 12px 0;border:1px solid #2e2e2e;padding:6px;max-width:100%}
 img{max-width:100%;background:repeating-conic-gradient(#333 0 25%,#222 0 50%) 0 0/16px 16px;display:block}
 figcaption{font-family:monospace;font-size:12px;margin-top:4px}</style></head><body>
 <div id="label"></div><div id="stale"></div><div id="status">connecting…</div><div id="meta"></div>
@@ -173,11 +173,16 @@ class Exclusive {
 }
 
 class LiveView {
-    constructor(client, { durationMs, intervalMs, waitMs, interactive = false, tv } = {}) {
+    constructor(client, { durationMs, intervalMs, waitMs, interactive = false, tv, frameAncestor } = {}) {
         for (const [value, min, max] of [[durationMs, 1000, 1800000], [intervalMs, 500, 60000], [waitMs, 10, 15000]]) {
             if (!Number.isInteger(value) || value < min || value > max) throw new InspectorError('invalid_live_option');
         }
-        Object.assign(this, { client, durationMs, intervalMs, waitMs, interactive: interactive === true });
+        if (frameAncestor !== undefined && !/^http:\/\/127\.0\.0\.1:\d{1,5}$/.test(frameAncestor)) {
+            throw new InspectorError('invalid_live_option');
+        }
+        // Only the local workbench page may frame the viewer; every other origin is still refused.
+        Object.assign(this, { client, durationMs, intervalMs, waitMs, interactive: interactive === true,
+            frameAncestor: frameAncestor || null });
         this.token = crypto.randomBytes(24).toString('hex');
         // One CSRF value per viewer, carried only by the page script; a cross-origin page cannot read it.
         this.nonce = crypto.randomBytes(16).toString('base64');
@@ -401,7 +406,7 @@ class LiveView {
         response.setHeader('Cache-Control', 'no-store');
         response.setHeader('X-Content-Type-Options', 'nosniff');
         response.setHeader('Referrer-Policy', 'no-referrer');
-        response.setHeader('X-Frame-Options', 'DENY');
+        if (!this.frameAncestor) response.setHeader('X-Frame-Options', 'DENY');
         response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
         const refuse = status => { response.statusCode = status; response.end(); };
         // Exact Host defeats DNS rebinding; the token keeps other local pages and users from guessing the URL.
@@ -422,7 +427,7 @@ class LiveView {
             const nonce = this.nonce;
             response.setHeader('Content-Security-Policy', `default-src 'none'; img-src 'self'; ` +
                 `connect-src 'self'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; ` +
-                `base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+                `base-uri 'none'; form-action 'none'; frame-ancestors ${this.frameAncestor || "'none'"}`);
             response.setHeader('Content-Type', 'text/html; charset=utf-8');
             return response.end(page(nonce, this.intervalMs, this.interactive));
         }

@@ -4,9 +4,10 @@
 const { Client, InspectorError, localEndpoint, discover, selectTarget } = require('./inspector/client');
 const { geometry } = require('./inspector/geometry');
 const { screenshot, screencastCapability, screencast } = require('./inspector/capture');
-const { acquireLock, outputPath, saveScreenshot, saveFrames } = require('./inspector/lifecycle');
+const { LOCK, acquireLock, outputPath, saveScreenshot, saveFrames } = require('./inspector/lifecycle');
 const { layerCapture } = require('./inspector/layers');
 const { LiveView } = require('./inspector/live');
+const { Workbench } = require('./inspector/workbench');
 const { KEYS, readState, press } = require('./inspector/nav');
 
 const HELP = `Samsung Web Inspector (Node >=22)
@@ -19,6 +20,9 @@ const HELP = `Samsung Web Inspector (Node >=22)
     (serves fresh separate layers from memory on a tokenised 127.0.0.1 URL printed to stderr; Ctrl-C stops;
      --interactive adds guarded on-page remote keys through the same checks as the key command;
      --tv-* values are shown as operator-supplied, never as observed)
+  node tools/tizen/inspector.js workbench [--port N] [--endpoint http://127.0.0.1:PORT --allow-private-pixels [live options]]
+    (one local web page, any browser: the desktop preview of samsung/PlexTv beside the TV's live layers;
+     without --endpoint it is preview only, contacts no TV and takes no lock; Ctrl-C stops)
   node tools/tizen/inspector.js state --endpoint http://127.0.0.1:PORT
   node tools/tizen/inspector.js key --endpoint http://127.0.0.1:PORT --key up|down|left|right|back|ok [--rating-key N]
     (ok is refused unless the focused control is browse-only; a card needs its observed --rating-key)
@@ -40,7 +44,7 @@ function integer(value, min, max) {
 
 function options(args) {
     const command = args[0];
-    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast', 'layers', 'live', 'state', 'key'].includes(command)) {
+    if (!['targets', 'probe', 'geometry', 'screenshot', 'screencast', 'layers', 'live', 'state', 'key', 'workbench'].includes(command)) {
         throw new InspectorError('invalid_command');
     }
     const values = {};
@@ -48,20 +52,30 @@ function options(args) {
         const name = args[i];
         if (Object.hasOwn(values, name)) throw new InspectorError('duplicate_option');
         if (['--allow-private-pixels', '--save-sign-in', '--interactive'].includes(name)) { values[name] = true; continue; }
-        if (!['--endpoint', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms', '--key', '--rating-key',
+        if (!['--endpoint', '--port', '--target-index', '--timeout-ms', '--output', '--duration-ms', '--max-frames', '--interval-ms', '--key', '--rating-key',
             '--tv-model', '--tv-year', '--tv-os', '--tv-firmware'].includes(name) ||
             i + 1 >= args.length || args[i + 1].startsWith('--')) throw new InspectorError('invalid_option');
         values[name] = args[++i];
     }
-    const pixel = ['screenshot', 'screencast', 'layers', 'live'].includes(command);
-    const saves = pixel && command !== 'live';
+    const bench = command === 'workbench';
+    if (bench) {
+        if (values['--port'] !== undefined) integer(values['--port'], 1024, 65535);
+        if (values['--endpoint'] === undefined) {
+            if (Object.keys(values).some(name => name !== '--port')) throw new InspectorError('inapplicable_option');
+            return { command, port: values['--port'] === undefined ? 0 : Number(values['--port']), endpoint: undefined };
+        }
+    } else if (values['--port'] !== undefined) throw new InspectorError('inapplicable_option');
+    // A workbench with an endpoint is a live view embedded beside the preview, under the same rules.
+    const liveLike = command === 'live' || bench;
+    const pixel = ['screenshot', 'screencast', 'layers'].includes(command) || liveLike;
+    const saves = pixel && !liveLike;
     if (pixel && (!values['--allow-private-pixels'] || (saves && !values['--output']))) {
         throw new InspectorError('private_pixel_consent_required');
     }
     if ((!pixel && values['--allow-private-pixels']) || (!saves && values['--output']) ||
-        (!['screencast', 'live'].includes(command) && values['--duration-ms']) ||
+        (command !== 'screencast' && !liveLike && values['--duration-ms']) ||
         (command !== 'screencast' && values['--max-frames']) ||
-        (command !== 'live' && (values['--interval-ms'] || values['--interactive'] ||
+        (!liveLike && (values['--interval-ms'] || values['--interactive'] ||
             TV_FIELDS.some(field => values[`--tv-${field}`] !== undefined))) ||
         (command !== 'key' && (values['--key'] || values['--rating-key'] || values['--save-sign-in'])) ||
         (values['--save-sign-in'] && (values['--key'] !== 'ok' || values['--rating-key']))) {
@@ -71,8 +85,9 @@ function options(args) {
     if (TV_FIELDS.some(field => values[`--tv-${field}`] !== undefined &&
         !/^[A-Za-z0-9 ._-]{1,40}$/.test(values[`--tv-${field}`]))) throw new InspectorError('invalid_option');
     if (values['--rating-key'] !== undefined && !/^\d{1,12}$/.test(values['--rating-key'])) throw new InspectorError('invalid_option');
-    const live = command === 'live';
+    const live = liveLike;
     return {
+        port: bench && values['--port'] !== undefined ? Number(values['--port']) : 0,
         key: values['--key'], ratingKey: values['--rating-key'], saveSignIn: values['--save-sign-in'] === true,
         command, endpoint: localEndpoint(values['--endpoint']),
         timeoutMs: integer(values['--timeout-ms'] || '15000', 100, 15000),
@@ -96,9 +111,23 @@ function versionSummary(value) {
         protocol: typeof protocol === 'string' && /^\d+\.\d+$/.test(protocol) ? protocol : 'unreported' };
 }
 
+async function workbenchOnly(config, ready) {
+    const bench = new Workbench({ port: config.port, lockPath: LOCK });
+    ready(await bench.start());
+    await new Promise(resolve => {
+        const stop = () => resolve();
+        process.once('SIGINT', stop);
+        process.once('SIGTERM', stop);
+    });
+    await bench.close();
+    return { status: 'ended', kind: 'workbench', live: false, reason: 'interrupted' };
+}
+
 async function run(config, lock = acquireLock, ready = view => process.stderr.write(JSON.stringify(
     { status: 'live', view, note: 'private local URL; do not share' }) + '\n')) {
+    if (config.command === 'workbench' && !config.endpoint) return workbenchOnly(config, ready);
     const release = lock();
+    let bench;
     let client;
     let viewer;
     let interrupted = false;
@@ -144,10 +173,18 @@ async function run(config, lock = acquireLock, ready = view => process.stderr.wr
                 result = { ...capture.receipt, version };
                 saveFrames(config.output, capture);
             }
-            if (config.command === 'live') {
+            if (config.command === 'live' || config.command === 'workbench') {
+                let frameAncestor;
+                if (config.command === 'workbench') {
+                    bench = new Workbench({ port: config.port, lockPath: LOCK });
+                    await bench.start();
+                    frameAncestor = bench.origin;
+                }
                 viewer = new LiveView(client, { durationMs: config.durationMs, intervalMs: config.intervalMs,
-                    waitMs: Math.min(config.timeoutMs, 1000), interactive: config.interactive, tv: config.tv });
-                ready(await viewer.start());
+                    waitMs: Math.min(config.timeoutMs, 1000), interactive: config.interactive, tv: config.tv, frameAncestor });
+                const view = await viewer.start();
+                if (bench) bench.live = view;
+                ready(bench ? `${bench.origin}/${bench.token}/` : view);
                 result = { ...await viewer.done, version };
             }
         }
@@ -158,6 +195,7 @@ async function run(config, lock = acquireLock, ready = view => process.stderr.wr
         throw error;
     } finally {
         if (viewer) await viewer.close();
+        if (bench) await bench.close();
         if (client) client.close();
         process.removeListener('SIGINT', interrupt);
         process.removeListener('SIGTERM', interrupt);

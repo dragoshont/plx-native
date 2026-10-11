@@ -69,4 +69,4 @@ function saveFrames(target, capture) {
     } catch (_) { throw new InspectorError('output_write_failed'); }
 }
 
-module.exports = { acquireLock, outputPath, saveScreenshot, saveFrames };
+module.exports = { LOCK, acquireLock, outputPath, saveScreenshot, saveFrames };
