@@ -20,7 +20,7 @@
                 });
                 var client;
                 try { client = account(); }
-                catch (error) { options.status(error.message, true); return; }
+                catch (error) { options.status(root.PlexI18n.error(error), true); return; }
                 client.watchlist(filter, start).then(function (container) {
                     if (generation !== options.generation()) { return; }
                     if (!Array.isArray(container.Metadata) && Number(container.size) !== 0) {
@@ -44,7 +44,7 @@
                     options.focus();
                 }).catch(function (error) {
                     if (generation !== options.generation()) { return; }
-                    options.status(error.message, true);
+                    options.status(root.PlexI18n.error(error), true);
                     options.button(options.screen, "Retry", function () { openWatchlist(filter, start); });
                 });
             }
@@ -63,7 +63,7 @@
                     options.button(options.screen, add ? "Add to Watchlist" : "Remove from Watchlist", function () {
                         var client;
                         try { client = account(); }
-                        catch (error) { options.status(error.message, true); return; }
+                        catch (error) { options.status(root.PlexI18n.error(error), true); return; }
                         options.confirm(add ? "Add to Watchlist" : "Remove from Watchlist",
                             function () { return client.setWatchlist(item.guid, add); }, function () { openWatchlist("all", 0); });
                     });
@@ -80,7 +80,7 @@
                     summary.textContent = details.summary || options.translate("No synopsis is available.");
                 }).catch(function (error) {
                     if (generation !== options.generation()) { return; }
-                    options.screen.appendChild(options.element("p", "inline-error", error.message));
+                    options.screen.appendChild(options.element("p", "inline-error", root.PlexI18n.error(error)));
                     options.button(options.screen, "Retry details", function () { openItem(item, listed); });
                 });
             }
@@ -112,7 +112,7 @@
                     options.status(items.length ? "Showing up to 30 catalogue results. Refine the query for more." : "No matching media found.");
                     options.focus();
                 }).catch(function (error) {
-                    if (generation === options.generation()) { options.status(error.message, true); }
+                    if (generation === options.generation()) { options.status(root.PlexI18n.error(error), true); }
                 });
             }
             return { watchlist: openWatchlist, item: openItem, search: openSearch };

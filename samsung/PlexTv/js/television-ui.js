@@ -19,7 +19,7 @@
                     options.status(providers.length ? "Choose a guide or manage recordings." :
                         "This server advertises no Live TV provider. Configure a supported tuner and check this profile's permissions in Plex.");
                     options.focus();
-                }).catch(function (error) { if (generation === options.generation()) { options.status(error.message, true); } });
+                }).catch(function (error) { if (generation === options.generation()) { options.status(root.PlexI18n.error(error), true); } });
             }
 
             function openGuide(provider) {
@@ -39,7 +39,7 @@
                     });
                     options.status(count ? "Choose a program to inspect recording options." : "No guide programs were returned.");
                     options.focus();
-                }).catch(function (error) { if (generation === options.generation()) { options.status(error.message, true); } });
+                }).catch(function (error) { if (generation === options.generation()) { options.status(root.PlexI18n.error(error), true); } });
                 options.button(options.screen, "Channel lineups", function () {
                     options.visit(function openLineups() {
                         var own = options.view("Channel lineups", openLineups, "lineups");
@@ -58,14 +58,14 @@
                                             options.status(channels.length ? "Channel list supplied by Plex. Live tuning requires a verified playback-session contract." : "No available items in this view.");
                                             options.focus();
                                         }).catch(function (error) {
-                                            if (channelGeneration === options.generation()) { options.status(error.message, true); }
+                                            if (channelGeneration === options.generation()) { options.status(root.PlexI18n.error(error), true); }
                                         });
                                     });
                                 });
                             });
                             options.status(dvrs.some(function (dvr) { return !!dvr.lineup; }) ? "Choose an existing DVR lineup. Tuner setup remains in Plex." : "No available items in this view.");
                             options.focus();
-                        }).catch(function (error) { if (own === options.generation()) { options.status(error.message, true); } });
+                        }).catch(function (error) { if (own === options.generation()) { options.status(root.PlexI18n.error(error), true); } });
                     });
                 });
             }
@@ -108,14 +108,14 @@
                                         });
                                     options.status("Choose the destination library. Scheduling requires explicit confirmation.");
                                     options.focus();
-                                }).catch(function (error) { if (own === options.generation()) { options.status(error.message, true); } });
+                                }).catch(function (error) { if (own === options.generation()) { options.status(root.PlexI18n.error(error), true); } });
                             });
                         });
                     });
                     options.status(templates.length ? "Recording options supplied by Plex; nothing has been scheduled." :
                         "No recording options are available for this program.");
                     options.focus();
-                }).catch(function (error) { if (generation === options.generation()) { options.status(error.message, true); } });
+                }).catch(function (error) { if (generation === options.generation()) { options.status(root.PlexI18n.error(error), true); } });
             }
 
             function openChannel(provider, media, date) {
@@ -138,7 +138,7 @@
                     options.status(programs.length ? "Guide times and programs are supplied by Plex." : "No guide programs were returned.");
                     options.focus();
                 }).catch(function (error) {
-                    if (generation === options.generation()) { options.status(error.message, true); }
+                    if (generation === options.generation()) { options.status(root.PlexI18n.error(error), true); }
                 });
                 options.focus();
             }
@@ -190,7 +190,7 @@
                                             }
                                             return { id: field.id, value: field.input.value };
                                         });
-                                    } catch (error) { options.status(error.message, true); return; }
+                                    } catch (error) { options.status(root.PlexI18n.error(error), true); return; }
                                     options.confirm("Save recording preferences", function () { return api.edit(item.key, values); },
                                         function () { openRecordings(true); });
                                 });
@@ -202,7 +202,7 @@
                     options.status(items.length > 200 ? "Showing the first 200 recordings." :
                         items.length ? "Recording status supplied by Plex. Conflicts are not automatically changed." : "No recordings were returned.");
                     options.focus();
-                }).catch(function (error) { if (generation === options.generation()) { options.status(error.message, true); } });
+                }).catch(function (error) { if (generation === options.generation()) { options.status(root.PlexI18n.error(error), true); } });
             }
 
             return { open: openTelevision };

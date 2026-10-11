@@ -617,7 +617,7 @@ after-fix acceptance remains separate from host checks and installation.
 - [x] Bound download-plus-decode concurrency to three; release Blob URLs after decode rather than evicting undecoded visible images at 60 URLs; cancel pending decodes on view exit. A 73-image synthetic regression exercises both lifetime and cancellation.
 - [ ] Establish measured decoded-image/metadata low-memory ceilings and long-session stability on the target TV.
 - [x] Add missing-key coverage for static/conditional control and status copy in English/Spanish/Belarusian; localize static elements and named resume/duration/record/auto-next placeholders.
-- [ ] Finish dynamic error/composite-copy localization and verify locale-sensitive formatting on the target engine.
+- [ ] Verify dynamic error/composite copy and locale-sensitive formatting on the target engine. Host: runtime error boundary localizes HTTP failures and rejects unknown external copy in Spanish/Belarusian; counts, server labels, seek/track/version/quality/confirmation strings use locale placeholders. AST scan rejects raw error-message sinks and English concatenation, with planted regressions. Target text fit and formatting remain unobserved.
 - [ ] Verify English/Spanish/Belarusian text fit, accessibility and couch legibility on actual display sizes.
 - [x] Stop playback while hidden, cancel auto-next, reload details on foreground without auto-play, and coalesce slow progress writes; synthetic lifecycle/queue regressions exercised.
 - [ ] Verify graceful exit/process-kill and interrupted-session reconciliation on Samsung.

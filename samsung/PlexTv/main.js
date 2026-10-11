@@ -80,7 +80,7 @@
         try {
             preferences = window.PlexPreferences.load(window.localStorage);
             window.PlexI18n.setLanguage(preferences.language);
-        } catch (error) { preferenceError = error.message; }
+        } catch (error) { preferenceError = errorText(error); }
     }
     if (typeof window.Promise !== "function" || typeof window.fetch !== "function" ||
             typeof window.URL !== "function" || typeof window.Blob !== "function") {
@@ -91,7 +91,17 @@
     var buildLabel = document.querySelector(".app-header p");
     if (buildLabel) { buildLabel.textContent = translate("Samsung TV client development build"); }
 
-    function translate(text, values) { return window.PlexI18n ? window.PlexI18n.text(text, values) : text; }
+    function translate(text, values) {
+        if (window.PlexI18n) { return window.PlexI18n.text(text, values); }
+        return String(text).replace(/\{([A-Za-z0-9]+)\}/g, function (match, key) {
+            return values && Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : match;
+        });
+    }
+
+    function errorText(error) {
+        return window.PlexI18n && window.PlexI18n.error ? window.PlexI18n.error(error) :
+            translate(error && error.message || "Playback failed. Stop and retry.");
+    }
 
     function savePreferences() {
         try {
@@ -269,8 +279,8 @@
         if (error.status !== 401 && error.status !== 403) { return false; }
         if (error.scope === "account" && error.status === 401) {
             var deleted = signOut();
-            setStatus("Your Plex session expired. Sign in again." + (deleted ? "" :
-                " The saved session could not be deleted. Clear this app's data on the TV."), true);
+            setStatus(translate("{message} {warning}", { message: translate("Your Plex session expired. Sign in again."),
+                warning: deleted ? "" : translate("The saved session could not be deleted. Clear this app's data on the TV.") }), true);
             return true;
         }
         if (error.scope === "server" && error.status === 401 && accountClient) {
@@ -566,11 +576,11 @@
                                         }
                                     }).catch(function (sessionError) {
                                         if (generation === viewGeneration && !recoverSession(sessionError)) {
-                                            setStatus(sessionError.message, true);
+                                            setStatus(errorText(sessionError), true);
                                         }
                                     });
                                 } else {
-                                    setStatus(error.message, true);
+                                    setStatus(errorText(error), true);
                                     if (!profile.protected) {
                                         if (!retryProfile) { retryProfile = button(screen, "Retry", selectProfile); }
                                         retryProfile.disabled = false;
@@ -601,7 +611,7 @@
             button(screen, "Retry profiles", openProfiles);
             button(screen, "Use linked account", openServers);
             button(screen, "Sign out", signOut);
-            setStatus(error.message, true);
+            setStatus(errorText(error), true);
             focusFirst();
         });
     }
@@ -653,8 +663,9 @@
                 var relayOnly = server.connections.length && server.connections.every(function (connection) {
                     return connection.relay === true;
                 });
-                var serverButton = button(serverList, server.name + (server.owned ? " (owned)" : " (shared)") +
-                    (unavailable ? " — unavailable" : relayOnly ? " — relay" : ""), function () {
+                var serverButton = button(serverList, translate("{server} ({ownership}){availability}", { server: server.name,
+                    ownership: translate(server.owned ? "owned" : "shared"),
+                    availability: unavailable ? translate(" — unavailable") : relayOnly ? translate(" — relay") : "" }), function () {
                     var selection = ++viewGeneration;
                     currentClient = null;
                     Array.prototype.forEach.call(serverList.querySelectorAll(".server-choice"), function (choice) {
@@ -691,7 +702,7 @@
                         Array.prototype.forEach.call(serverList.querySelectorAll(".server-choice"), function (choice, index) {
                             choice.disabled = !servers[index].token || !servers[index].connections.length;
                         });
-                        if (!recoverSession(error)) { setStatus(error.message, true); }
+                        if (!recoverSession(error)) { setStatus(errorText(error), true); }
                         focusFirst();
                     });
                 }, true);
@@ -720,7 +731,7 @@
                 visit(openSettings);
             });
             button(screen, "Sign out", signOut);
-            setStatus(error.message, true);
+            setStatus(errorText(error), true);
             focusFirst();
         });
     }
@@ -735,8 +746,8 @@
         try {
             authClient = window.PlexApi.createAuthClient();
         } catch (error) {
-            info.textContent = error.message;
-            setStatus(error.message, true);
+            info.textContent = errorText(error);
+            setStatus(errorText(error), true);
             return;
         }
         authClient.startAuthorization().then(function (pin) {
@@ -859,8 +870,8 @@
                 token: token
             });
         } catch (error) {
-            addConnectForm(error.message);
-            setStatus(error.message, true);
+            addConnectForm(errorText(error));
+            setStatus(errorText(error), true);
             return;
         }
 
@@ -878,7 +889,7 @@
             if (generation !== viewGeneration || player) { return; }
             startPlayer(metadata, client, resume ? metadata.viewOffset || 0 : 0);
         }).catch(function (error) {
-            if (generation === viewGeneration) { setStatus(error.message, true); }
+            if (generation === viewGeneration) { setStatus(errorText(error), true); }
         });
     }
 
@@ -989,7 +1000,7 @@
             done = button(screen, firstRun ? "Start watching" : "Done", function () {
                 try {
                     window.PlexFavorites.save(window.localStorage, currentServerId, chosen);
-                } catch (error) { setStatus(error.message === "Keep at least one library." ? error.message :
+                } catch (error) { setStatus(error.message === "Keep at least one library." ? errorText(error) :
                     "Could not save favorite libraries. Check app storage permissions.", true); return; }
                 navigation.length = 0;
                 restoreView = null;
@@ -1006,7 +1017,7 @@
             if (generation !== viewGeneration) { return; }
             if (recoverSession(error)) { return; }
             if (firstRun) { loadHome(false); return; }
-            setStatus(error.message, true);
+            setStatus(errorText(error), true);
             button(screen, "Back", backView);
             focusFirst();
         });
@@ -1030,9 +1041,9 @@
             if (accountClient && recoverSession(error)) { return; }
             if (showConnectOnError) {
                 currentClient = null;
-                addConnectForm(error.message);
+                addConnectForm(errorText(error));
             }
-            setStatus(error.message, true);
+            setStatus(errorText(error), true);
             if (!document.getElementById("home-retry")) {
                 button(screen, "Retry", function () { loadHome(showConnectOnError); }).id = "home-retry";
             }
@@ -1313,14 +1324,14 @@
             if (loadMore.disabled && document.activeElement === loadMore) {
                 document.getElementById("home-back").focus();
             }
-            setStatus(currentOffset + " of " + page.totalSize + " items loaded. Showing the latest " + currentItems.length + ".");
+            setStatus(translate("{loaded} of {total} items loaded. Showing the latest {shown}.", { loaded: currentOffset, total: page.totalSize, shown: currentItems.length }));
         }).catch(function (error) {
             if (generation !== viewGeneration) {
                 return;
             }
             itemsLoading = false;
             if (accountClient && recoverSession(error)) { return; }
-            setStatus(error.message, true);
+            setStatus(errorText(error), true);
         });
     }
 
@@ -1349,13 +1360,13 @@
                 button(screen, "Load more", function () { openListing(title, loader, client, next, items); });
             }
             button(screen, "Back", backView);
-            setStatus(items.length + " items shown.");
+            setStatus(translate("{count} items shown.", { count: items.length }));
             focusFirst();
         }).catch(function (error) {
             if (generation !== viewGeneration) { return; }
             button(screen, "Retry", function () { openListing(title, loader, client, offset, retained); });
             button(screen, "Back", backView);
-            setStatus(error.message, true);
+            setStatus(errorText(error), true);
             focusFirst();
         });
     }
@@ -1420,7 +1431,7 @@
                             focusFirst();
                         }).catch(function (error) {
                             if (filterGeneration !== viewGeneration) { return; }
-                            setStatus(error.message, true);
+                            setStatus(errorText(error), true);
                             button(screen, "Back", backView);
                             focusFirst();
                         });
@@ -1429,7 +1440,7 @@
             });
             setStatus("Filter and sort choices come from the selected server.");
         }).catch(function (error) {
-            if (generation === viewGeneration) { setStatus(error.message, true); }
+            if (generation === viewGeneration) { setStatus(errorText(error), true); }
         });
         focusFirst();
     }
@@ -1458,7 +1469,7 @@
             setStatus("Select a letter to jump within title order.");
             focusFirst();
         }).catch(function (error) {
-            if (generation === viewGeneration) { setStatus(error.message, true); }
+            if (generation === viewGeneration) { setStatus(errorText(error), true); }
         });
     }
 
@@ -1556,7 +1567,7 @@
                         }).catch(function (error) {
                             failures += 1;
                             if (searchGeneration === viewGeneration) {
-                                results.appendChild(element("p", "inline-error", error.message));
+                                results.appendChild(element("p", "inline-error", errorText(error)));
                             }
                         }).then(function () {
                             active -= 1;
@@ -1606,7 +1617,7 @@
         }).catch(function (error) {
             if (generation !== viewGeneration) { return; }
             button(screen, "Retry details", function () { openDetail(id, client); });
-            setStatus(error.message, true);
+            setStatus(errorText(error), true);
             focusFirst();
         });
     }
@@ -1922,7 +1933,8 @@
                 screen.appendChild(element("p", "help-text", translate("This changes every episode in this show or season.")));
             }
             var pending = false;
-            var confirm = button(screen, "Confirm " + label.toLowerCase(), function () {
+            var confirm = button(screen, translate(action === "remove" ? "Confirm remove from continue watching" :
+                action === "unwatched" ? "Confirm mark unwatched" : "Confirm mark watched"), function () {
                 if (pending || generation !== viewGeneration) { return; }
                 pending = true;
                 confirm.disabled = true;
@@ -1949,7 +1961,7 @@
                     pending = false;
                     confirm.disabled = false;
                     cancel.textContent = translate("Cancel");
-                    setStatus("Plex did not confirm the change. Check the server state before retrying. " + error.message, true);
+                    setStatus(translate("{message} {warning}", { message: translate("Plex did not confirm the change. Check the server state before retrying."), warning: errorText(error) }), true);
                 });
             });
             var cancel = button(screen, "Cancel", backView);
@@ -1996,7 +2008,7 @@
                     screen.appendChild(element("p", "detail-meta", profile.bornAt + (profile.birthPlace ? " / " + profile.birthPlace : "")));
                 }
             }).catch(function (error) {
-                if (generation === viewGeneration) { setStatus(error.message, true); focusFirst(); }
+                if (generation === viewGeneration) { setStatus(errorText(error), true); focusFirst(); }
             });
             var localIndex = client.personLibraryIndex(person.id).catch(function () { return null; });
             Promise.all([accountClient.personCredits(person.tagKey), localIndex]).then(function (results) {
@@ -2055,13 +2067,13 @@
                 renderCareer(careerStart || 0);
                 focusFirst();
             }).catch(function (error) {
-                if (generation === viewGeneration) { setStatus(error.message, true); focusFirst(); }
+                if (generation === viewGeneration) { setStatus(errorText(error), true); focusFirst(); }
             });
         }
         focusFirst();
     }
 
-    function showPlayerError(error) { setStatus(error.message || "Playback failed. Stop and retry.", true); }
+    function showPlayerError(error) { setStatus(errorText(error) || "Playback failed. Stop and retry.", true); }
 
     function serviceView(title, restore, kind) {
         var generation = ++viewGeneration;
@@ -2142,7 +2154,7 @@
                         }).catch(function (error) {
                             if (generation !== viewGeneration) { return; }
                             failed += 1;
-                            screen.appendChild(element("p", "inline-error", error.message));
+                            screen.appendChild(element("p", "inline-error", errorText(error)));
                         }).then(function () {
                             active -= 1; finished += 1;
                             if (generation !== viewGeneration) { return; }
@@ -2175,7 +2187,7 @@
                     button(screen, "Refresh", refresh);
                 }).catch(function (error) {
                     if (generation !== viewGeneration) { return; }
-                    setStatus(translate("The change was not confirmed. Check Plex before retrying.") + " " + error.message, true);
+                    setStatus(translate("The change was not confirmed. Check Plex before retrying.") + " " + errorText(error), true);
                 });
             });
             button(screen, "Cancel", backView);
@@ -2198,7 +2210,7 @@
                 button: button, status: setStatus, translate: translate, urls: window.URL, back: backView
             });
             viewCleanup = viewer.close;
-        } catch (error) { setStatus(error.message, true); button(screen, "Back", backView); }
+        } catch (error) { setStatus(errorText(error), true); button(screen, "Back", backView); }
         focusFirst();
     }
 
@@ -2470,7 +2482,7 @@
                         setStatus("This TV could not play the original file. Asking Plex to convert it...");
                     }
                     if (event.type === "progress-error" || event.type === "cleanup-error") {
-                        if (player === ownPlayer) { setStatus(event.message, true); }
+                        if (player === ownPlayer) { setStatus(errorText(event), true); }
                     }
                 }
             });
@@ -2513,7 +2525,7 @@
         var selectedPlayer = player;
         player.seek(target).then(function (position) {
             if (player !== selectedPlayer || playerClosing) { return; }
-            setStatus("Seek landed at " + timeLabel(position) + ".");
+            setStatus(translate("Seek landed at {time}.", { time: timeLabel(position) }));
             showHud();
         }).catch(function (error) {
             if (player === selectedPlayer && !playerClosing) { showPlayerError(error); }
@@ -2582,7 +2594,7 @@
         menu.id = "player-menu";
         menu.appendChild(element("h2", "", translate("Chapters and markers")));
         (playerItem.Chapter || []).forEach(function (chapter, index) {
-            button(menu, chapter.tag || "Chapter " + (index + 1), function () {
+            button(menu, chapter.tag || translate("Chapter {number}", { number: index + 1 }), function () {
                 player.seek(chapter.startTimeOffset || 0).catch(showPlayerError);
             });
         });
@@ -2741,7 +2753,7 @@
                     function () { reload(current.audioId, stream.id); });
                 subtitleChoice.setAttribute("aria-pressed", String(!externalCues && String(current.subtitleId) === String(stream.id)));
                 if (["srt", "subrip", "webvtt"].indexOf(stream.codec) !== -1) {
-                    button(subtitleGroup, "Text overlay / " + (stream.displayTitle || stream.language || stream.id), function () {
+                    button(subtitleGroup, translate("Text overlay / {track}", { track: stream.displayTitle || stream.language || stream.id }), function () {
                         useTextOverlay(stream, current.audioId);
                     });
                 }
@@ -2778,7 +2790,7 @@
         try {
             player.tracks().forEach(function (track) {
                 if (track.type !== "AUDIO" && track.type !== "TEXT") { return; }
-                button(nativeTracks, "Samsung " + track.type + " track " + track.index, function () {
+                button(nativeTracks, translate("Samsung {type} track {number}", { type: translate(track.type), number: track.index }), function () {
                     try {
                         player.selectTrack(track.type, track.index);
                         if (track.type === "TEXT") { player.subtitles(true); }
@@ -2786,7 +2798,7 @@
                     } catch (error) { showPlayerError(error); }
                 });
             });
-        } catch (error) { menu.appendChild(element("p", "inline-error", error.message)); }
+        } catch (error) { menu.appendChild(element("p", "inline-error", errorText(error))); }
         if (nativeTracks.querySelectorAll("button").length) {
             button(menu, "Device tracks", function () {
                 nativeTracks.hidden = !nativeTracks.hidden;
@@ -2819,12 +2831,12 @@
             stopPlayer(function () { startPlayer(item, client, position, version, tracks); });
         }
         ["720", "1080"].forEach(function (quality) {
-            button(menu, quality + "p server transcode", function () { change(quality, playerSettings.mediaIndex); })
+            button(menu, translate("{quality}p server transcode", { quality: quality }), function () { change(quality, playerSettings.mediaIndex); })
                 .setAttribute("aria-pressed", String(playerSettings.quality === quality));
         });
         (playerItem.Media || []).forEach(function (media, version) {
             if (playerItem.Media.length < 2) { return; }
-            button(menu, "Version " + (version + 1) + " / " + qualityLabel(media),
+            button(menu, translate("Version {number} / {quality}", { number: version + 1, quality: qualityLabel(media) }),
                 function () { change(preferences.quality, version); })
                 .setAttribute("aria-pressed", String(playerSettings.mediaIndex === version));
         });
@@ -2846,7 +2858,7 @@
             var successor = queueSuccessor(queue);
             (successor ? Promise.resolve(successor) : client.nextEpisode(item)).then(function (next) {
                 if (!next || player || playerItem !== item || generation !== viewGeneration) { return; }
-                button(screen, "Up Next: " + next.title, function () {
+                button(screen, translate("Up Next: {title}", { title: next.title }), function () {
                     if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
                     openDetail(next.ratingKey, client);
                 });
@@ -2904,9 +2916,9 @@
         menu.setAttribute("aria-label", translate("Settings"));
         screen.appendChild(menu);
         var playbackSettings = group(menu, translate("Playback"), "settings-group");
-        button(playbackSettings, "Transcode quality: " + preferences.quality + "p", function () {
+        button(playbackSettings, translate("Transcode quality: {quality}p", { quality: preferences.quality }), function () {
             settingsChoices("Transcode quality", ["720", "1080"].map(function (quality) {
-                return { value: quality, label: quality + "p server transcode" };
+                return { value: quality, label: translate("{quality}p server transcode", { quality: quality }) };
             }), preferences.quality, function (quality) {
                 preferences.quality = quality;
                 if (savePreferences()) { backView(); }
@@ -2957,7 +2969,7 @@
         if (accountToken && window.PlexSession) {
             var savedAccount = "";
             try { savedAccount = window.PlexSession.load(window.localStorage); }
-            catch (error) { storageWarning = error.message; }
+            catch (error) { storageWarning = errorText(error); }
             var savedSignIn = savedAccount === accountToken;
             var savedLabel = translate("Stay signed in on this TV") + ": " +
                 translate(savedSignIn ? "On" : "Off");
@@ -3000,8 +3012,8 @@
                 page(translate("Diagnostics"), "diagnostics");
                 screen.appendChild(element("p", "help-text", translate("Sign-in is saved on this TV by default. You can turn it off in Settings. Storage is unencrypted. No analytics or crash uploads are enabled.")));
                 screen.appendChild(element("p", "help-text",
-                    "AVPlay: " + (window.webapis && window.webapis.avplay ? "available" : "unavailable") +
-                    ". " + directPlaySummary() + ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
+                    translate("AVPlay: {state}. {profile}. Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded.", {
+                        state: translate(window.webapis && window.webapis.avplay ? "available" : "unavailable"), profile: directPlaySummary() })));
                 button(screen, "Back", backView);
                 focusFirst();
             });
@@ -3317,6 +3329,6 @@
                 accountClient = window.PlexApi.createAccountClient({ token: accountToken });
                 openProfiles();
             }
-        } catch (error) { setStatus(error.message, true); }
+        } catch (error) { setStatus(errorText(error), true); }
     }
 }());
