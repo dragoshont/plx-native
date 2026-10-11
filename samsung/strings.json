@@ -360,5 +360,8 @@
   "Plex accepted the subtitle but has not finished adding it. Open Audio and subtitles again shortly.": { "es": "Plex aceptó el subtítulo pero aún no ha terminado de añadirlo. Vuelve a abrir Audio y subtítulos en un momento.", "be": "Plex прыняў субтытры, але яшчэ не скончыў іх даданне. Неўзабаве зноў адкрыйце «Гук і субтытры»." },
   "This Plex account cannot add subtitles on this server.": { "es": "Esta cuenta de Plex no puede añadir subtítulos en este servidor.", "be": "Гэты ўліковы запіс Plex не можа дадаваць субтытры на гэтым серверы." },
   "Adding the subtitle failed. Search again and pick a fresh result.": { "es": "No se pudo añadir el subtítulo. Busca de nuevo y elige un resultado nuevo.", "be": "Не ўдалося дадаць субтытры. Пашукайце зноў і выберыце новы вынік." },
-  "Search again": { "es": "Buscar de nuevo", "be": "Шукаць зноў" }
+  "Search again": { "es": "Buscar de nuevo", "be": "Шукаць зноў" },
+  "Auto": { "es": "Automático", "be": "Аўта" },
+  "Direct play: {state}": { "es": "Reproducción directa: {state}", "be": "Прамое прайграванне: {state}" },
+  "This TV could not play the original file. Asking Plex to convert it...": { "es": "Este televisor no pudo reproducir el archivo original. Pidiendo a Plex que lo convierta...", "be": "Гэты тэлевізар не змог прайграць арыгінальны файл. Просім Plex канвертаваць яго..." }
 }

@@ -60,8 +60,7 @@ uses series posters on episode shelves when available. Settings exposes one qual
 value with separate choice pages; audio and subtitles have distinct groups and native tracks
 are secondary. Closing player menus returns focus to More. Original-source metadata, the
 PMS-reported stream and the requested transcode limit are now distinct; missing output metadata
-is not replaced with the chosen limit. Original direct play remains capability-gated and is not
-enabled by this UI work. These changes were included in the signed `7c6f7158` deployment;
+is not replaced with the chosen limit. Original direct play is capability-gated (see the Direct play row in §9A). These changes were included in the signed `7c6f7158` deployment;
 installation does not establish native acceptance of every screen or playback behavior.
 The LG-inspired revision follows the application demo loop: full-bleed Home artwork,
 persistent capsule navigation, a top Account menu, explicit feature play/info/cycling, focused-only
@@ -99,7 +98,7 @@ official-Plex parity.
 | Account/profiles/servers | Synthetic short-code, PIN, scoped grants and recovery tests | Actual Plex and Samsung TLS/CORS, profile PIN acceptance, QR and relaunch checks |
 | Browse/search/details | Mock PMS and host DOM journeys; paged collections and career pages; GUID availability index | Full remote navigation, search cancellation, large-library/image memory and text-fit evidence; career pages retain 50 controls and local indexing has an explicitly reported 10,000-title safety ceiling |
 | Playback/progress | Fake AVPlay state/seek and PMS decision/timeline/read-back tests | Named-model native playback, direct/transcode, HDR/audio, native/external/burned subtitle matrix |
-| Direct play | Adapter accepts an evidenced capability profile; UI uses conservative transcode | Real model-profile hookup and measured capabilities; no guessed direct/UHD/HDR support |
+| Direct play | `js/capabilities.js` detects a per-platform profile from the Tizen version and `productinfo.isUdPanelSupported()`: Tizen 3.0 uses the codecs measured on the 2017 UE55MU6172 (H.264/HEVC, AAC/AC-3/E-AC-3/DTS core, MKV/MP4); Tizen 4.0+ follows Samsung's published specification without DTS and is labelled unmeasured. The profile is sent to PMS as `add-direct-play-profile`; if AVPlay rejects the original file, playback re-negotiates a server transcode. Settings → Playback → Direct play: Auto/Off; Diagnostics names the profile and its evidence | Device verification of the new path on the 2017 set and on a 2018+ set; HDR passthrough per model |
 | Up Next/quality/versions | Source implementation with opt-in auto-next; multipart titles request a joined PMS transcode (`partIndex=-1`), never direct-play just the first file | Long sessions, interrupted transitions and actual server/native multipart joins, resume and completion |
 | Settings/languages | Non-secret preferences, English/Spanish/Belarusian catalogs, static app-copy coverage and named placeholders | Dynamic errors/copy coverage and physical-TV text fit |
 | Credential persistence | Saves the original account token automatically in unencrypted TV storage; Settings opt-out and sign-out deletion; old opt-in records remain readable | TV storage/relaunch/update/deletion behavior; storage is not encryption at rest |

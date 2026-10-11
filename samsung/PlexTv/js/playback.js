@@ -58,6 +58,10 @@
             "X-Plex-Client-Profile-Name": "Generic",
             "X-Plex-Client-Profile-Extra": "add-transcode-target(type=videoProfile&context=streaming&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)"
         };
+        if (direct) {
+            query["X-Plex-Client-Profile-Extra"] += "+add-direct-play-profile(type=videoProfile&protocol=http&container=" +
+                profile.containers.join(",") + "&videoCodec=" + profile.video.join(",") + "&audioCodec=" + profile.audio.join(",") + ")";
+        }
         if (kind === "music") {
             query.protocol = "http";
             query.audioCodec = "mp3";
@@ -143,6 +147,32 @@
                 throw error;
             });
         }
+        function negotiate() {
+            if (closed || stopping) { throw new Error("Playback was cancelled."); }
+            return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", selection.query).then(function (decision) {
+                if (closed || stopping) { throw new Error("Playback was cancelled."); }
+                if (Number(decision.generalDecisionCode) >= 2000 || Number(decision.transcodeDecisionCode) >= 2000) {
+                    throw new Error("Plex refused playback. Change quality, source or subtitle settings and retry.");
+                }
+                var selectedMedia = decision.Metadata && decision.Metadata[0] &&
+                    decision.Metadata[0].Media && decision.Metadata[0].Media[0];
+                var selectedPart = selectedMedia && selectedMedia.Part && selectedMedia.Part[0];
+                streamMedia = selectedMedia || null;
+                selection.direct = !!(selection.direct && selectedPart && selectedPart.decision === "directplay");
+                var path = selection.direct ? selection.part.key : "/" + selection.kind +
+                    "/:/transcode/universal/start." + (selection.kind === "music" ? "mp3" : "m3u8");
+                var url = client.streamUrl(path, selection.direct ? {} : selection.query);
+                allocated = true;
+                return adapter.open(url, settings.offset || 0).catch(function (error) {
+                    if (!selection.direct || closed || stopping) { throw error; }
+                    // The capability profile is a prediction; the decoder has the last word.
+                    emit({ type: "direct-fallback", message: error && error.message });
+                    selection.direct = false;
+                    selection.query.directPlay = 0;
+                    return negotiate();
+                });
+            });
+        }
         return {
             start: function () {
                 if (started || starting || closed || stopping) { return Promise.reject(new Error("This playback session cannot be started again.")); }
@@ -151,25 +181,7 @@
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
                     if (!selection.tracks.explicit) { return null; }
                     return client.selectStreams(selection.part.id, selection.tracks.audioId, selection.tracks.subtitleId);
-                }).then(function () {
-                    if (closed || stopping) { throw new Error("Playback was cancelled."); }
-                    return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", selection.query);
-                }).then(function (decision) {
-                    if (closed || stopping) { throw new Error("Playback was cancelled."); }
-                    if (Number(decision.generalDecisionCode) >= 2000 || Number(decision.transcodeDecisionCode) >= 2000) {
-                        throw new Error("Plex refused playback. Change quality, source or subtitle settings and retry.");
-                    }
-                    var selectedMedia = decision.Metadata && decision.Metadata[0] &&
-                        decision.Metadata[0].Media && decision.Metadata[0].Media[0];
-                    var selectedPart = selectedMedia && selectedMedia.Part && selectedMedia.Part[0];
-                    streamMedia = selectedMedia || null;
-                    selection.direct = selection.direct && selectedPart && selectedPart.decision === "directplay";
-                    var path = selection.direct ? selection.part.key : "/" + selection.kind +
-                        "/:/transcode/universal/start." + (selection.kind === "music" ? "mp3" : "m3u8");
-                    var url = client.streamUrl(path, selection.direct ? {} : selection.query);
-                    allocated = true;
-                    return adapter.open(url, settings.offset || 0);
-                }).then(function () {
+                }).then(negotiate).then(function () {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
                     started = true;
                     starting = false;

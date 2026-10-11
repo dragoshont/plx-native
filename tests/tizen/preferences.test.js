@@ -9,11 +9,11 @@ var storage = {
 };
 assert.deepStrictEqual(prefs.load(storage), { quality: "1080", language: "en", autoNext: false,
     continueAction: "details", skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low",
-    subtitleColor: "white", subtitleDelayMs: 0 });
+    subtitleColor: "white", subtitleDelayMs: 0, directPlay: "auto" });
 value = JSON.stringify({ quality: "720", language: "en", autoNext: false });
 assert.deepStrictEqual(prefs.load(storage), { quality: "720", language: "en", autoNext: false,
     continueAction: "details", skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low",
-    subtitleColor: "white", subtitleDelayMs: 0 }, "Preferences from earlier app versions receive safe defaults");
+    subtitleColor: "white", subtitleDelayMs: 0, directPlay: "auto" }, "Preferences from earlier app versions receive safe defaults");
 prefs.save(storage, { quality: "720", language: "es", autoNext: true, token: "synthetic-secret",
     skipInterval: 15, subtitleSize: "large", subtitlePosition: "middle", subtitleColor: "yellow", subtitleDelayMs: 500 });
 assert.strictEqual(value.includes("secret"), false, "Only non-secret preference fields may be persisted");
@@ -29,6 +29,9 @@ assert.throws(function () { prefs.save(storage, { quality: "720", language: "es"
 assert.throws(function () { prefs.save(storage, { quality: "720", language: "es", autoNext: true, skipInterval: 45 }); }, /invalid/);
 assert.throws(function () { prefs.save(storage, { quality: "720", language: "es", autoNext: true, subtitlePosition: "center" }); }, /invalid/);
 assert.throws(function () { prefs.save(storage, { quality: "720", language: "es", autoNext: true, subtitleDelayMs: 2501 }); }, /invalid/);
+prefs.save(storage, { quality: "1080", language: "en", autoNext: false, directPlay: "off" });
+assert.strictEqual(prefs.load(storage).directPlay, "off");
+assert.throws(function () { prefs.save(storage, { quality: "1080", language: "en", autoNext: false, directPlay: "always" }); }, /invalid/);
 value = "{invalid";
 assert.throws(function () { prefs.load(storage); }, /invalid/);
 prefs.reset(storage);

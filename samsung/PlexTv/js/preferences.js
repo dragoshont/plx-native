@@ -16,19 +16,20 @@
         var subtitlePosition = value && value.subtitlePosition !== undefined ? value.subtitlePosition : "low";
         var subtitleColor = value && value.subtitleColor !== undefined ? value.subtitleColor : "white";
         var subtitleDelayMs = value && value.subtitleDelayMs !== undefined ? value.subtitleDelayMs : 0;
+        var directPlay = value && value.directPlay !== undefined ? value.directPlay : "auto";
         if (!value || ["720", "1080"].indexOf(value.quality) === -1 ||
                 ["en", "es", "be"].indexOf(value.language) === -1 || typeof value.autoNext !== "boolean" ||
                 (value.continueAction !== undefined && ["details", "play"].indexOf(value.continueAction) === -1) ||
                 skipIntervals.indexOf(skipInterval) === -1 || subtitleSizes.indexOf(subtitleSize) === -1 ||
                 subtitlePositions.indexOf(subtitlePosition) === -1 || subtitleColors.indexOf(subtitleColor) === -1 ||
-                subtitleDelays.indexOf(subtitleDelayMs) === -1) {
+                subtitleDelays.indexOf(subtitleDelayMs) === -1 || ["auto", "off"].indexOf(directPlay) === -1) {
             throw new Error("Saved preferences are invalid. Reset app preferences in Settings.");
         }
         // Preferences saved before continueAction existed load with the safe default.
         return { quality: value.quality, language: value.language, autoNext: value.autoNext,
             continueAction: value.continueAction || "details", skipInterval: skipInterval,
             subtitleSize: subtitleSize, subtitlePosition: subtitlePosition, subtitleColor: subtitleColor,
-            subtitleDelayMs: subtitleDelayMs };
+            subtitleDelayMs: subtitleDelayMs, directPlay: directPlay };
     }
     return {
         load: function (storage) {

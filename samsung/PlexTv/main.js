@@ -54,8 +54,21 @@
     var subtitleSearchGeneration = 0;
     var preferences = { quality: "1080", autoNext: false, language: "en", continueAction: "details",
         skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low", subtitleColor: "white",
-        subtitleDelayMs: 0 };
+        subtitleDelayMs: 0, directPlay: "auto" };
     var preferenceError = "";
+    function directPlayProfile() {
+        if (preferences.directPlay === "off" || !window.PlexCapabilities) { return null; }
+        return window.PlexCapabilities.detect({ userAgent: navigator.userAgent,
+            productinfo: window.webapis && window.webapis.productinfo });
+    }
+    function directPlaySummary() {
+        if (preferences.directPlay === "off") { return translate("Direct play: {state}", { state: translate("Off") }); }
+        var profile = directPlayProfile();
+        if (!profile) { return translate("Direct play: {state}", { state: translate("Off") }); }
+        return translate("Direct play: {state}", { state: translate("Auto") }) + " (" +
+            profile.video.join("/").toUpperCase() + ", " + profile.audio.join("/").toUpperCase() + ", " +
+            profile.maxWidth + "x" + profile.maxHeight + "). " + profile.evidence;
+    }
     var pendingRestore = null;
     if (window.PlexPreferences) {
         try {
@@ -2313,7 +2326,8 @@
             offset: offset || 0, mediaIndex: mediaIndex || 0, quality: preferences.quality,
             audioId: trackOptions ? trackOptions.audioId : undefined,
             subtitleId: trackOptions ? trackOptions.subtitleId : undefined,
-            overlaySubtitle: !!(trackOptions && trackOptions.cues)
+            overlaySubtitle: !!(trackOptions && trackOptions.cues),
+            profile: directPlayProfile()
         };
         externalCues = trackOptions && trackOptions.cues || null;
         document.body.className = "playing";
@@ -2398,6 +2412,9 @@
             ownPlayer = window.PlexPlayback.create({
                 adapter: adapter, client: client, item: item, settings: playerSettings,
                 onEvent: function (event) {
+                    if (event.type === "direct-fallback" && player === ownPlayer) {
+                        setStatus("This TV could not play the original file. Asking Plex to convert it...");
+                    }
                     if (event.type === "progress-error" || event.type === "cleanup-error") {
                         if (player === ownPlayer) { setStatus(event.message, true); }
                     }
@@ -2805,6 +2822,12 @@
             if (savePreferences()) { openSettings(); }
         }, false, "play");
         autoNext.setAttribute("aria-pressed", preferences.autoNext ? "true" : "false");
+        button(playbackSettings, translate("Direct play: {state}", {
+            state: translate(preferences.directPlay === "off" ? "Off" : "Auto")
+        }), function () {
+            preferences.directPlay = preferences.directPlay === "off" ? "auto" : "off";
+            if (savePreferences()) { openSettings(); }
+        }, false, "play");
         button(playbackSettings, translate("Continue Watching: {state}", {
             state: translate(preferences.continueAction === "play" ? "Play" : "Open details")
         }), function () {
@@ -2880,8 +2903,8 @@
                 page(translate("Diagnostics"), "diagnostics");
                 screen.appendChild(element("p", "help-text", translate("Sign-in is saved on this TV by default. You can turn it off in Settings. Storage is unencrypted. No analytics or crash uploads are enabled.")));
                 screen.appendChild(element("p", "help-text",
-                    "AVPlay: " + (window.webapis && window.webapis.avplay ? "available (formats unverified)" : "unavailable") +
-                    ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
+                    "AVPlay: " + (window.webapis && window.webapis.avplay ? "available" : "unavailable") +
+                    ". " + directPlaySummary() + ". Model support is not certified. Account tokens, server origins, titles and queries are not logged or uploaded."));
                 button(screen, "Back", backView);
                 focusFirst();
             });

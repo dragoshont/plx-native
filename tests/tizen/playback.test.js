@@ -151,6 +151,51 @@ async function run() {
     assert(!test.calls.some(function (call) { return call[0] === "decision" || call[0] === "open" || call[0] === "timeline"; }),
         "Failed stream selection must not silently play the wrong track");
     await session.stop();
+    var profile = { evidence: "synthetic-measured-profile", containers: ["mp4"], video: ["h264"], audio: ["aac"],
+        maxWidth: 1920, maxHeight: 1080 };
+    var directPlan = playback.plan(item, { profile: profile });
+    assert(/add-direct-play-profile\(type=videoProfile&protocol=http&container=mp4&videoCodec=h264&audioCodec=aac\)/
+        .test(directPlan.query["X-Plex-Client-Profile-Extra"]), "PMS must be told which files this TV plays as they are");
+    assert(!/add-direct-play-profile/.test(plan.query["X-Plex-Client-Profile-Extra"]));
+    function directDecision(query) {
+        return { generalDecisionCode: 1000, Metadata: [{ Media: [{ width: 1920, height: 1080, videoCodec: "h264",
+            Part: [{ decision: query.directPlay ? "directplay" : "transcode" }] }] }] };
+    }
+    test = rig();
+    test.client.request = function (path, method, query) { test.calls.push(["decision", query]); return Promise.resolve(directDecision(query)); };
+    session = playback.create({ client: test.client, adapter: test.adapter, item: item, settings: { profile: profile } });
+    await session.start();
+    assert.strictEqual(session.mode(), "direct");
+    assert(test.calls.some(function (call) { return call[0] === "open" && call[1] === "https://synthetic.invalid/library/parts/20/file.mp4"; }));
+    await session.stop();
+    assert(!test.calls.some(function (call) { return call[0] === "cleanup"; }), "Direct play allocates no transcode session to stop");
+
+    test = rig();
+    var events = [];
+    test.client.request = function (path, method, query) {
+        test.calls.push(["decision", JSON.parse(JSON.stringify(query))]);
+        return Promise.resolve(directDecision(query));
+    };
+    var rejectingOpen = test.adapter.open;
+    test.adapter.open = function (url, offset) {
+        if (/library\/parts/.test(url)) { test.calls.push(["open", url]); return Promise.reject(new Error("Samsung AVPlay could not prepare.")); }
+        return rejectingOpen(url, offset);
+    };
+    session = playback.create({ client: test.client, adapter: test.adapter, item: item,
+        settings: { profile: profile, offset: 5000 }, onEvent: function (event) { events.push(event); } });
+    await session.start();
+    assert.strictEqual(session.mode(), "transcode", "A file the TV refuses must fall back to a server transcode");
+    var decisions = test.calls.filter(function (call) { return call[0] === "decision"; });
+    assert.strictEqual(decisions.length, 2);
+    assert.strictEqual(decisions[0][1].directPlay, 1);
+    assert.strictEqual(decisions[1][1].directPlay, 0);
+    var opens = test.calls.filter(function (call) { return call[0] === "open"; });
+    assert.strictEqual(opens[opens.length - 1][1], "https://synthetic.invalid/video/:/transcode/universal/start.m3u8");
+    assert(events.some(function (event) { return event.type === "direct-fallback"; }));
+    assert(events.some(function (event) { return event.type === "source" && event.mode === "transcode"; }));
+    await session.stop();
+    assert(test.calls.some(function (call) { return call[0] === "cleanup"; }));
+
     console.log("Tizen playback negotiation/progress/read-back tests: passed");
 }
 run().catch(function (error) { console.error(error); process.exit(1); });
