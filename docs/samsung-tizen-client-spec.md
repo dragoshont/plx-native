@@ -159,6 +159,12 @@ No row becomes complete solely because the source builds or a fake adapter retur
 - **AUTH-4:** Keep the account token out of URLs where headers are supported, UI, logs, screenshots,
   crash reports and analytics. Redact credential-bearing request targets. On sign-out remove
   account credentials from app storage.
+  *Stream URL exception:* AVPlay's `open(url)` cannot send request headers, so the PMS token is
+  appended to the media URL by `streamUrl` in `js/plex-api.js`, as LG does in
+  `plex/src/plex/client.rs`. This URL goes only to `avplay.open`. Adapter errors and events carry
+  fixed text, never native error strings, and `tests/tizen/stream-token-exposure.test.js` fails if
+  the token can reach a rejection or emitted event. Every token-bearing `fetch` keeps the token in a
+  header with `redirect: "error"`; the profile-artwork fetch sends no token.
 - **AUTH-5:** Investigate Samsung's supported private/secure storage options and threat model before
   deciding whether localStorage, another web storage API or a platform service is acceptable for
   credentials. Do not claim encryption at rest without verified platform evidence.
