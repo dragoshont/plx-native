@@ -1,0 +1,46 @@
+name: Samsung Tizen
+
+# WHAT A GREEN RUN HERE MEANS: the Samsung web app under samsung/PlexTv parses as strict ES5 (the
+# 2018 Chromium 56 floor), its generated locale bundles match their sources, and its host contract
+# tests (Plex API, playback negotiation, timeline parity with the LG client, UI state) and the
+# inspector tooling tests pass against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
+# AVPlay plays anything, or that any Samsung model is supported. Those claims need observed TV
+# evidence (docs/samsung-upstream-readiness.md). No Rust, no ARM build, no LG artifact is touched.
+
+on:
+  push:
+    branches: [main, 'release/v*', 'dragoshont-samsung-tizen-feasibility']
+    paths:
+      - 'samsung/**'
+      - 'tests/tizen/**'
+      - 'tests/tizen-inspector/**'
+      - 'tools/tizen/**'
+      - '.github/workflows/samsung.yml'
+  pull_request:
+    paths:
+      - 'samsung/**'
+      - 'tests/tizen/**'
+      - 'tests/tizen-inspector/**'
+      - 'tools/tizen/**'
+      - '.github/workflows/samsung.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: samsung-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Contract tests, ES5 parse and locale build
+        run: tools/tizen/test.sh
+      - name: Generated locale bundles are committed
+        run: git diff --exit-code -- samsung/
+      - name: Inspector tooling tests
+        run: node --test tests/tizen-inspector/
