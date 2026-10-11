@@ -71,6 +71,8 @@
         if (preferences.directPlay === "off") { return translate("Direct play: {state}", { state: translate("Off") }); }
         var profile = directPlayProfile();
         if (!profile) { return translate("Direct play: {state}", { state: translate("Off") }); }
+        if (profile.status === "unknown") { return translate("Unverified model. Plex will convert unverified formats."); }
+        if (profile.status === "observed") { return translate("Observed video only: {model}. Audio, HDR and other formats remain unverified; Plex converts them.", { model: profile.model }); }
         return translate("Direct play: {state}", { state: translate("Auto") }) + " (" +
             profile.video.join("/").toUpperCase() + ", " + profile.audio.join("/").toUpperCase() + ", " +
             profile.maxWidth + "x" + profile.maxHeight + "). " + profile.evidence;
@@ -2916,6 +2918,7 @@
         menu.setAttribute("aria-label", translate("Settings"));
         screen.appendChild(menu);
         var playbackSettings = group(menu, translate("Playback"), "settings-group");
+        playbackSettings.appendChild(element("p", "help-text", directPlaySummary()));
         button(playbackSettings, translate("Transcode quality: {quality}p", { quality: preferences.quality }), function () {
             settingsChoices("Transcode quality", ["720", "1080"].map(function (quality) {
                 return { value: quality, label: translate("{quality}p server transcode", { quality: quality }) };

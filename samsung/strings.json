@@ -395,5 +395,7 @@
   "Something went wrong. Check the connection and retry.": {"es": "Algo ha fallado. Comprueba la conexión y reintenta.", "be": "Узнікла памылка. Праверце злучэнне і паўтарыце."},
   "The saved session could not be deleted. Clear this app's data on the TV.": {"es": "No se pudo borrar la sesión guardada. Borra los datos de esta aplicación en el televisor.", "be": "Не ўдалося выдаліць захаваны сеанс. Ачысціце даныя праграмы на тэлевізары."},
   "Plex did not confirm the change. Check the server state before retrying.": {"es": "Plex no confirmó el cambio. Comprueba el estado del servidor antes de reintentar.", "be": "Plex не пацвердзіў змену. Праверце стан сервера перад паўторам."},
-  "Your Plex session expired. Sign in again.": { "es": "Tu sesión de Plex ha caducado. Inicia sesión de nuevo.", "be": "Сеанс Plex скончыўся. Увайдзіце зноў." }
+  "Your Plex session expired. Sign in again.": { "es": "Tu sesión de Plex ha caducado. Inicia sesión de nuevo.", "be": "Сеанс Plex скончыўся. Увайдзіце зноў." },
+  "Unverified model. Plex will convert unverified formats.": { "es": "Modelo no verificado. Plex convertirá los formatos no verificados.", "be": "Неправераная мадэль. Plex канвертуе неправераныя фарматы." },
+  "Observed video only: {model}. Audio, HDR and other formats remain unverified; Plex converts them.": { "es": "Solo vídeo observado: {model}. Audio, HDR y otros formatos siguen sin verificar; Plex los convierte.", "be": "Назіраўся толькі відэасігнал: {model}. Гук, HDR і іншыя фарматы не правераны; Plex іх канвертуе." }
 }

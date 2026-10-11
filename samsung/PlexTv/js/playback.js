@@ -60,7 +60,14 @@
         var burn = tracks.subtitleId && !options.overlaySubtitle ? tracks.subtitleId : 0;
         var profile = options.profile;
         var kind = item.type === "track" ? "music" : "video";
-        var direct = kind === "video" && !multipart && profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
+        var hdr = media.videoDynamicRange || media.colorTrc || media.colorTransfer || media.hdr ||
+            (part.Stream || []).some(function (stream) { return stream.streamType === 1 &&
+                (stream.DOVIPresent || stream.colorTrc === "smpte2084" || stream.colorTrc === "arib-std-b67"); });
+        var tupleKnown = !profile || !profile.observations || profile.observations.some(function (row) {
+            return row.videoCodec === media.videoCodec && row.container === media.container &&
+                row.width === media.width && row.height === media.height;
+        });
+        var direct = kind === "video" && tupleKnown && (!hdr || hdr === "SDR" || profile && profile.hdr === "observed") && !multipart && profile && profile.evidence && profile.containers.indexOf(media.container) !== -1 &&
             profile.video.indexOf(media.videoCodec) !== -1 && profile.audio.indexOf(plexAudio(media.audioCodec)) !== -1 &&
             media.width <= profile.maxWidth && media.height <= profile.maxHeight && !burn;
         var session = "tizen-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
