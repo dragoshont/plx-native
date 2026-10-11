@@ -51,6 +51,7 @@
     var viewClients = [];
     var suspendedView = null;
     var foregroundRecovery = null;
+    var subtitleSearchGeneration = 0;
     var preferences = { quality: "1080", autoNext: false, language: "en", continueAction: "details",
         skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low", subtitleColor: "white",
         subtitleDelayMs: 0 };
@@ -2490,6 +2491,122 @@
         if (control) { control.focus(); }
     }
 
+    // Restart playback at the current position with an explicit track choice. `cues` keeps an
+    // app-rendered text overlay; only "Subtitles off" may send subtitleStreamID=0, because moving
+    // the PMS selection off a downloaded subtitle deletes it (docs/pms-api.md section 8).
+    function reloadTracks(audioId, subtitleId, cues) {
+        if (!player) { return; }
+        var item = playerItem;
+        var client = playerClient;
+        var position = player.snapshot().position;
+        var version = playerSettings.mediaIndex;
+        var options = { audioId: audioId, subtitleId: subtitleId };
+        if (cues) { options.cues = cues; }
+        stopPlayer(function () { startPlayer(item, client, position, version, options); });
+    }
+
+    function useTextOverlay(stream, audioId) {
+        var selectedPlayer = player;
+        setStatus("Loading text subtitles...");
+        playerClient.subtitleText(stream.id, stream.codec).then(function (text) {
+            if (player !== selectedPlayer) { return; }
+            reloadTracks(audioId, stream.id, window.PlexSubtitles.parse(text));
+        }).catch(showPlayerError);
+    }
+
+    function subtitleSearchLanguages(first) {
+        var seen = [];
+        function add(tag) {
+            var code = window.PlexSubtitleSearch.twoLetter(tag);
+            if (code && seen.indexOf(code) === -1) { seen.push(code); }
+        }
+        add(first);
+        (player.part().Stream || []).forEach(function (stream) { add(stream.languageCode || stream.languageTag); });
+        add(preferences.language);
+        add("en");
+        return seen;
+    }
+
+    // Read-only search; picking a result is the only server write and needs an explicit OK.
+    function openSubtitleSearch(language) {
+        if (!player) { return; }
+        cancelHudTimer();
+        var search = window.PlexSubtitleSearch;
+        var generation = ++subtitleSearchGeneration;
+        var selectedPlayer = player;
+        var ratingKey = playerItem.ratingKey;
+        var audioId = player.selection().audioId;
+        var old = document.getElementById("player-menu");
+        if (old) { old.parentNode.removeChild(old); }
+        var menu = element("section", "player-menu");
+        menu.id = "player-menu";
+        menu.appendChild(element("h2", "", translate("Search for subtitles")));
+        var languages = subtitleSearchLanguages(language);
+        var languageButton = button(menu, translate("Language: {language}", { language: language }), function () {
+            openSubtitleSearch(languages[(languages.indexOf(language) + 1) % languages.length]);
+        }, true, "settings");
+        var results = group(menu, translate("Results"), "track-group");
+        var note = element("p", "help-text", translate("Searching for subtitles..."));
+        note.setAttribute("aria-live", "polite");
+        results.appendChild(note);
+        button(menu, "Back to audio and subtitles", openTracks);
+        button(menu, "Close menu", closePlayerMenu);
+        screen.appendChild(menu);
+        languageButton.focus();
+        function current() { return player === selectedPlayer && generation === subtitleSearchGeneration; }
+        function retry() { openSubtitleSearch(language); }
+        playerClient.searchSubtitles(ratingKey, language).then(function (container) {
+            if (!current()) { return; }
+            var hits = search.hitsOf(container);
+            if (!hits.length) {
+                note.textContent = translate("No subtitles found for this language.");
+                return;
+            }
+            note.textContent = translate("Choosing a result adds it to this item on your Plex server.");
+            hits.forEach(function (hit) {
+                var label = [hit.title || hit.language || translate("Subtitle"), hit.provider,
+                    hit.hearingImpaired ? "SDH" : "", hit.forced ? translate("Forced") : ""]
+                    .filter(Boolean).join(" / ");
+                var choice = button(results, label, function () { downloadSubtitle(hit); }, true);
+                choice.setAttribute("aria-label", label + ", " + translate("score {score}", { score: hit.score }));
+            });
+        }).catch(function (error) {
+            if (!current()) { return; }
+            var verdict = search.failure(error);
+            note.textContent = translate(verdict === "denied" ? "This Plex account cannot search for subtitles on this server." :
+                verdict === "missing" ? "This item is no longer on the server." :
+                verdict === "bad-language" ? "Plex cannot search subtitles in this language." :
+                "The subtitle search failed. Check the connection and try again.");
+            if (verdict === "transport") { button(results, "Retry", retry).focus(); }
+        });
+        function downloadSubtitle(hit) {
+            if (!current()) { return; }
+            generation = ++subtitleSearchGeneration;
+            Array.prototype.forEach.call(results.querySelectorAll("button"), function (node) { node.disabled = true; });
+            note.textContent = translate("Adding the subtitle to your Plex server...");
+            search.download(playerClient, ratingKey, hit, { alive: current }).then(function (stream) {
+                if (!current()) { return; }
+                if (!stream) {
+                    note.textContent = translate("Plex accepted the subtitle but has not finished adding it. Open Audio and subtitles again shortly.");
+                    return;
+                }
+                if (["srt", "subrip", "webvtt"].indexOf(stream.codec) !== -1) {
+                    useTextOverlay(stream, audioId);
+                } else {
+                    reloadTracks(audioId, stream.id);
+                }
+            }).catch(function (error) {
+                if (!current()) { return; }
+                var verdict = search.failure(error);
+                note.textContent = translate(verdict === "denied" ? "This Plex account cannot add subtitles on this server." :
+                    verdict === "missing" ? "This item is no longer on the server." :
+                    "Adding the subtitle failed. Search again and pick a fresh result.");
+                Array.prototype.forEach.call(results.querySelectorAll("button"), function (node) { node.disabled = false; });
+                if (verdict === "transport") { button(results, "Search again", retry).focus(); }
+            });
+        }
+    }
+
     function openTracks() {
         if (!player) { return; }
         cancelHudTimer();
@@ -2501,47 +2618,31 @@
         var audioGroup = group(menu, translate("Audio"), "track-group");
         var subtitleGroup = group(menu, translate("Subtitles"), "track-group");
         var current = player.selection();
-        function reload(audioId, subtitleId) {
-            var item = playerItem;
-            var client = playerClient;
-            var position = player.snapshot().position;
-            var version = playerSettings.mediaIndex;
-            stopPlayer(function () {
-                startPlayer(item, client, position, version, { audioId: audioId, subtitleId: subtitleId });
-            });
-        }
+        var reload = reloadTracks;
         (player.part().Stream || []).forEach(function (stream) {
             if (stream.streamType === 2) {
                 var audioChoice = button(audioGroup, stream.displayTitle || stream.language || stream.codec || String(stream.id), function () {
-                    reload(stream.id, externalCues ? 0 : current.subtitleId);
+                    reload(stream.id, current.subtitleId, externalCues);
                 });
                 audioChoice.setAttribute("aria-pressed", String(String(current.audioId) === String(stream.id)));
             } else if (stream.streamType === 3) {
                 var subtitleChoice = button(subtitleGroup, stream.displayTitle || stream.language || stream.codec || String(stream.id),
                     function () { reload(current.audioId, stream.id); });
                 subtitleChoice.setAttribute("aria-pressed", String(!externalCues && String(current.subtitleId) === String(stream.id)));
-                if (stream.key && ["srt", "subrip", "webvtt"].indexOf(stream.codec) !== -1) {
+                if (["srt", "subrip", "webvtt"].indexOf(stream.codec) !== -1) {
                     button(subtitleGroup, "Text overlay / " + (stream.displayTitle || stream.language || stream.id), function () {
-                        var selectedPlayer = player;
-                        setStatus("Loading text subtitles...");
-                        playerClient.subtitleText(stream.id, stream.codec).then(function (text) {
-                            if (player !== selectedPlayer) { return; }
-                            var cues = window.PlexSubtitles.parse(text);
-                            var item = playerItem;
-                            var client = playerClient;
-                            var position = player.snapshot().position;
-                            var version = playerSettings.mediaIndex;
-                            var audioId = current.audioId;
-                            stopPlayer(function () {
-                                startPlayer(item, client, position, version, { audioId: audioId, subtitleId: stream.id, cues: cues });
-                            });
-                        }).catch(showPlayerError);
+                        useTextOverlay(stream, current.audioId);
                     });
                 }
             }
         });
         button(subtitleGroup, "Subtitles off", function () { reload(current.audioId, 0); })
             .setAttribute("aria-pressed", String(!current.subtitleId && !externalCues));
+        if (playerItem.type === "movie" || playerItem.type === "episode") {
+            button(subtitleGroup, "Search for subtitles", function () {
+                openSubtitleSearch(window.PlexSubtitleSearch.defaultLanguage(player.part(), preferences.language));
+            });
+        }
         var appearance = group(menu, translate("Text overlay appearance"), "track-group");
         appearance.appendChild(element("p", "help-text", translate("These settings apply only to the app-rendered SRT/WebVTT text overlay, not device-native or burned subtitles.")));
         function cycleAppearance(title, preferenceKey, values, labelForValue) {

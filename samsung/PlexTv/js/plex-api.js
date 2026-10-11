@@ -867,6 +867,29 @@
                     return text;
                 });
             },
+            // docs/pms-api.md section 8: read-only search; `language` must be ISO 639-1.
+            searchSubtitles: function (id, language) {
+                if (!/^[a-z]{2}$/.test(String(language || ""))) {
+                    var refused = new Error("Subtitle search needs a two-letter language code.");
+                    refused.code = "bad-language";
+                    return Promise.reject(refused);
+                }
+                return Promise.resolve().then(function () {
+                    return get("/library/metadata/" + key(id) + "/subtitles", "GET", {
+                        language: language, hearingImpaired: 0, forced: 0
+                    });
+                });
+            },
+            // Adds the candidate as a stream on the item (a server write); PMS installs it asynchronously.
+            addSubtitle: function (id, candidateKey) {
+                if (typeof candidateKey !== "string" ||
+                        !/^\/library\/streams\/[0-9]{1,20}(\.[A-Za-z0-9]{1,10})?$/.test(candidateKey)) {
+                    return Promise.reject(new Error("Plex returned an invalid subtitle candidate."));
+                }
+                return Promise.resolve().then(function () {
+                    return get("/library/metadata/" + key(id) + "/subtitles", "PUT", { key: candidateKey }, true);
+                });
+            },
             selectStreams: function (partId, audioId, subtitleId) {
                 if (!/^[0-9]+$/.test(String(audioId)) || !/^[0-9]+$/.test(String(subtitleId))) {
                     return Promise.reject(new Error("Invalid audio or subtitle selection."));
