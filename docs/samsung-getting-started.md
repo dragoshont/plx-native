@@ -326,7 +326,9 @@ package is not exist", and without `-t` it exits silently without removing anyth
 On the 2019 set (Tizen 5.0) even the correct command printed only "Platform log view" and left the
 app installed; `sdb uninstall`, `sdb shell 0 vd_appuninstall` and `sdb shell 0 uninstall` all
 returned "closed". Remove the app on the TV instead: Apps → Settings (gear) → select the app →
-Delete. Confirm removal by re-listing apps, not by the CLI's exit status.
+Delete. Confirm removal by re-listing apps, not by the CLI's exit status:
+`sdb -s <ip>:26101 shell 0 vd_applist` worked on both the 2017 and 2019 sets and prints
+"apps count: N" followed by one `app_tizen_id` entry per app.
 
 **Troubleshooting.**
 
