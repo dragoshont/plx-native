@@ -61,7 +61,8 @@ assert.strictEqual(capabilities.detect({userAgent:"SMART-TV Tizen 4.0",productin
 assert.strictEqual(capabilities.detect({ userAgent: "Mozilla/5.0 (Macintosh)" }), null);
 assert.strictEqual(capabilities.detect({ userAgent: "SMART-TV Tizen 2.4" }), null);
 function plan(media, profile, quality, streams) {
-    var item = { ratingKey:"1", type:"movie", Media:[Object.assign({},media,{Part:[{id:"1",key:"/library/parts/1/file",Stream:streams||[]}]})] };
+    var item = { ratingKey:"1", type:"movie", Media:[Object.assign({},media,{Part:[{id:"1",key:"/library/parts/1/file",
+        Stream:streams||[{streamType:1,codec:media.videoCodec}]}]})] };
     return playback.plan(item,{profile:profile,quality:quality||"original"});
 }
 var direct = plan({ container:"mkv",videoCodec:"hevc",audioCodec:"aac",width:3840,height:2160 }, unknown);
@@ -121,7 +122,7 @@ function qualityPolicyJourney(mode, expected) {
         source = source.slice(0, source.lastIndexOf('    addConnectForm("");')) +
             'preferences.directPlay = "' + mode + '";' +
             'playerItem = {ratingKey:"1",type:"movie",Media:[{container:"mp4",videoCodec:"h264",audioCodec:"aac",' +
-            'width:1920,height:1080,Part:[{id:"1",key:"/library/parts/1/file",Stream:[]}]}]};' +
+            'width:1920,height:1080,Part:[{id:"1",key:"/library/parts/1/file",Stream:[{streamType:1,codec:"h264"}]}]}]};' +
             'playerSettings = {mediaIndex:0,quality:"original",profile:{evidence:"synthetic-profile",' +
             'video:["h264"],audio:["aac"],containers:["mp4"],maxWidth:1920,maxHeight:1080}};' +
             'player = {quality:function(){return {source:playerItem.Media[0],stream:playerItem.Media[0],mode:"direct"};}};' +

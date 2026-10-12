@@ -10,7 +10,7 @@ function harness() {
         get: function (obj, name) { if (name === "then") { return undefined; } return obj[name] || function () { return request(name); }; }
     });
     w.fetch = function () { assert.fail("No network in route journey"); };
-    ["i18n", "preferences", "queue", "subtitles", "television-ui", "catalogue-ui"].forEach(function (name) {
+    ["i18n", "preferences", "queue", "subtitles", "television-ui", "catalogue-ui", "home-hero"].forEach(function (name) {
         var text = fs.readFileSync(path.join(app, "js", name + ".js"), "utf8");
         if (name === "television-ui") { text = text.replace("return { open: openTelevision };", "return { open: openTelevision, guide: openGuide, program: openProgram, channel: openChannel, recordings: openRecordings };"); }
         if (name === "catalogue-ui") { text = text.replace("open: openWatchlist", "open: openWatchlist"); }

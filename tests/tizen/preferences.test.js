@@ -9,11 +9,11 @@ var storage = {
 };
 assert.deepStrictEqual(prefs.load(storage), { quality: "original", language: "en", nextEpisode: "countdown",
     continueAction: "details", skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low",
-    subtitleColor: "white", subtitleDelayMs: 0, directPlay: "auto" });
+    subtitleColor: "white", subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto" });
 value = JSON.stringify({ quality: "720", language: "en", autoNext: false });
 assert.deepStrictEqual(prefs.load(storage), { quality: "720", language: "en", nextEpisode: "off",
     continueAction: "details", skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low",
-    subtitleColor: "white", subtitleDelayMs: 0, directPlay: "auto" }, "Preferences from earlier app versions receive safe defaults; auto-play off stays off");
+    subtitleColor: "white", subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto" }, "Preferences from earlier app versions receive safe defaults; auto-play off stays off");
 value = JSON.stringify({ quality: "720", language: "en", autoNext: true });
 assert.strictEqual(prefs.load(storage).nextEpisode, "countdown", "Auto-play on becomes the LG credits countdown");
 assert.strictEqual("autoNext" in prefs.load(storage), false);
@@ -43,6 +43,10 @@ assert.strictEqual(prefs.load(storage).quality, "1080h", "The LG ladder's 1080p 
 assert.strictEqual(prefs.load(storage).directPlay, "force");
 assert.strictEqual(prefs.load(storage).subtitleSize, "extra_large");
 assert.strictEqual(prefs.load(storage).subtitleColor, "grey_55");
+assert.strictEqual(prefs.load(storage).subtitleBackground, "off", "Subtitles default to the LG outline, no box");
+prefs.save(storage, { quality: "720", language: "en", nextEpisode: "off", subtitleBackground: "on" });
+assert.strictEqual(prefs.load(storage).subtitleBackground, "on");
+assert.throws(function () { prefs.save(storage, { quality: "720", language: "en", nextEpisode: "off", subtitleBackground: "grey" }); }, /invalid/);
 assert.throws(function () { prefs.save(storage, { quality: "720", language: "en", nextEpisode: "always" }); }, /invalid/);
 assert.throws(function () { prefs.save(storage, { quality: "1080", language: "en", nextEpisode: "off", directPlay: "always" }); }, /invalid/);
 value = "{invalid";

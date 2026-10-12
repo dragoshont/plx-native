@@ -84,7 +84,7 @@ async function run() {
         }
     };
     vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/main.js"), "utf8"), {
-        document: document, window: { PlexApi: api, Promise: Promise, URL: URL, Blob: Blob,
+        document: document, window: { PlexApi: api, PlexHomeHero: require("../../samsung/PlexTv/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob,
             fetch: function () { assert.fail("The synthetic API must not use the network"); },
             addEventListener: function () {} },
         setTimeout: function () { return 1; }, clearTimeout: function () {}

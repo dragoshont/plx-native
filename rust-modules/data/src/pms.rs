@@ -1785,47 +1785,58 @@ fn merge_with_scope(srcs: &[Src], scope: &BrowseScope) -> HubBuild {
     }
 
     // ---- 3. the rotating hero pool ----
-    // Continue Watching items first, then Recently Added, deduped by the item's IDENTITY. Require
-    // landscape `art` (the hero draws a full-bleed backdrop) and skip seasons (a bare "Season 1"
-    // makes a poor billboard). Capped at HERO_MAX.
-    let mut new_pool: Vec<HeroSlot> = Vec::new();
-    for hub in &new_hubs {
-        // Match on the locale-independent hubIdentifier, not the localized display title:
-        // "home.continue" plus every Recently Added variant (home.movies.recent,
-        // home.television.recent, promoted <type>.recentlyadded.<id>) all carry "recent".
-        let eligible = hub.hub_id == "home.continue" || hub.hub_id.contains("recent");
-        if !eligible {
-            continue;
-        }
-        for idx in hub.start..hub.start + hub.len {
-            if new_pool.len() >= HERO_MAX {
-                break;
-            }
-            let m = &new_cat[idx];
-            if m.art.is_empty() || m.kind == 2 {
-                continue; // need landscape art; skip seasons
-            }
-            // dedup by the item's IDENTITY, not by its bare key: two shelves merged from two
-            // servers can each contribute a different film numbered 1, and a bare-key dedup would
-            // silently drop the second from the hero rotation.
-            //
-            // NB the pool holds `HeroSlot`s, so the index is `s.idx` — unit 12's hero-ordering work
-            // and unit 3's identity work landed in this same expression from opposite directions.
-            if new_pool.iter().any(|s| {
-                plx_plex::plex::same_item((new_cat[s.idx].sid, &new_cat[s.idx].rk), (m.sid, &m.rk))
-            }) {
-                continue;
-            }
-            new_pool.push(HeroSlot {
-                idx,
-                source: row_handle[idx].to_string(),
-            });
-        }
-    }
+    let mut new_pool = hero_pool(&new_hubs, &new_cat, &row_handle);
     // …and only now is the order decided: the pool is assembled shelf by shelf, so which server
     // opens the door is not knowable until every shelf has contributed.
     own_items_first(&mut new_pool);
     (new_cat, new_hubs, new_pool)
+}
+
+/// The hero rotation: Continue Watching and the Recently Added rows, deduped by the item's
+/// IDENTITY, requiring landscape `art` (the hero draws a full-bleed backdrop) and skipping seasons
+/// (a bare "Season 1" makes a poor billboard). Capped at HERO_MAX.
+///
+/// The rows take turns, one item each per round. PMS orders Home rows by library pin order, so
+/// filling row by row handed the whole hero to Recently Added Movies whenever Movies is pinned
+/// above TV Shows; round-robin keeps every eligible row in the rotation. The Samsung client's
+/// `js/home-hero.js` applies the same rule.
+fn hero_pool(hubs: &[HubRow], cat: &[Arc<PmsMovie>], row_handle: &[&str]) -> Vec<HeroSlot> {
+    // Match on the locale-independent hubIdentifier, not the localized display title:
+    // "home.continue" plus every Recently Added variant (home.movies.recent,
+    // home.television.recent, promoted <type>.recentlyadded.<id>) all carry "recent".
+    let mut rows: Vec<std::ops::Range<usize>> = hubs
+        .iter()
+        .filter(|h| h.hub_id == "home.continue" || h.hub_id.contains("recent"))
+        .map(|h| h.start..h.start + h.len)
+        .collect();
+    let mut pool: Vec<HeroSlot> = Vec::new();
+    let mut progressed = true;
+    while pool.len() < HERO_MAX && progressed {
+        progressed = false;
+        for row in &mut rows {
+            if pool.len() >= HERO_MAX {
+                break;
+            }
+            for idx in row.by_ref() {
+                let m = &cat[idx];
+                if m.art.is_empty() || m.kind == 2 {
+                    continue; // need landscape art; skip seasons
+                }
+                // dedup by the item's IDENTITY, not by its bare key: two shelves merged from two
+                // servers can each contribute a different film numbered 1, and a bare-key dedup
+                // would silently drop the second from the hero rotation.
+                if pool.iter().any(|s| {
+                    plx_plex::plex::same_item((cat[s.idx].sid, &cat[s.idx].rk), (m.sid, &m.rk))
+                }) {
+                    continue;
+                }
+                pool.push(HeroSlot { idx, source: row_handle[idx].to_string() });
+                progressed = true;
+                break;
+            }
+        }
+    }
+    pool
 }
 
 // ---- fetch state machine: PER SOURCE loading / ready / failed + the automatic-retry backoff ----

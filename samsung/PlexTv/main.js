@@ -61,7 +61,7 @@
     var subtitleSearchGeneration = 0;
     var preferences = { quality: "original", nextEpisode: "countdown", language: "en", continueAction: "details",
         skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low", subtitleColor: "white",
-        subtitleDelayMs: 0, directPlay: "auto" };
+        subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto" };
     var preferenceError = "";
     function directPlayProfile() {
         if (preferences.directPlay === "off" || !window.PlexCapabilities) { return null; }
@@ -1106,17 +1106,7 @@
             return !favorites || hub.librarySectionID === undefined ||
                 favorites.indexOf(String(hub.librarySectionID)) !== -1;
         });
-        var features = [];
-        var seen = {};
-        visibleHubs.forEach(function (hub) {
-            (hub.Metadata || []).forEach(function (item) {
-                if (features.length < 8 && item.ratingKey && !seen[item.ratingKey] &&
-                        ["movie", "show", "episode"].indexOf(item.type) !== -1) {
-                    seen[item.ratingKey] = true;
-                    features.push(item);
-                }
-            });
-        });
+        var features = window.PlexHomeHero.pick(visibleHubs, 8);
         if (features.length) {
             var featuredIndex = 0;
             var featured = features[0];
@@ -2371,6 +2361,7 @@
         return { white: "White", grey_85: "Silver", grey_70: "Light gray", grey_55: "Gray",
             grey_40: "Dark gray", grey_28: "Charcoal", yellow: "Yellow" }[value] || value;
     }
+    function backgroundName(value) { return value === "on" ? "On" : "Off"; }
     function qualityLadder() {
         return (window.PlexPreferences && window.PlexPreferences.qualities) ||
             ["original", "1080h", "1080", "720", "720l", "480"];
@@ -2409,7 +2400,8 @@
         if (!externalCues) { return; }
         node.className += " subtitle-size-" + preferences.subtitleSize +
             " subtitle-position-" + preferences.subtitlePosition +
-            " subtitle-color-" + preferences.subtitleColor;
+            " subtitle-color-" + preferences.subtitleColor +
+            " subtitle-background-" + preferences.subtitleBackground;
     }
 
     function refreshSubtitleAppearance() {
@@ -2615,7 +2607,7 @@
                         if (externalCues) { return; }
                         var text = document.getElementById("subtitle-text");
                         if (text) {
-                            text.textContent = event.detail.text;
+                            text.textContent = window.PlexSubtitles.clean(event.detail.text);
                             if (subtitleTimer !== null) { clearTimeout(subtitleTimer); }
                             subtitleTimer = setTimeout(function () { text.textContent = ""; }, event.detail.duration || 3000);
                         }
@@ -2637,13 +2629,6 @@
                     }
                 }
             });
-            if ((item.type === "movie" || item.type === "episode") && currentServerId &&
-                    client === currentClient && client.createVideoPlayQueue) {
-                var queueSettings = playerSettings;
-                client.createVideoPlayQueue(currentServerId, item.ratingKey).then(function (queue) {
-                    if (playerSettings === queueSettings) { queueSettings.playQueue = queue; }
-                }).catch(function () { /* the queue is optional; playback and progress continue without it */ });
-            }
             ownPlayer = window.PlexPlayback.create({
                 adapter: adapter, client: client, item: item, settings: playerSettings,
                 onEvent: function (event) {
@@ -2655,6 +2640,13 @@
                     }
                 }
             });
+            if ((item.type === "movie" || item.type === "episode") && currentServerId &&
+                    client === currentClient && client.createVideoPlayQueue) {
+                var queueSettings = playerSettings;
+                client.createVideoPlayQueue(currentServerId, item.ratingKey).then(function (queue) {
+                    if (playerSettings === queueSettings) { queueSettings.playQueue = queue; }
+                }).catch(function () { /* the queue is optional; playback and progress continue without it */ });
+            }
             player = ownPlayer;
             setStatus("Asking Plex for a compatible stream...");
             player.start().then(function () {
@@ -2962,6 +2954,7 @@
             function (value) { return { small: "Small", medium: "Medium", large: "Large", extra_large: "Extra large" }[value]; });
         cycleAppearance("Text position", "subtitlePosition", ["low", "middle", "high"], function (value) { return value; });
         cycleAppearance("Text color", "subtitleColor", SUBTITLE_COLORS, colorName);
+        cycleAppearance("Text background", "subtitleBackground", ["off", "on"], backgroundName);
         cycleAppearance("Subtitle delay", "subtitleDelayMs", [-2000, -1000, -500, 0, 500, 1000, 2000],
             function (value) { return (value > 0 ? "+" : "") + value + " ms"; });
         var nativeTracks = element("div", "native-tracks");
@@ -3255,6 +3248,7 @@
             function (value) { return { small: "Small", medium: "Medium", large: "Large", extra_large: "Extra large" }[value]; });
         preferenceChoice(subtitleSettings, "Text position", "subtitlePosition", ["low", "middle", "high"], function (value) { return value; });
         preferenceChoice(subtitleSettings, "Text color", "subtitleColor", SUBTITLE_COLORS, colorName);
+        preferenceChoice(subtitleSettings, "Text background", "subtitleBackground", ["off", "on"], backgroundName);
         preferenceChoice(subtitleSettings, "Subtitle delay", "subtitleDelayMs", [-2000, -1000, -500, 0, 500, 1000, 2000],
             function (value) { return (value > 0 ? "+" : "") + value + " ms"; });
         if (currentClient && currentServerId) {

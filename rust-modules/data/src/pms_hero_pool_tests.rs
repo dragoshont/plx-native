@@ -100,3 +100,42 @@ fn the_hero_pool_opens_on_our_own_item_and_never_dedups_across_servers() {
     );
     reset(&mut o.state, &o.adapter);
 }
+
+fn hub_row(hub_id: &str, start: usize, len: usize) -> HubRow {
+    HubRow {
+        title: String::new(),
+        hub_id: hub_id.to_string(),
+        key: String::new(),
+        source: String::new(),
+        total: len,
+        start,
+        len,
+        offset: 0,
+        more: false,
+        epoch: 0,
+    }
+}
+
+fn card(rk: &str) -> Arc<PmsMovie> {
+    Arc::new(PmsMovie { rk: rk.to_string(), art: "/art".to_string(), ..PmsMovie::default() })
+}
+
+/// PMS orders Home rows by library pin order, so a library with Movies pinned above TV Shows
+/// sends Recently Added Movies first. Filling the hero row by row gave it every slot.
+#[test]
+fn the_hero_takes_turns_between_continue_watching_and_every_recent_row() {
+    let mut cat = vec![card("c1"), card("c2")];
+    cat.extend((1..=10).map(|i| card(&format!("m{i}"))));
+    cat.extend((1..=10).map(|i| card(&format!("x{i}"))));
+    cat.extend((1..=10).map(|i| card(&format!("t{i}"))));
+    let hubs = vec![
+        hub_row("home.continue", 0, 2),
+        hub_row("home.movies.recent", 2, 10),
+        hub_row("movie.inprogress.1", 12, 10),
+        hub_row("home.television.recent", 22, 10),
+    ];
+    let handles = vec![""; cat.len()];
+    let pool = hero_pool(&hubs, &cat, &handles);
+    let rks: Vec<&str> = pool.iter().map(|s| cat[s.idx].rk.as_str()).collect();
+    assert_eq!(rks, ["c1", "m1", "t1", "c2", "m2", "t2", "m3", "t3"]);
+}

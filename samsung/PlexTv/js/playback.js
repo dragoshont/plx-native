@@ -9,6 +9,10 @@
         return /^[0-9]+$/.test(String(value)) ? Number(value) : 0;
     }
 
+    function unplayableFile() {
+        return new Error("This file can't be played. It may be damaged or not analyzed on the Plex server.");
+    }
+
     // Unset audio/subtitle ids follow PMS `Stream.selected`, which already applies the account's
     // language preferences and any earlier pick. Only an explicit choice (Off included) is
     // written back with PUT /library/parts, matching the LG client.
@@ -129,14 +133,19 @@
         if (!part || !part.key || !/^[0-9]+$/.test(String(item.ratingKey))) {
             throw new Error("This item has no playable media version.");
         }
+        var kind = item.type === "track" ? "music" : "video";
+        var streams = part.Stream || [];
+        if (!streams.some(function (stream) {
+            return Number(stream.streamType) === 2 || kind === "video" && Number(stream.streamType) === 1;
+        })) {
+            throw unplayableFile();
+        }
         var multipart = media.Part.length > 1;
         var tracks = resolveTracks(part, options);
         // A text subtitle the app renders itself stays selected on PMS but is never burned in.
         var burn = tracks.subtitleId && !options.overlaySubtitle ? tracks.subtitleId : 0;
         var profile = options.profile;
-        var kind = item.type === "track" ? "music" : "video";
         var range = String(media.videoDynamicRange || "");
-        var streams = part.Stream || [];
         var dolby = /dolby|dovi/i.test(range) || streams.some(function (stream) { return stream.streamType === 1 && stream.DOVIPresent; });
         var hdr = (range && range !== "SDR") || dolby || media.hdr ||
             /smpte2084|arib-std-b67/.test(String(media.colorTrc || media.colorTransfer || "")) || streams.some(function (stream) { return stream.streamType === 1 &&
@@ -162,11 +171,12 @@
             videoResolution: rung.width + "x" + rung.height,
             videoBitrate: rung.bitrate,
             videoQuality: 100, audioCodec: "aac", videoCodec: "h264",
-            audioStreamID: tracks.audioId, subtitleStreamID: burn,
+            subtitleStreamID: burn,
             subtitles: burn ? "burn" : "none",
             "X-Plex-Client-Profile-Name": "Generic",
             "X-Plex-Client-Profile-Extra": "add-transcode-target(type=videoProfile&context=streaming&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)"
         };
+        if (tracks.audioId > 0) { query.audioStreamID = tracks.audioId; }
         if (direct) {
             query["X-Plex-Client-Profile-Extra"] += "+add-direct-play-profile(type=videoProfile&protocol=http&container=" +
                 profile.containers.join(",") + "&videoCodec=" + profile.video.join(",") + "&audioCodec=" +
@@ -262,7 +272,15 @@
         function negotiate() {
             if (closed || stopping) { throw new Error("Playback was cancelled."); }
             var asked = selection.direct ? directQuery(selection.query) : selection.query;
-            return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", asked).then(function (decision) {
+            return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", asked).catch(function (error) {
+                if (error && error.status === 400) {
+                    var unavailable = unplayableFile();
+                    unavailable.status = error.status;
+                    unavailable.scope = error.scope;
+                    throw unavailable;
+                }
+                throw error;
+            }).then(function (decision) {
                 if (closed || stopping) { throw new Error("Playback was cancelled."); }
                 if (Number(decision.generalDecisionCode) >= 2000 || Number(decision.transcodeDecisionCode) >= 2000) {
                     throw new Error("Plex refused playback. Change quality, source or subtitle settings and retry.");
