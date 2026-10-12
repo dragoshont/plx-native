@@ -1,4 +1,8 @@
 {
+  "Plex has no stream information for this media version. Check that the file is complete and analyzed on the server.": {
+    "es": "Plex no tiene información de pistas para esta versión. Comprueba que el archivo esté completo y analizado en el servidor.",
+    "be": "Plex не мае звестак пра дарожкі гэтай версіі. Праверце, што файл поўны і прааналізаваны на серверы."
+  },
   "Exit Plx?": { "es": "¿Salir de Plx?", "be": "Выйсці з Plx?" },
   "Stay": { "es": "Quedarse", "be": "Застацца" },
   "Exit": { "es": "Salir", "be": "Выйсці" },

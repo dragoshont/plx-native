@@ -43,6 +43,31 @@ async function run() {
     var plan = playback.plan(item, { offset: 5000 });
     assert.strictEqual(plan.direct, false, "Unknown capabilities must not guess direct play");
     assert.strictEqual(plan.query.directPlay, 0);
+    assert.strictEqual(plan.query.audioStreamID, undefined,
+        "An unset audio stream must be omitted, matching LG's default-track query");
+    var unanalysed = { ratingKey: "70", type: "movie", Media: [{
+        id: 80, Part: [{ id: 80, key: "/library/parts/80/file.mp4", size: 4000000 }]
+    }] };
+    for (var directPlay of ["auto", "off", "force"]) {
+        var invalidRig = rig();
+        assert.throws(function () {
+            playback.create({ client: invalidRig.client, adapter: invalidRig.adapter, item: unanalysed,
+                settings: { directPlay: directPlay } });
+        }, /stream information.*complete.*analyzed/i,
+        "Media without codec or Stream facts must fail before asking PMS to transcode an unplayable file");
+        assert.strictEqual(invalidRig.calls.length, 0, "Invalid source metadata must cause no network/native calls");
+    }
+    var streamOnly = JSON.parse(JSON.stringify(item));
+    delete streamOnly.Media[0].videoCodec;
+    streamOnly.Media[0].Part[0].Stream = [{ streamType: 1, codec: "h264" }];
+    assert.doesNotThrow(function () { playback.plan(streamOnly, {}); },
+        "A server may provide the video codec only in Stream metadata");
+    var unanalysedTrack = JSON.parse(JSON.stringify(unanalysed));
+    unanalysedTrack.type = "track";
+    assert.throws(function () { playback.plan(unanalysedTrack, {}); }, /stream information/i,
+        "Music without audio codec or Stream facts must not negotiate an unplayable file");
+    unanalysedTrack.Media[0].Part[0].Stream = [{ streamType: 2, codec: "flac" }];
+    assert.doesNotThrow(function () { playback.plan(unanalysedTrack, {}); });
     assert.strictEqual(plan.query.offset, 0, "AVPlay resumes in the source timeline, not an offset-relative HLS clock");
     assert.strictEqual(playback.plan(item, { profile: {
         evidence: "synthetic-measured-profile", containers: ["mp4"], video: ["h264"], audio: ["aac"],
@@ -358,6 +383,9 @@ async function run() {
     assert.strictEqual(started[2].protocol, "hls");
     assert.strictEqual(started[2].directPlay, 0);
     assert.strictEqual(started[2].videoBitrate, 8000, "A transcode keeps its quality cap");
+    assert.strictEqual(started[2].audioStreamID, undefined, "The HLS start also omits unset audio IDs");
+    assert(hlsQueries.every(function (query) { return query.audioStreamID === undefined; }),
+        "Both the direct ask and fallback conversion must retain default-track omission");
     assert.strictEqual(hlsQueries[hlsQueries.length - 1].directPlay, 0, "The transcode is registered by its own decision");
     await session.stop();
 

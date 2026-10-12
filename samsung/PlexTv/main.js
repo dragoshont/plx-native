@@ -2629,13 +2629,6 @@
                     }
                 }
             });
-            if ((item.type === "movie" || item.type === "episode") && currentServerId &&
-                    client === currentClient && client.createVideoPlayQueue) {
-                var queueSettings = playerSettings;
-                client.createVideoPlayQueue(currentServerId, item.ratingKey).then(function (queue) {
-                    if (playerSettings === queueSettings) { queueSettings.playQueue = queue; }
-                }).catch(function () { /* the queue is optional; playback and progress continue without it */ });
-            }
             ownPlayer = window.PlexPlayback.create({
                 adapter: adapter, client: client, item: item, settings: playerSettings,
                 onEvent: function (event) {
@@ -2647,6 +2640,13 @@
                     }
                 }
             });
+            if ((item.type === "movie" || item.type === "episode") && currentServerId &&
+                    client === currentClient && client.createVideoPlayQueue) {
+                var queueSettings = playerSettings;
+                client.createVideoPlayQueue(currentServerId, item.ratingKey).then(function (queue) {
+                    if (playerSettings === queueSettings) { queueSettings.playQueue = queue; }
+                }).catch(function () { /* the queue is optional; playback and progress continue without it */ });
+            }
             player = ownPlayer;
             setStatus("Asking Plex for a compatible stream...");
             player.start().then(function () {

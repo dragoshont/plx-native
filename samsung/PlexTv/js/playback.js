@@ -129,14 +129,20 @@
         if (!part || !part.key || !/^[0-9]+$/.test(String(item.ratingKey))) {
             throw new Error("This item has no playable media version.");
         }
+        var kind = item.type === "track" ? "music" : "video";
+        var streams = part.Stream || [];
+        var sourceCodec = kind === "music" ? media.audioCodec : media.videoCodec;
+        if (!sourceCodec && !streams.some(function (stream) {
+            return Number(stream.streamType) === (kind === "music" ? 2 : 1) && stream.codec;
+        })) {
+            throw new Error("Plex has no stream information for this media version. Check that the file is complete and analyzed on the server.");
+        }
         var multipart = media.Part.length > 1;
         var tracks = resolveTracks(part, options);
         // A text subtitle the app renders itself stays selected on PMS but is never burned in.
         var burn = tracks.subtitleId && !options.overlaySubtitle ? tracks.subtitleId : 0;
         var profile = options.profile;
-        var kind = item.type === "track" ? "music" : "video";
         var range = String(media.videoDynamicRange || "");
-        var streams = part.Stream || [];
         var dolby = /dolby|dovi/i.test(range) || streams.some(function (stream) { return stream.streamType === 1 && stream.DOVIPresent; });
         var hdr = (range && range !== "SDR") || dolby || media.hdr ||
             /smpte2084|arib-std-b67/.test(String(media.colorTrc || media.colorTransfer || "")) || streams.some(function (stream) { return stream.streamType === 1 &&
@@ -162,11 +168,12 @@
             videoResolution: rung.width + "x" + rung.height,
             videoBitrate: rung.bitrate,
             videoQuality: 100, audioCodec: "aac", videoCodec: "h264",
-            audioStreamID: tracks.audioId, subtitleStreamID: burn,
+            subtitleStreamID: burn,
             subtitles: burn ? "burn" : "none",
             "X-Plex-Client-Profile-Name": "Generic",
             "X-Plex-Client-Profile-Extra": "add-transcode-target(type=videoProfile&context=streaming&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)"
         };
+        if (tracks.audioId > 0) { query.audioStreamID = tracks.audioId; }
         if (direct) {
             query["X-Plex-Client-Profile-Extra"] += "+add-direct-play-profile(type=videoProfile&protocol=http&container=" +
                 profile.containers.join(",") + "&videoCodec=" + profile.video.join(",") + "&audioCodec=" +
