@@ -133,7 +133,7 @@ function boot(storage) {
             return Promise.resolve({ relay: false, client: entry.id === "machine-a" ? clients.a : clients.b });
         }
     };
-    var window = { PlexApi: api, Promise: Promise, URL: URL, Blob: Blob, localStorage: storage,
+    var window = { PlexApi: api, PlexHomeHero: require("../../samsung/PlexTv/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob, localStorage: storage,
         fetch: function () { assert.fail("The synthetic UI must not use the network"); },
         addEventListener: function () {} };
     ["i18n.js", "js/preferences.js", "js/favorites.js", "js/item-menu.js"].forEach(function (file) {

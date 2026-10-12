@@ -96,7 +96,7 @@ async function journey(indexFails, language, largeCareer) {
         selectServer: function () { return Promise.resolve({ relay: false, client: server }); },
         matchCredit: realApi.matchCredit
     };
-    var window = { PlexApi: api, Promise: Promise, URL: URL, Blob: Blob,
+    var window = { PlexApi: api, PlexHomeHero: require("../../samsung/PlexTv/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob,
         fetch: function () { assert.fail("The synthetic API must not use the network"); },
         addEventListener: function () {} };
     vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/i18n.js"), "utf8"), window);

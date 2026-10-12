@@ -1106,17 +1106,7 @@
             return !favorites || hub.librarySectionID === undefined ||
                 favorites.indexOf(String(hub.librarySectionID)) !== -1;
         });
-        var features = [];
-        var seen = {};
-        visibleHubs.forEach(function (hub) {
-            (hub.Metadata || []).forEach(function (item) {
-                if (features.length < 8 && item.ratingKey && !seen[item.ratingKey] &&
-                        ["movie", "show", "episode"].indexOf(item.type) !== -1) {
-                    seen[item.ratingKey] = true;
-                    features.push(item);
-                }
-            });
-        });
+        var features = window.PlexHomeHero.pick(visibleHubs, 8);
         if (features.length) {
             var featuredIndex = 0;
             var featured = features[0];

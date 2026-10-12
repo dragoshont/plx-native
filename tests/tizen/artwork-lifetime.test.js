@@ -45,7 +45,7 @@ async function run() {
             return Promise.resolve({ MediaContainer: container });
         } });
     };
-    ["js/plex-api.js", "js/preferences.js", "js/i18n.js", "main.js"].forEach(function (file) {
+    ["js/plex-api.js", "js/preferences.js", "js/i18n.js", "js/home-hero.js", "main.js"].forEach(function (file) {
         window.eval(fs.readFileSync(path.join(app, file), "utf8"));
     });
     window.document.querySelector('input[name="server"]').value = "https://pms.synthetic.invalid";
