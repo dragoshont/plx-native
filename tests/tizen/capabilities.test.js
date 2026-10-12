@@ -122,7 +122,7 @@ function qualityPolicyJourney(mode, expected) {
         source = source.slice(0, source.lastIndexOf('    addConnectForm("");')) +
             'preferences.directPlay = "' + mode + '";' +
             'playerItem = {ratingKey:"1",type:"movie",Media:[{container:"mp4",videoCodec:"h264",audioCodec:"aac",' +
-            'width:1920,height:1080,Part:[{id:"1",key:"/library/parts/1/file",Stream:[]}]}]};' +
+            'width:1920,height:1080,Part:[{id:"1",key:"/library/parts/1/file",Stream:[{streamType:1,codec:"h264"}]}]}]};' +
             'playerSettings = {mediaIndex:0,quality:"original",profile:{evidence:"synthetic-profile",' +
             'video:["h264"],audio:["aac"],containers:["mp4"],maxWidth:1920,maxHeight:1080}};' +
             'player = {quality:function(){return {source:playerItem.Media[0],stream:playerItem.Media[0],mode:"direct"};}};' +
