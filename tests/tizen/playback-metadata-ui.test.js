@@ -97,6 +97,12 @@ async function run() {
         assert.strictEqual(calls.filter(function (call) { return /\/transcode\/universal\/decision$/.test(call.path); }).length, 1);
         assert(!calls.some(function (call) { return /start\.|\/:\/timeline/.test(call.path); }));
         assert.strictEqual(nativeOpens, 0);
+        var message = window.document.getElementById("status").textContent;
+        for (var language of ["es", "be"]) {
+            window.PlexI18n.setLanguage(language);
+            assert(window.PlexI18n.has(message), "Unavailable-media guidance must have an explicit translation");
+            assert.notStrictEqual(window.PlexI18n.error(new Error(message)), message);
+        }
     } finally { dom.window.close(); }
     console.log("Tizen incomplete-media UI fails explicitly without playback writes: passed");
 }

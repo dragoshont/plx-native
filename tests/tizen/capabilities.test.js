@@ -61,7 +61,8 @@ assert.strictEqual(capabilities.detect({userAgent:"SMART-TV Tizen 4.0",productin
 assert.strictEqual(capabilities.detect({ userAgent: "Mozilla/5.0 (Macintosh)" }), null);
 assert.strictEqual(capabilities.detect({ userAgent: "SMART-TV Tizen 2.4" }), null);
 function plan(media, profile, quality, streams) {
-    var item = { ratingKey:"1", type:"movie", Media:[Object.assign({},media,{Part:[{id:"1",key:"/library/parts/1/file",Stream:streams||[]}]})] };
+    var item = { ratingKey:"1", type:"movie", Media:[Object.assign({},media,{Part:[{id:"1",key:"/library/parts/1/file",
+        Stream:streams||[{streamType:1,codec:media.videoCodec}]}]})] };
     return playback.plan(item,{profile:profile,quality:quality||"original"});
 }
 var direct = plan({ container:"mkv",videoCodec:"hevc",audioCodec:"aac",width:3840,height:2160 }, unknown);
