@@ -45,7 +45,11 @@ function playerFixture(trackOptions) {
     var window = dom.window;
     Object.defineProperty(window.document, "hidden", { value: false, configurable: true });
     var callbacks = {};
+    var adapters = 0;
     var seeks = [];
+    var starts = 0;
+    var plays = 0;
+    var playerSettings = [];
     var timers = [];
     var timersNext = 1;
     window.fetch = function () { assert.fail("The player preview must not use the network"); };
@@ -54,21 +58,30 @@ function playerFixture(trackOptions) {
     window.PlexI18n = i18nContext.PlexI18n;
     window.PlexPreferences = {
         load: function () { return { quality: "original", nextEpisode: "countdown", language: "en",
-            skipInterval: 10, subtitleDelayMs: 0, subtitleSize: "medium", subtitlePosition: "low",
+            skipInterval: 10, subtitleDelayMs: trackOptions && trackOptions.initialDelay || 0,
+            subtitleSize: "medium", subtitlePosition: "low",
             subtitleColor: "white", subtitleBackground: "off", directPlay: "auto" }; },
         save: function () {}
     };
     window.PlexSkipMarkers = require("../../samsung/PlexTv/js/skip-markers.js");
     window.PlexSubtitles = require("../../samsung/PlexTv/js/subtitles.js");
-    window.PlexAvplay = { create: function (options) { callbacks.avplay = options; return {}; } };
+    window.PlexAvplay = { create: function (options) { adapters += 1; callbacks.avplay = options; return {}; } };
     window.PlexPlayback = {
-        create: function () {
-            var state = "playing";
+        create: function (options) {
+            playerSettings.push(options.settings);
+            var state = "idle";
             return {
-                start: function () { return Promise.resolve(); },
+                start: function () {
+                    starts += 1;
+                    if (trackOptions && trackOptions.failFirstStart && starts === 1) {
+                        return Promise.reject(new Error("Synthetic stream negotiation failure"));
+                    }
+                    state = "playing";
+                    return Promise.resolve();
+                },
                 snapshot: function () { return { state: state, position: 45000, duration: item.duration }; },
                 pause: function () { state = "paused"; return Promise.resolve(); },
-                play: function () { state = "playing"; return Promise.resolve(); },
+                play: function () { plays += 1; state = "playing"; return Promise.resolve(); },
                 seek: function (position) { seeks.push(position); return Promise.resolve(position); },
                 stop: function () { state = "idle"; return Promise.resolve(item); },
                 selection: function () { return { audioId: 11, subtitleId: 21 }; },
@@ -127,14 +140,17 @@ function playerFixture(trackOptions) {
         control.click();
         return control;
     }
-    function key(code) {
-        var event = new window.KeyboardEvent("keydown", { bubbles: true, cancelable: true });
+    function key(code, repeat) {
+        var event = new window.KeyboardEvent("keydown", { bubbles: true, cancelable: true, repeat: !!repeat });
         Object.defineProperty(event, "keyCode", { value: code });
         window.document.dispatchEvent(event);
     }
     async function settle() { for (var i = 0; i < 8; i += 1) { await Promise.resolve(); } }
     return {
-        dom: dom, window: window, document: window.document, callbacks: callbacks, seeks: seeks, timers: timers,
+        dom: dom, window: window, document: window.document, callbacks: callbacks, seeks: seeks,
+        starts: function () { return starts; }, plays: function () { return plays; },
+        adapters: function () { return adapters; },
+        playerSettings: playerSettings, timers: timers,
         findButton: findButton, click: click, key: key, settle: settle
     };
 }
@@ -198,8 +214,8 @@ async function upNextAndTracks() {
 
 async function timingStatsAndErrors() {
     var app = playerFixture({ cues: [
-        { start: 44000, end: 44700, text: "Earlier cue" },
-        { start: 44800, end: 46000, text: "Current cue" }
+        { start: 44000, end: 44999, text: "Earlier cue" },
+        { start: 45000, end: 46000, text: "Current cue" }
     ] });
     try {
         app.callbacks.avplay.onEvent({ type: "time", position: 45000, duration: item.duration });
@@ -211,8 +227,13 @@ async function timingStatsAndErrors() {
         var before = timing.textContent;
         app.key(39);
         assert.notStrictEqual(timing.textContent, before, "RIGHT changes the subtitle offset live");
+        assert.strictEqual(timing.querySelector(".subtitle-timing-value").textContent, "+0.1 s",
+            "A fresh LG timing key advances exactly 100 ms");
         assert.strictEqual(app.document.getElementById("subtitle-text").textContent, "Earlier cue",
             "The live delay immediately changes the rendered text subtitle");
+        for (var repeat = 0; repeat < 8; repeat += 1) { app.key(39, true); }
+        assert.strictEqual(timing.querySelector(".subtitle-timing-value").textContent, "+1.3 s",
+            "The eighth held repeat advances by the LG 500 ms fast step");
         app.key(13);
         assert(!app.document.querySelector(".subtitle-timing"), "OK closes subtitle timing");
 
@@ -233,10 +254,97 @@ async function timingStatsAndErrors() {
     } finally { app.dom.window.close(); }
 }
 
+async function subtitleTimingUsesTrackBounds() {
+    var sidecar = playerFixture({ cues: [], subtitleSidecar: true, initialDelay: 60000 });
+    try {
+        sidecar.click("Subtitles");
+        sidecar.click("Subtitle timing");
+        sidecar.key(39);
+        assert.strictEqual(sidecar.document.querySelector(".subtitle-timing-value").textContent, "+60.0 s",
+            "Sidecar timing clamps at the LG +60 s bound");
+        sidecar.key(37);
+        assert.strictEqual(sidecar.document.querySelector(".subtitle-timing-value").textContent, "+59.9 s",
+            "Sidecar timing can move earlier by one 100 ms step");
+    } finally { sidecar.dom.window.close(); }
+
+    var sidecarMinimum = playerFixture({ cues: [], subtitleSidecar: true, initialDelay: -60000 });
+    try {
+        sidecarMinimum.click("Subtitles");
+        sidecarMinimum.click("Subtitle timing");
+        sidecarMinimum.key(37);
+        assert.strictEqual(sidecarMinimum.document.querySelector(".subtitle-timing-value").textContent, "-60.0 s",
+            "Sidecar timing clamps at the LG -60 s bound");
+        sidecarMinimum.key(39);
+        assert.strictEqual(sidecarMinimum.document.querySelector(".subtitle-timing-value").textContent, "-59.9 s",
+            "Sidecar timing can move later by one 100 ms step");
+    } finally { sidecarMinimum.dom.window.close(); }
+
+    var embedded = playerFixture({ cues: [], subtitleSidecar: false, initialDelay: 0 });
+    try {
+        embedded.click("Subtitles");
+        embedded.click("Subtitle timing");
+        embedded.key(37);
+        assert.strictEqual(embedded.document.querySelector(".subtitle-timing-value").textContent, "0.0 s",
+            "Embedded text subtitles cannot advance before their not-yet-read cues");
+    } finally { embedded.dom.window.close(); }
+}
+
+async function subtitleTimingZeroDetentAndTrackAvailability() {
+    var sidecar = playerFixture({ cues: [], subtitleSidecar: true, initialDelay: 100 });
+    try {
+        sidecar.click("Subtitles");
+        sidecar.click("Subtitle timing");
+        for (var repeat = 0; repeat < 8; repeat += 1) { sidecar.key(37, true); }
+        assert.strictEqual(sidecar.document.querySelector(".subtitle-timing-value").textContent, "0.0 s",
+            "The held-key sweep detents at zero rather than crossing immediately");
+        sidecar.key(37);
+        assert.strictEqual(sidecar.document.querySelector(".subtitle-timing-value").textContent, "-0.1 s",
+            "A fresh press passes through the zero detent");
+    } finally { sidecar.dom.window.close(); }
+
+    var native = playerFixture({ cues: null, subtitleId: 21 });
+    try {
+        native.click("Subtitles");
+        assert.strictEqual(native.findButton("Subtitle timing"), null,
+            "Device-native subtitles are not offered a live app-overlay timing control");
+        native.click("More");
+        assert.strictEqual(native.findButton("Subtitle timing"), null,
+            "Device-native subtitle timing is also absent from the More menu");
+    } finally { native.dom.window.close(); }
+}
+
+async function failedPlayerRecoveryRestartsThePipeline() {
+    var app = playerFixture({ cues: [], subtitleSidecar: true, audioId: 11, subtitleId: 21, failFirstStart: true });
+    try {
+        await app.settle();
+        assert(app.document.querySelector(".playback-error"), "A failed startup offers recovery");
+        app.click("Retry playback");
+        await app.settle();
+        assert.strictEqual(app.starts(), 2, "Retry creates and starts a fresh player pipeline");
+        assert.strictEqual(app.plays(), 0, "Retry does not call play on the failed AVPlay instance");
+        assert.strictEqual(app.playerSettings[1].audioId, 11, "Retry preserves the selected audio stream");
+        assert.strictEqual(app.playerSettings[1].subtitleId, 21, "Retry preserves the selected subtitle stream");
+        assert.strictEqual(app.playerSettings[1].offset, 45000, "Retry preserves the failed session position");
+        assert.strictEqual(app.adapters(), 2, "Retry allocates a fresh AVPlay adapter");
+        assert.strictEqual(app.playerSettings[1].subtitleSidecar, true, "Retry preserves sidecar identity");
+        app.callbacks.avplay.onEvent({ type: "error", detail: "Synthetic decoder failure" });
+        app.click("Restart");
+        await app.settle();
+        assert.strictEqual(app.starts(), 3, "Restart also resolves and starts a fresh pipeline");
+        assert.strictEqual(app.playerSettings[2].offset, 0, "Restart starts the fresh pipeline at zero");
+        assert.strictEqual(app.playerSettings[2].audioId, 11, "Restart preserves explicit audio selection");
+        assert.strictEqual(app.playerSettings[2].subtitleId, 21, "Restart preserves explicit subtitle selection");
+        assert.strictEqual(app.adapters(), 3, "Restart allocates another fresh AVPlay adapter");
+    } finally { app.dom.window.close(); }
+}
+
 async function run() {
     await hudAndPanels();
     await upNextAndTracks();
     await timingStatsAndErrors();
+    await subtitleTimingUsesTrackBounds();
+    await subtitleTimingZeroDetentAndTrackAvailability();
+    await failedPlayerRecoveryRestartsThePipeline();
     console.log("Tizen LG-style player HUD, panels, Up Next, tracks, timing, stats and recovery: passed (synthetic player)");
 }
 run().catch(function (error) { console.error(error.stack || error); process.exitCode = 1; });

@@ -23,6 +23,16 @@ assert.strictEqual(value.includes("secret"), false, "Only non-secret preference 
 assert.strictEqual(prefs.load(storage).language, "es");
 assert.strictEqual(prefs.load(storage).skipInterval, 15);
 assert.strictEqual(prefs.load(storage).subtitleDelayMs, 500);
+prefs.save(storage, { quality: "720", language: "es", nextEpisode: "countdown", subtitleDelayMs: -60000 });
+assert.strictEqual(prefs.load(storage).subtitleDelayMs, -60000, "Sidecar timing supports the LG 60-second earlier bound");
+prefs.save(storage, { quality: "720", language: "es", nextEpisode: "countdown", subtitleDelayMs: 60000 });
+assert.strictEqual(prefs.load(storage).subtitleDelayMs, 60000, "Subtitle timing supports the LG 60-second later bound");
+assert.throws(function () {
+    prefs.save(storage, { quality: "720", language: "es", nextEpisode: "countdown", subtitleDelayMs: 50 });
+}, /invalid/, "Timing offsets must use the LG 100 ms step");
+assert.throws(function () {
+    prefs.save(storage, { quality: "720", language: "es", nextEpisode: "countdown", subtitleDelayMs: 60100 });
+}, /invalid/, "Timing offsets must stay inside the LG 60-second bound");
 assert.strictEqual(prefs.load(storage).continueAction, "details", "Preferences saved before the Continue Watching choice load as Open details");
 prefs.save(storage, { quality: "720", language: "es", nextEpisode: "countdown", continueAction: "play",
     skipInterval: 60, subtitleSize: "small", subtitlePosition: "high", subtitleColor: "white", subtitleDelayMs: -500 });

@@ -55,6 +55,8 @@
     var playerStatsVisible = false;
     var subtitleTiming = false;
     var subtitleTimingRepeats = 0;
+    var subtitleTimingDirection = 0;
+    var subtitleTimingDetentUntil = 0;
     var upNextGeneration = 0;
     var externalCues = null;
     var musicQueue = null;
@@ -2194,8 +2196,36 @@
         label.textContent = (delay > 0 ? "+" : "") + (delay / 1000).toFixed(1) + " s";
     }
 
+    function subtitleTimingRange() {
+        return playerSettings && playerSettings.subtitleSidecar ? [-60000, 60000] : [0, 60000];
+    }
+
+    function storeSubtitleDelay(delay) {
+        var range = subtitleTimingRange();
+        var next = Math.max(range[0], Math.min(range[1], delay));
+        var previous = preferences.subtitleDelayMs;
+        preferences.subtitleDelayMs = next;
+        if (!savePreferences()) {
+            preferences.subtitleDelayMs = previous;
+            updateSubtitleTimingLabel();
+            return false;
+        }
+        updateSubtitleTimingLabel();
+        var text = document.getElementById("subtitle-text");
+        if (text && externalCues) {
+            text.textContent = window.PlexSubtitles.at(externalCues, currentPlayerPosition() - next);
+        }
+        setStatus(translate("Subtitle delay: {value}", {
+            value: (next > 0 ? "+" : "") + (next / 1000).toFixed(1) + " s"
+        }));
+        return true;
+    }
+
     function openSubtitleTiming() {
         if (!player) { return; }
+        var range = subtitleTimingRange();
+        var bounded = Math.max(range[0], Math.min(range[1], preferences.subtitleDelayMs));
+        if (bounded !== preferences.subtitleDelayMs && !storeSubtitleDelay(bounded)) { return; }
         cancelHudTimer();
         var menu = document.getElementById("player-menu");
         if (menu && menu.parentNode) { menu.parentNode.removeChild(menu); }
@@ -2203,14 +2233,15 @@
         if (old && old.parentNode) { old.parentNode.removeChild(old); }
         subtitleTiming = true;
         subtitleTimingRepeats = 0;
+        subtitleTimingDirection = 0;
+        subtitleTimingDetentUntil = 0;
         var panel = element("section", "subtitle-timing");
         panel.id = "subtitle-timing";
         panel.setAttribute("role", "group");
         panel.appendChild(element("h2", "", translate("Subtitle timing")));
         panel.appendChild(element("p", "subtitle-timing-value", ""));
-        panel.appendChild(element("p", "help-text", translate(externalCues ?
-            "Use LEFT and RIGHT to adjust. OK or Back closes this control." :
-            "Live timing is available for app-rendered text subtitles only; device-native timing is unchanged.")));
+        panel.appendChild(element("p", "help-text", translate(
+            "Use LEFT and RIGHT to adjust. OK or Back closes this control.")));
         button(panel, "Close", closeSubtitleTiming);
         screen.appendChild(panel);
         updateSubtitleTimingLabel();
@@ -2221,30 +2252,37 @@
     function closeSubtitleTiming() {
         subtitleTiming = false;
         subtitleTimingRepeats = 0;
+        subtitleTimingDirection = 0;
+        subtitleTimingDetentUntil = 0;
         var panel = document.getElementById("subtitle-timing");
         if (panel && panel.parentNode) { panel.parentNode.removeChild(panel); }
         showHud();
     }
 
-    function adjustSubtitleTiming(direction) {
-        if (!subtitleTiming) { return; }
-        var values = [-2000, -1000, -500, 0, 500, 1000, 2000];
-        var index = values.indexOf(preferences.subtitleDelayMs);
-        if (index < 0) { index = 3; }
-        subtitleTimingRepeats += 1;
-        var amount = subtitleTimingRepeats > 4 && subtitleTimingRepeats % 3 === 0 ? 2 : 1;
-        index = Math.max(0, Math.min(values.length - 1, index + direction * amount));
-        preferences.subtitleDelayMs = values[index];
-        if (!savePreferences()) { return; }
-        updateSubtitleTimingLabel();
-        var text = document.getElementById("subtitle-text");
-        if (text && externalCues) {
-            text.textContent = window.PlexSubtitles.at(externalCues,
-                currentPlayerPosition() - preferences.subtitleDelayMs);
+    function adjustSubtitleTiming(direction, repeat) {
+        if (!subtitleTiming || !externalCues) { return; }
+        var now = Date.now();
+        if (!repeat) {
+            subtitleTimingRepeats = 0;
+            subtitleTimingDirection = direction;
+            subtitleTimingDetentUntil = 0;
+        } else {
+            if (direction !== subtitleTimingDirection) {
+                subtitleTimingRepeats = 0;
+                subtitleTimingDirection = direction;
+            }
+            if (now < subtitleTimingDetentUntil) { return; }
+            subtitleTimingDetentUntil = 0;
+            subtitleTimingRepeats += 1;
         }
-        setStatus(translate("Subtitle delay: {value}", {
-            value: (preferences.subtitleDelayMs > 0 ? "+" : "") + (preferences.subtitleDelayMs / 1000).toFixed(1) + " s"
-        }));
+        var step = repeat && subtitleTimingRepeats >= 8 ? 500 : 100;
+        var current = preferences.subtitleDelayMs;
+        var next = current + direction * step;
+        if (repeat && current !== 0 && (next === 0 || (next < 0) !== (current < 0))) {
+            next = 0;
+            subtitleTimingDetentUntil = now + 600;
+        }
+        storeSubtitleDelay(next);
     }
 
     function togglePlayerStats() {
@@ -2419,6 +2457,24 @@
         focusFirst();
     }
 
+    function recoverPlayer(restart) {
+        if (!player || playerClosing || !playerSettings) { return; }
+        var failedPlayer = player;
+        var item = playerItem;
+        var client = playerClient;
+        var settings = playerSettings;
+        var snapshot = failedPlayer.snapshot();
+        var position = restart ? 0 : (snapshot.position || playerPosition || settings.offset || 0);
+        var tracks = {
+            audioId: settings.audioId,
+            subtitleId: settings.subtitleId,
+            paused: snapshot.state === "paused",
+            subtitleSidecar: settings.subtitleSidecar
+        };
+        if (settings.overlaySubtitle && externalCues) { tracks.cues = externalCues; }
+        stopPlayer(function () { startPlayer(item, client, position, settings.mediaIndex, tracks); });
+    }
+
     function showPlayerError(error) {
         var message = errorText(error) || translate("Playback failed. Stop and retry.");
         setStatus(message, true);
@@ -2433,26 +2489,10 @@
         panel.appendChild(element("h2", "", translate("Playback problem")));
         panel.appendChild(element("p", "help-text", message));
         button(panel, "Retry playback", function () {
-            var selected = player;
-            if (!selected) { return; }
-            selected.play().then(function () {
-                if (player === selected) {
-                    panel.parentNode.removeChild(panel);
-                    setStatus("");
-                    showHud();
-                }
-            }).catch(showPlayerError);
+            recoverPlayer(false);
         });
         button(panel, "Restart", function () {
-            var selected = player;
-            if (!selected) { return; }
-            selected.seek(0).then(function () { return selected.play(); }).then(function () {
-                if (player === selected) {
-                    panel.parentNode.removeChild(panel);
-                    setStatus("");
-                    showHud();
-                }
-            }).catch(showPlayerError);
+            recoverPlayer(true);
         });
         button(panel, "Stop playback", stopPlayer);
         button(panel, "Back", function () {
@@ -2800,7 +2840,7 @@
         menu.appendChild(element("h2", "", translate("Playback options")));
         button(menu, "Markers", openMarkers);
         button(menu, "Audio and subtitles", function () { openTracks("subtitle"); });
-        button(menu, "Subtitle timing", openSubtitleTiming);
+        if (externalCues) { button(menu, "Subtitle timing", openSubtitleTiming); }
         button(menu, "Stats for nerds", function () {
             closePlayerMenu();
             togglePlayerStats();
@@ -2850,6 +2890,7 @@
             audioId: trackOptions ? trackOptions.audioId : undefined,
             subtitleId: trackOptions ? trackOptions.subtitleId : undefined,
             overlaySubtitle: !!(trackOptions && trackOptions.cues),
+            subtitleSidecar: !!(trackOptions && trackOptions.subtitleSidecar),
             paused: !!(trackOptions && trackOptions.paused),
             profile: directPlayProfile(), directPlay: preferences.directPlay
         };
@@ -3176,13 +3217,15 @@
     // Restart playback at the current position with an explicit track choice. `cues` keeps an
     // app-rendered text overlay; only "Subtitles off" may send subtitleStreamID=0, because moving
     // the PMS selection off a downloaded subtitle deletes it (docs/pms-api.md section 8).
-    function reloadTracks(audioId, subtitleId, cues) {
+    function reloadTracks(audioId, subtitleId, cues, subtitleSidecar) {
         if (!player) { return; }
         var item = playerItem;
         var client = playerClient;
         var position = player.snapshot().position;
         var version = playerSettings.mediaIndex;
-        var options = { audioId: audioId, subtitleId: subtitleId, paused: player.snapshot().state === "paused" };
+        var options = { audioId: audioId, subtitleId: subtitleId, paused: player.snapshot().state === "paused",
+            subtitleSidecar: cues ? (subtitleSidecar === undefined ?
+                playerSettings.subtitleSidecar : !!subtitleSidecar) : false };
         if (cues) { options.cues = cues; }
         stopPlayer(function () { startPlayer(item, client, position, version, options); });
     }
@@ -3193,7 +3236,8 @@
         setStatus("Loading text subtitles...");
         playerClient.subtitleText(stream.id, stream.codec).then(function (text) {
             if (player !== selectedPlayer || playerClosing || generation !== subtitleSearchGeneration) { return; }
-            reloadTracks(audioId, stream.id, window.PlexSubtitles.parse(text));
+            reloadTracks(audioId, stream.id, window.PlexSubtitles.parse(text), stream.index === undefined ||
+                stream.index === null);
         }).catch(function (error) {
             if (player === selectedPlayer && !playerClosing && generation === subtitleSearchGeneration) { showPlayerError(error); }
         });
@@ -3360,7 +3404,7 @@
                     openSubtitleSearch(window.PlexSubtitleSearch.defaultLanguage(player.part(), preferences.language));
                 });
             }
-            button(menu, "Subtitle timing", openSubtitleTiming);
+            if (externalCues) { button(menu, "Subtitle timing", openSubtitleTiming); }
             var appearance = group(menu, translate("Text overlay appearance"), "track-group");
             appearance.appendChild(element("p", "help-text", translate("These settings apply only to the app-rendered SRT/WebVTT text overlay, not device-native or burned subtitles.")));
             function cycleAppearance(title, preferenceKey, values, labelForValue) {
@@ -3682,8 +3726,6 @@
         preferenceChoice(subtitleSettings, "Text position", "subtitlePosition", ["low", "middle", "high"], function (value) { return value; });
         preferenceChoice(subtitleSettings, "Text color", "subtitleColor", SUBTITLE_COLORS, colorName);
         preferenceChoice(subtitleSettings, "Text background", "subtitleBackground", ["off", "on"], backgroundName);
-        preferenceChoice(subtitleSettings, "Subtitle delay", "subtitleDelayMs", [-2000, -1000, -500, 0, 500, 1000, 2000],
-            function (value) { return (value > 0 ? "+" : "") + value + " ms"; });
         if (currentClient && currentServerId) {
             var librarySettings = group(menu, translate("Libraries"), "settings-group");
             button(librarySettings, "Favorite libraries", function () { visit(function () { openFavorites(false); }); });
@@ -3936,7 +3978,7 @@
         if (key === 13 && event.repeat) { event.preventDefault(); return; }
         if (player && subtitleTiming && (key === 37 || key === 39)) {
             event.preventDefault();
-            adjustSubtitleTiming(key === 39 ? 1 : -1);
+            adjustSubtitleTiming(key === 39 ? 1 : -1, event.repeat);
             return;
         }
         if (player && subtitleTiming && key === 13) {
