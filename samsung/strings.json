@@ -1,7 +1,7 @@
 {
-  "Plex has no stream information for this media version. Check that the file is complete and analyzed on the server.": {
-    "es": "Plex no tiene información de pistas para esta versión. Comprueba que el archivo esté completo y analizado en el servidor.",
-    "be": "Plex не мае звестак пра дарожкі гэтай версіі. Праверце, што файл поўны і прааналізаваны на серверы."
+  "This file can't be played. It may be damaged or not analyzed on the Plex server.": {
+    "es": "No se puede reproducir este archivo. Puede estar dañado o sin analizar en el servidor Plex.",
+    "be": "Гэты файл нельга прайграць. Магчыма, ён пашкоджаны або не прааналізаваны на серверы Plex."
   },
   "Exit Plx?": { "es": "¿Salir de Plx?", "be": "Выйсці з Plx?" },
   "Stay": { "es": "Quedarse", "be": "Застацца" },

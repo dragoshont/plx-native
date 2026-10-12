@@ -80,10 +80,22 @@ async function run() {
         click("Play");
         await settle();
         assert.match(window.document.getElementById("status").textContent,
-            /stream information.*complete.*analyzed/i);
+            /can't be played.*damaged.*analyzed/i);
         assert(!calls.some(function (call) {
             return call.path === "/playQueues" || /\/transcode\/|\/:\/timeline|\/library\/parts\//.test(call.path);
         }), "An incomplete source must be rejected before queue creation, negotiation, selection or progress");
+        assert.strictEqual(nativeOpens, 0);
+        movie.Media[0].Part[0].Stream = [{ streamType: 1, codec: "h264" }];
+        click("Back");
+        await settle();
+        window.document.querySelector(".media-card").click();
+        await settle();
+        click("Play");
+        await settle();
+        assert.match(window.document.getElementById("status").textContent,
+            /can't be played.*damaged.*analyzed/i, "A decision 400 must show the same recovery guidance");
+        assert.strictEqual(calls.filter(function (call) { return /\/transcode\/universal\/decision$/.test(call.path); }).length, 1);
+        assert(!calls.some(function (call) { return /start\.|\/:\/timeline/.test(call.path); }));
         assert.strictEqual(nativeOpens, 0);
     } finally { dom.window.close(); }
     console.log("Tizen incomplete-media UI fails explicitly without playback writes: passed");

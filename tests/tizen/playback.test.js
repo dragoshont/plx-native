@@ -4,7 +4,7 @@ var playback = require("../../samsung/PlexTv/js/playback.js");
 var item = {
     ratingKey: "10", duration: 100000, viewOffset: 5000,
     Media: [{ container: "mp4", videoCodec: "h264", audioCodec: "aac", width: 1920, height: 1080,
-        Part: [{ id: "20", key: "/library/parts/20/file.mp4", Stream: [] }] }]
+        Part: [{ id: "20", key: "/library/parts/20/file.mp4", Stream: [{ streamType: 1, codec: "h264" }] }] }]
 };
 function rig() {
     var calls = [];
@@ -45,6 +45,29 @@ async function run() {
     assert.strictEqual(plan.query.directPlay, 0);
     assert.strictEqual(plan.query.audioStreamID, undefined,
         "An unset audio stream must be omitted, matching LG's default-track query");
+    var badDecision = rig();
+    badDecision.client.request = function () {
+        var error = new Error("PMS request failed with HTTP 400.");
+        error.status = 400;
+        return Promise.reject(error);
+    };
+    var badSession = playback.create({ client: badDecision.client, adapter: badDecision.adapter, item: item });
+    await assert.rejects(badSession.start(), /can't be played.*damaged.*analyzed/i,
+        "Decision 400 must explain an unavailable file rather than label it a network outage");
+    assert(!badDecision.calls.some(function (call) { return call[0] === "open" || call[0] === "timeline"; }));
+    await badSession.stop();
+    var serverFailure = new Error("PMS request failed with HTTP 500.");
+    serverFailure.status = 500;
+    var failedDecision = rig();
+    failedDecision.client.request = function () { return Promise.reject(serverFailure); };
+    var failedSession = playback.create({ client: failedDecision.client, adapter: failedDecision.adapter, item: item });
+    await assert.rejects(failedSession.start(), function (error) { return error === serverFailure; },
+        "Other status codes must retain their original failure");
+    await failedSession.stop();
+    var summaryOnly = JSON.parse(JSON.stringify(item));
+    summaryOnly.Media[0].Part[0].Stream = [];
+    assert.throws(function () { playback.plan(summaryOnly, {}); }, /can't be played/i,
+        "Media summary codecs do not establish that its Part has playable streams");
     var unanalysed = { ratingKey: "70", type: "movie", Media: [{
         id: 80, Part: [{ id: 80, key: "/library/parts/80/file.mp4", size: 4000000 }]
     }] };
@@ -53,7 +76,7 @@ async function run() {
         assert.throws(function () {
             playback.create({ client: invalidRig.client, adapter: invalidRig.adapter, item: unanalysed,
                 settings: { directPlay: directPlay } });
-        }, /stream information.*complete.*analyzed/i,
+        }, /can't be played.*damaged.*analyzed/i,
         "Media without codec or Stream facts must fail before asking PMS to transcode an unplayable file");
         assert.strictEqual(invalidRig.calls.length, 0, "Invalid source metadata must cause no network/native calls");
     }
@@ -64,7 +87,7 @@ async function run() {
         "A server may provide the video codec only in Stream metadata");
     var unanalysedTrack = JSON.parse(JSON.stringify(unanalysed));
     unanalysedTrack.type = "track";
-    assert.throws(function () { playback.plan(unanalysedTrack, {}); }, /stream information/i,
+    assert.throws(function () { playback.plan(unanalysedTrack, {}); }, /can't be played/i,
         "Music without audio codec or Stream facts must not negotiate an unplayable file");
     unanalysedTrack.Media[0].Part[0].Stream = [{ streamType: 2, codec: "flac" }];
     assert.doesNotThrow(function () { playback.plan(unanalysedTrack, {}); });
@@ -306,7 +329,8 @@ async function run() {
         var source = sources[s];
         var sourceItem = { ratingKey: source.ratingKey, duration: 100000, Media: [{ container: source.container,
             videoCodec: source.videoCodec, audioCodec: source.audioCodec, width: source.width, height: source.height,
-            bitrate: source.bitrate, Part: [{ id: "4" + s, key: "/library/parts/4" + s + "/file.mkv", Stream: [] }] }] };
+            bitrate: source.bitrate, Part: [{ id: "4" + s, key: "/library/parts/4" + s + "/file.mkv",
+                Stream: [{ streamType: 1, codec: source.videoCodec }] }] }] };
         test = rig();
         var answer = pmsDecision(source);
         test.client.request = function (path, method, query) {
@@ -325,7 +349,7 @@ async function run() {
     // The LG ladder: any rung below Original converts a source above it, by height or bitrate.
     function ladderPlan(media, quality, streams, profile) {
         var item = { ratingKey: "50", Media: [Object.assign({ Part: [{ id: "5", key: "/library/parts/5/file.mkv",
-            Stream: streams || [] }] }, media)] };
+            Stream: streams || [{ streamType: 1, codec: media.videoCodec }] }] }, media)] };
         return playback.plan(item, { profile: profile || documentedProfile, quality: quality || "original" });
     }
     var documentedProfile = { evidence: "Samsung media specifications", containers: ["mkv", "mp4", "mov", "mpegts"],
@@ -359,11 +383,11 @@ async function run() {
     assert.strictEqual(ladderPlan(dv, "original", [{ streamType: 1, DOVIPresent: true, DOVIProfile: 8,
         DOVIBLCompatID: 1 }]).direct, true, "DV profile 8.1 plays its HDR10 base layer");
     var forced = playback.plan({ ratingKey: "51", Media: [Object.assign({ Part: [{ id: "6", key: "/library/parts/6/f.mkv",
-        Stream: [] }] }, uhdHevc)] }, { profile: documentedProfile, quality: "720", directPlay: "force" });
+        Stream: [{ streamType: 1, codec: "hevc" }] }] }, uhdHevc)] }, { profile: documentedProfile, quality: "720", directPlay: "force" });
     assert.strictEqual(forced.direct, true, "Force always sends the original");
     assert.strictEqual(forced.force, true);
     var off = playback.plan({ ratingKey: "52", Media: [Object.assign({ Part: [{ id: "7", key: "/library/parts/7/f.mkv",
-        Stream: [] }] }, uhdHevc)] }, { profile: documentedProfile, quality: "original", directPlay: "off" });
+        Stream: [{ streamType: 1, codec: "hevc" }] }] }, uhdHevc)] }, { profile: documentedProfile, quality: "original", directPlay: "off" });
     assert.strictEqual(off.direct, false, "Direct play Off always converts");
     assert.strictEqual(playback.streamMode(false, { Part: [{ Stream: [{ streamType: 1, decision: "copy" }] }] }), "directstream");
     assert.strictEqual(playback.streamMode(false, { Part: [{ Stream: [{ streamType: 1, decision: "transcode" }] }] }), "transcode");

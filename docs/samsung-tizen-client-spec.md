@@ -109,10 +109,10 @@ official-Plex parity.
 
 No row becomes complete solely because the source builds or a fake adapter returns success.
 
-Playback rejects a media version with no codec information for its media type in either Media
-or matching Stream facts before
-creating a PlayQueue or asking PMS for a decision. The error asks the viewer to check that the
-file is complete and analyzed; a generic HTTP 400 does not establish a decoder or network fault.
+Playback rejects a media version whose Part has no video/audio Stream (audio for music) before
+creating a PlayQueue or asking PMS for a decision. It reports that the file cannot be played and
+may be damaged or not analyzed. A decision HTTP 400 gets the same translated guidance; other
+HTTP failures retain their status. A generic HTTP 400 does not establish a decoder or network fault.
 Unset audio stream IDs are omitted from decision/start queries, matching the LG default-track
 contract. This does not repair an incomplete or corrupt source file.
 

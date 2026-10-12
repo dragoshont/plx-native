@@ -9,6 +9,10 @@
         return /^[0-9]+$/.test(String(value)) ? Number(value) : 0;
     }
 
+    function unplayableFile() {
+        return new Error("This file can't be played. It may be damaged or not analyzed on the Plex server.");
+    }
+
     // Unset audio/subtitle ids follow PMS `Stream.selected`, which already applies the account's
     // language preferences and any earlier pick. Only an explicit choice (Off included) is
     // written back with PUT /library/parts, matching the LG client.
@@ -131,11 +135,10 @@
         }
         var kind = item.type === "track" ? "music" : "video";
         var streams = part.Stream || [];
-        var sourceCodec = kind === "music" ? media.audioCodec : media.videoCodec;
-        if (!sourceCodec && !streams.some(function (stream) {
-            return Number(stream.streamType) === (kind === "music" ? 2 : 1) && stream.codec;
+        if (!streams.some(function (stream) {
+            return Number(stream.streamType) === 2 || kind === "video" && Number(stream.streamType) === 1;
         })) {
-            throw new Error("Plex has no stream information for this media version. Check that the file is complete and analyzed on the server.");
+            throw unplayableFile();
         }
         var multipart = media.Part.length > 1;
         var tracks = resolveTracks(part, options);
@@ -269,7 +272,15 @@
         function negotiate() {
             if (closed || stopping) { throw new Error("Playback was cancelled."); }
             var asked = selection.direct ? directQuery(selection.query) : selection.query;
-            return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", asked).then(function (decision) {
+            return client.request("/" + selection.kind + "/:/transcode/universal/decision", "GET", asked).catch(function (error) {
+                if (error && error.status === 400) {
+                    var unavailable = unplayableFile();
+                    unavailable.status = error.status;
+                    unavailable.scope = error.scope;
+                    throw unavailable;
+                }
+                throw error;
+            }).then(function (decision) {
                 if (closed || stopping) { throw new Error("Playback was cancelled."); }
                 if (Number(decision.generalDecisionCode) >= 2000 || Number(decision.transcodeDecisionCode) >= 2000) {
                     throw new Error("Plex refused playback. Change quality, source or subtitle settings and retry.");

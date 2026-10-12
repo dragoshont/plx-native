@@ -6,7 +6,8 @@ var JSDOM = require("jsdom").JSDOM;
 var app = path.resolve(__dirname, "../../samsung/PlexTv");
 var tracks = [1, 2].map(function (id) {
     return { ratingKey: String(id), type: "track", title: "Track " + id, duration: 180000,
-        Media: [{ container: "flac", audioCodec: "flac", Part: [{ id: String(20 + id), key: "/library/parts/" + (20 + id) + "/file.flac" }] }] };
+        Media: [{ container: "flac", audioCodec: "flac", Part: [{ id: String(20 + id), key: "/library/parts/" + (20 + id) + "/file.flac",
+            Stream: [{ streamType: 2, codec: "flac" }] }] }] };
 });
 var album = { ratingKey: "30", type: "album", title: "Synthetic Album" };
 var catalogue = { title: "Synthetic Watchlist movie", guid: "plex://movie/5d776b59ad5437001f79c6f8",
