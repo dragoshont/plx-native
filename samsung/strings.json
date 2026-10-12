@@ -1,4 +1,15 @@
 {
+  "Exit Plx?": { "es": "¿Salir de Plx?", "be": "Выйсці з Plx?" },
+  "Stay": { "es": "Quedarse", "be": "Застацца" },
+  "Exit": { "es": "Salir", "be": "Выйсці" },
+  "Plx could not close itself. Hold Back on the remote to exit.": {
+    "es": "Plx no pudo cerrarse. Mantén pulsado Atrás en el mando para salir.",
+    "be": "Plx не ўдалося закрыцца. Утрымлівайце «Назад» на пульце, каб выйсці."
+  },
+  "Direct Play is set to Force, but this selection requires server conversion. Change subtitle settings or turn off Force.": {
+    "es": "La reproducción directa está forzada, pero esta selección requiere conversión en el servidor. Cambia los ajustes de subtítulos o desactiva Forzar.",
+    "be": "Прамое прайграванне прымусова ўключана, але гэты выбар патрабуе перакадзіравання на серверы. Змяніце налады субтытраў або выключыце прымусовы рэжым."
+  },
   "Couldn't return to where you left off. Playing from the start.": { "es": "No se pudo volver al punto donde lo dejaste. Se reproduce desde el principio.", "be": "Не ўдалося вярнуцца туды, дзе вы спыніліся. Прайграецца з пачатку." },
   "Next featured title": { "es": "Siguiente título destacado", "be": "Наступная выбраная назва" },
   "Read more": { "es": "Leer más", "be": "Чытаць далей" },

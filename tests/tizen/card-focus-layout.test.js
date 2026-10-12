@@ -36,4 +36,31 @@ assert.strictEqual(rule(".screen-listing .item-list .media-card[data-shape=\"lan
     "height: calc((100vw - 228px) * 3 / 16); min-height: 0;", "Listing stills are 9/16 of the (100vw - 228px) / 3 card width");
 assert(/height:\s*240px/.test(rule(".screen-listing .item-list .media-card[data-shape=\"square\"] .poster")),
     "Square listing covers keep their fixed 240px size");
+
+// Home focus and the hero must stay compositor-only: on a 2017 UE55MU6172 a focus box-shadow,
+// brightness filter or colour/opacity transition re-rastered posters in software every frame
+// (44 missed frames over 10 shelf moves), and visibility-toggling the hero repainted it.
+var homeDom = new JSDOM("<style>" + css + "</style><section class='screen screen-home shelves-focused'>" +
+    "<div class='home-track'><section class='home-hero'></section><div class='shelf-row'>" +
+    "<button class='media-card'><img class='poster'><p class='card-title'>T</p></button></div></div></section>");
+try {
+    var w = homeDom.window;
+    var homeCard = w.getComputedStyle(w.document.querySelector(".media-card"));
+    assert.strictEqual(homeCard.getPropertyValue("will-change"), "transform", "Home cards are their own layers");
+    var cardRules = Array.prototype.filter.call(w.document.styleSheets[0].cssRules, function (r) {
+        return r.selectorText === ".screen-home .media-card";
+    });
+    assert(cardRules.some(function (r) { return r.style.getPropertyValue("transition") === "transform 120ms ease"; }),
+        "Home cards animate only their transform");
+    w.document.querySelector(".media-card").focus();
+    var focusedPoster = w.getComputedStyle(w.document.querySelector(".poster"));
+    assert(!/brightness|blur/.test(focusedPoster.getPropertyValue("filter")), "No filter on a focused Home poster");
+    assert.notStrictEqual(w.getComputedStyle(w.document.querySelector(".card-title")).getPropertyValue("transition-property"),
+        "opacity", "The Home caption does not fade, which would re-raster the card layer");
+    var hiddenHero = w.getComputedStyle(w.document.querySelector(".home-hero"));
+    assert.strictEqual(hiddenHero.opacity, "0", "The hero hides by opacity on its own layer");
+    assert.notStrictEqual(hiddenHero.visibility, "hidden", "The hero is not hidden by visibility, which repaints it");
+    assert.strictEqual(w.getComputedStyle(w.document.querySelector(".screen-home")).overflowY, "hidden",
+        "Home never scrolls natively; .home-track moves by transform");
+} finally { homeDom.window.close(); }
 console.log("Tizen card/avatar focus and library poster aspect: passed");

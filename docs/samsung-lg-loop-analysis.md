@@ -79,7 +79,7 @@ cropped lettering in those fixtures is not a second product title or evidence ab
   Seek controls expose the configured skip interval. Back from a submenu returns to Playback
   options before dismissing the menu; Stop, tracks, chapters and quality remain reachable.
 - Source-file quality, PMS-reported stream quality and requested transcode limits remain separate.
-  This redesign does not enable or advertise unverified original/direct playback.
+  This redesign changed no playback policy; direct play now follows `js/capabilities.js` predictions.
 
 The pre-change adversarial assessment found invisible utility focus, unreadable full synopses,
 boxed Home composition, excessive detail actions and a deep season journey. Those findings

@@ -70,12 +70,15 @@
     }
 
     // Why the original cannot play as-is on this profile, or "" when it can.
-    function fits(profile, media, streams, hdr, rung) {
+    function fits(profile, media, streams, hdr, rung, audioId) {
         if (!profile || !profile.evidence) { return "profile"; }
         var video = videoStream(streams);
         var container = String(media.container || "");
         var vcodec = String(media.videoCodec || "");
-        var acodec = plexAudio(String(media.audioCodec || ""));
+        var audio = streams.filter(function (stream) {
+            return audioId > 0 && Number(stream.streamType) === 2 && trackId(stream.id) === audioId;
+        })[0];
+        var acodec = plexAudio(String(audio && audio.codec || media.audioCodec || ""));
         if (profile.video.indexOf(vcodec) === -1) { return "video-codec"; }
         var boxes = profile.videoContainers && profile.videoContainers[vcodec] || profile.containers;
         if (boxes.indexOf(container) === -1) { return "container"; }
@@ -141,7 +144,7 @@
         var rung = rungFor(options.quality);
         var force = options.directPlay === "force";
         var verdict = kind !== "video" ? "" : multipart ? "multipart" : burn ? "subtitle" :
-            options.directPlay === "off" ? "settings" : fits(profile, media, streams, hdr, rung);
+            options.directPlay === "off" ? "settings" : fits(profile, media, streams, hdr, rung, tracks.audioId);
         var direct = verdict === "" && kind === "video" && !multipart && !burn && !!profile;
         // Force asks for the original even where the profile predicts a refusal; the device is the judge.
         if (force && kind === "video" && !multipart && !burn) { direct = true; }
@@ -181,7 +184,7 @@
                 "add-transcode-target(type=musicProfile&context=streaming&protocol=http&container=mp3&audioCodec=mp3)";
         }
         return { direct: !!direct, part: part, query: query, session: session, kind: kind, tracks: tracks,
-            force: force && direct, reason: verdict };
+            force: force && kind === "video", reason: verdict };
     }
 
     function create(options) {
@@ -299,6 +302,9 @@
                 starting = true;
                 return Promise.resolve().then(function () {
                     if (closed || stopping) { throw new Error("Playback was cancelled."); }
+                    if (selection.force && !selection.direct) {
+                        throw new Error("Direct Play is set to Force, but this selection requires server conversion. Change subtitle settings or turn off Force.");
+                    }
                     if (!selection.tracks.explicit) { return null; }
                     return client.selectStreams(selection.part.id, selection.tracks.audioId, selection.tracks.subtitleId);
                 }).then(negotiate).then(function () {

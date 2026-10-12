@@ -106,3 +106,34 @@ settingsJourney(product("OTHER2017","T-KTMDEUC-1410.1"),"en","From Samsung's pub
 settingsJourney({getModelCode:function(){throw new Error("private detail");}},"en","up to 60 fps");
 settingsJourney(product("UE55MU6172","T-KTMDEUC-1410.1"),"en","Confirmed on this TV model: UE55MU6172");
 console.log("Tizen browser-loaded register and Settings uncertainty journeys: passed");
+
+function qualityPolicyJourney(mode, expected) {
+    var dom = new JSDOM(fs.readFileSync("samsung/PlexTv/index.html", "utf8"), {
+        url: "https://synthetic.invalid", runScripts: "outside-only"
+    });
+    try {
+        var w = dom.window;
+        w.fetch = function () { assert.fail("Opening quality choices must not contact Plex"); };
+        ["i18n", "preferences", "playback"].forEach(function (name) {
+            w.eval(fs.readFileSync("samsung/PlexTv/js/" + name + ".js", "utf8"));
+        });
+        var source = fs.readFileSync("samsung/PlexTv/main.js", "utf8");
+        source = source.slice(0, source.lastIndexOf('    addConnectForm("");')) +
+            'preferences.directPlay = "' + mode + '";' +
+            'playerItem = {ratingKey:"1",type:"movie",Media:[{container:"mp4",videoCodec:"h264",audioCodec:"aac",' +
+            'width:1920,height:1080,Part:[{id:"1",key:"/library/parts/1/file",Stream:[]}]}]};' +
+            'playerSettings = {mediaIndex:0,quality:"original",profile:{evidence:"synthetic-profile",' +
+            'video:["h264"],audio:["aac"],containers:["mp4"],maxWidth:1920,maxHeight:1080}};' +
+            'player = {quality:function(){return {source:playerItem.Media[0],stream:playerItem.Media[0],mode:"direct"};}};' +
+            'openQuality(); }());';
+        w.eval(source);
+        var original = Array.from(w.document.querySelectorAll("#player-menu button")).find(function (button) {
+            return button.textContent.indexOf("Original quality") !== -1;
+        });
+        assert(original && original.textContent.includes(expected),
+            "The Original prediction must respect Direct Play " + mode + ": " + (original && original.textContent));
+    } finally { dom.window.close(); }
+}
+qualityPolicyJourney("off", "Converts on server");
+qualityPolicyJourney("auto", "Direct Play");
+console.log("Tizen quality-menu direct-play policy labels: passed");

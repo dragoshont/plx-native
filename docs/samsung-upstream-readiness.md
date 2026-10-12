@@ -5,6 +5,66 @@ The separate Samsung client has a broad source/host baseline; developer installa
 Neither implies that its playback, account lifecycle and runtime constraints match the LG app.
 LG remains unchanged. Plex Media Server remains the library/watch-state authority.
 
+## LG production-parity recheck (2026-10-12)
+
+The production target is LG movie/show capability parity, not the complete official Plex
+service ecosystem. The comparison is frozen to upstream LG release
+[`v0.8.0`](https://github.com/GLinnik21/plx-native/releases/tag/v0.8.0)
+(`ed7b1360d3f9021f542b8c099f6a3003ea4a59e1`), with development main
+`cd3f0646b560b7979b2e5d07570ed398990ccfac` checked separately. The blockers below
+exist in the published release as well as development main.
+
+| Capability | Current Samsung evidence | LG-parity verdict |
+|---|---|---|
+| Browse, search, movie/show details, seasons, collections, people and alternate servers | Implemented and host exercised; per-server favorites and show/season/trailer card actions are present | Source baseline present; full current-artifact remote acceptance remains |
+| Intro/credits, chapters, resume, watched/unwatched and episode continuation | Implemented and host exercised | Current-artifact AVPlay/PMS output and write/read-back acceptance remain |
+| Quality and direct-play policy | Original plus five fixed ceilings; Direct Play Auto/Force/Off; actual direct/direct-stream/transcode reporting | **Incomplete:** LG's adaptive **quality Auto** is absent. Direct Play Auto is a different setting and is not a substitute |
+| Audio track negotiation | The selected track's codec, rather than `Media.audioCodec`, determines original eligibility; unsupported selected audio permits video copy with audio conversion | Regression-backed source fix; actual native track identity/output remains unverified |
+| Force and quality labels | Force refuses selections requiring subtitle burning or multipart joining before any request; Original's prediction respects Direct Play Off | Regression-backed source fixes; no silent transcode under Force for these paths |
+| Account audio/subtitle policy | Preferred audio language, subtitle mode/language and forced policy are editable; default selections honor PMS `Stream.selected` | Source implementation present, superseding the older missing-editor description below; LG's client-side language/codec ranking remains a separate difference |
+| Audio processing | No Samsung `boostDialog`/`normalizeLoudness` request path or controls | **Missing:** LG's entitlement-gated Boost dialog and Normalize loudness |
+| Subtitle rendering and menu | SRT/WebVTT overlay, search/download and size/position/color/delay controls; other formats use device/server paths | **Not equivalent:** LG renders styled ASS/SSA and PGS/VobSub locally and groups/ranks subtitle languages. Samsung's flat track list and text-only appearance controls do not establish those behaviors |
+| Codec/HDR/performance | Samsung AVPlay with documented capability predictions; earlier direct-play receipts are source-bound to their older builds | LG's Starfish/FFmpeg, Dolby Vision, codec tables and 60-fps GPU renderer do not transfer to Samsung. Acceptance must be named-model and platform-specific |
+
+The 2026-10-12 install cycle put local Samsung 0.2.4, built from `7ee43ce`, on
+UE55MU6172, UE43RU7092UXXH, QE65Q80CATXXH and QE55QN70FAUXXH. The owner reported
+all four working. A delayed inspector observation on UE55MU6172 showed the account
+profile picker after 30 seconds with no displayed network error. These are startup
+observations, not verification of the playback rows above; inspector capture restarts
+the app and does not preserve a preceding failure.
+
+### UI frame pacing (measured 2026-10-12)
+
+Video already decodes on Samsung's hardware decoder and video plane through AVPlay, so the
+LG renderer's hardware-acceleration claim applies to the Samsung app's UI, not its video.
+To measure the UI, `requestAnimationFrame` timestamps were recorded through the web inspector
+while remote keys moved focus on the signed-in Home. Nothing was played. A rAF gap is a
+main-thread frame miss, so this is a conservative bound.
+
+| Home interaction | UE55MU6172 (2017, Tizen 3.0) before → after | QE55QN70F (2025) before → after |
+|---|---|---|
+| Idle, horizontal shelf moves, 120 ms held-style repeats | 60 fps → 60 fps | 59–60 fps → 60 fps |
+| Shelf-to-shelf, Down ×4 then Up ×4 at 350 ms | 45.8 fps, 56 missed frames, worst 167 ms → **55.9 fps, 16 missed, worst 117 ms** | 57.5 fps, 10 missed → **58.6 fps, 6 missed** |
+
+A Chromium trace on the 2017 set showed shelf moves bound by software tile raster and GPU
+upload, not JavaScript (3–7 ms per key). The causes were native scrolling of Home, a focus
+blur shadow and brightness filter, colour/opacity transitions, and visibility-toggling the
+hero. Home now moves `.home-track` by `translate3d`, cards are their own layers with a
+transform-only focus animation and a static shadow, and the hero hides by opacity on its
+own layer. The remaining misses fall on the first visit to a lower shelf, when its posters
+are decoded and rasterized. Other screens were not measured.
+
+Cost: Home now has more paint layers than the toolkit's eight-layer native capture accepts,
+so `tizen.py screenshot` refuses a Home capture. Other screens capture as before.
+Promoting only the focused card avoids that but measured 53 missed frames at the same key
+cadence, so it was reverted.
+
+Do not announce completed LG parity, merge a parity-completion claim or promote the
+candidate as production until the source blockers and release-bound device criteria
+are resolved. A 60-fps desktop MP4 is not device evidence. Playback, timeline, watch-state,
+queue and subtitle-download acceptance require explicitly authorized disposable Plex
+records; a household Guest profile is not disposable.
+
 ## Store and service authorization checkpoint (2026-10-11)
 
 **B2 and B3 remain blocked, not implementation tasks that can be closed by a green test.**
@@ -31,7 +91,7 @@ for the current Samsung certification requirements.
 
 ## Deployment and follow-up evidence
 
-The currently observed install is `9db91e36`, installed on 2026-10-11 after the baseline below.
+On 2026-10-11 the observed install was `9db91e36`, installed after the baseline below (superseded by the 2026-10-12 installs above).
 Its signed package SHA-256 is
 `622156b7ff3406de0cfcb9738e97f8c9c4a8a065c895fee8486e26580b265ef0`.
 Install and debug relaunch exited successfully; the post-install live viewer completed 59 cycles
@@ -62,7 +122,7 @@ An artifact inventory also exposed duplicate nested `.buildResult` assets in the
 helper; the helper now packages SDK output directly, with a failing-then-passing regression.
 The clean candidate SHA-256 is
 `5889bb033cb46202e8375bfb2102be93d13540728b0ce96dffbb1b55347d88b9`.
-**Candidate installation and native login-retention/feature acceptance are still pending.**
+**At that build, candidate installation and native login-retention/feature acceptance were pending;** later builds are installed on five TVs and the owner's sign-in is retained in daily use.
 
 ### Earlier sign-in-screen receipt
 
@@ -194,7 +254,7 @@ Same TV and firmware. All 19 live scripts matched the build. The pass ended on H
 |---|---|
 | **Passing** | Direct play, policy Auto, subtitles Off, on two titles: a 1080p H.264 MKV and a 3840x1600 HEVC file. For each: the app showed *Direct play*; AVPlay reached `PLAYING` and advanced from about 0.25 s to 20.3 s; and PMS `/status/sessions` reported `Media.Part.decision=directplay`. The decision requests carried no caps |
 | **Inconclusive** | Progress readback after direct play. The stored offset stayed at the pre-test value across six polls over 50 s, although the reported session offsets reached about 19 s. The protocol cannot distinguish a fault: the harness chose *Play from beginning* and stopped after about 20 s, and PMS is recorded (`tests/run.py`, live-verified) to keep an existing offset when it receives a small progress value, so an unchanged readback is expected server behaviour, not proof of an app defect. The LG harness never asserts persistence after a short play either. The Samsung timeline was since aligned with the LG contract (`plex/src/plex/timeline.rs`): it now also sends `X-Plex-Session-Identifier` and the selected audio/subtitle stream IDs. A valid retest resumes from a known mid-file offset (or plays well over a minute from a known point), stops, and compares the readback to the last reported position; it writes to the account and needs explicit authorization |
-| Condition | With the downloaded SRT subtitle selected, both titles transcode; that is the server's normal subtitle-burn decision, not a capability failure. Image or text subtitles in a direct-play stream are not yet supported on Samsung |
+| Condition | With the downloaded SRT subtitle selected, both titles transcode; that is the server's normal subtitle-burn decision, not a capability failure. At that build, image or text subtitles in a direct-play stream were not supported on Samsung; SRT/WebVTT drawn by the app's overlay now keeps direct play |
 | Disclosed account change | The PMS subtitle selection on the HEVC title was left Off with the owner's authorization. The original downloaded subtitle no longer exists on the server (HTTP 400) and cannot be restored. Cleanup in an earlier attempt also made two unintended queue requests for another item; they were stopped and recorded in the ledger, and the final pass had none |
 
 A renderer network flag reporting no original route is an unsupported observation and does not contradict the app plus PMS evidence. No HDR, panel or dashboard-visual claim is made.
@@ -221,8 +281,8 @@ in `parity-gaps.md`. The website loop establishes composition, not coverage of t
 | Movie/show navigation | `screens/src/detail/hero.rs`, `item_menu.rs` | **Host-implemented in this follow-up:** show and season card-menu Play resolve to a server-selected OnDeck episode, otherwise the first valid episode; the leaf's own ratingKey is fetched before playback. A direct Play trailer action appears only for a typed, identified trailer clip with a safe part key. `lg-parity.test.js` covers resolver, endpoint, trailer metadata and invalid/empty response contracts. This does not establish native playback |
 | People, collections and alternate sources | `screens/src/person.rs`, `filmography.rs`, `collection.rs`, `alt_sources.rs` | Paged careers/collections, local GUID availability and Other servers are implemented. Local lookup has an explicit 10,000-title safety ceiling; this is not unlimited-library parity |
 | Playback progress and continuation | `plex/src/plex/timeline.rs`, `media/src/route/`, `screens/src/player/` | Timeline, episode queue identity, Up Next, auto-next, markers/chapters, track/version changes and stop paths are implemented in `plex-api.js`, `player.js` and `main.js`. Actual AVPlay/PMS acceptance is pending |
-| Audio/subtitle selection | `appkit/src/track_menu.rs` | **Host-implemented in this follow-up:** size, vertical position, color and timing controls apply only to the app-rendered SRT/WebVTT overlay; device-native and burned subtitles are explicitly excluded. Synthetic preference tests cover the allowlist, defaults and migration. **Host-fixed:** playback now starts on the part's PMS `Stream.selected` audio/subtitle (which carries the account's language preferences) and PUTs `/library/parts/{id}` only for an explicit pick, as LG does; previously every start wrote `subtitleStreamID=0`, clearing the server-side subtitle choice. A text-overlay pick is recorded as that stream and never also burned in. **Host-implemented, not device-verified:** server subtitle search/download from the player's Audio and subtitles menu (`js/subtitle-search.js`): only ISO 639-1 languages are sent (PMS answers 500 for 3-letter codes), results are tied to their search generation, a pick PUTs the candidate and polls metadata (10 × 1.5 s) to identify the new stream, and SRT/WebVTT results open as the app overlay. A pick writes to the household's Plex library, so a device check of the download needs explicit owner authorization. **Host-fixed:** changing audio under a text overlay no longer sends `subtitleStreamID=0`, which would have deleted a downloaded subtitle. Still missing: account-level track policy and LG's audio boost/loudness controls. Native subtitle styling and audio processing need capability evidence before promising equivalence |
-| Playback/account preferences | `screens/src/preferences.rs` (`page_fields`, `field_options`) | Samsung persists quality limit, locale, auto-next and Continue Watching action. **Host-implemented in this follow-up:** the configurable 5/10/15/30/60-second interval drives both on-screen seek controls and media-key seeks. Still missing, each blocked on evidence or authorization rather than code: (1) the Auto/Forced/Disabled direct-play policy. `main.js` now passes an exact model/firmware profile and shows Auto/Off. The two recorded video direct-play observations do not establish audio/HDR support, so Auto conservatively transcodes the currently incomplete tuples. Forced direct play is not offered. (2) Editing account audio/subtitle language, mode and forced preferences. LG's `account/preferences.rs` editor writes to plex.tv, which needs owner authorization. The read side is already honoured by default track choice: unset ids follow PMS `Stream.selected` (`playback.js` `resolveTracks`), which carries PMS's automatic account-language pick. Samsung has no equivalent of LG's client-side direct-play language ladder (`media/src/route/plan.rs` `AudioIntent`) because it does not direct-play. Current safe negotiation is not the full LG quality/policy ladder |
+| Audio/subtitle selection | `appkit/src/track_menu.rs` | **Host-implemented in this follow-up:** size, vertical position, color and timing controls apply only to the app-rendered SRT/WebVTT overlay; device-native and burned subtitles are explicitly excluded. Synthetic preference tests cover the allowlist, defaults and migration. **Host-fixed:** playback now starts on the part's PMS `Stream.selected` audio/subtitle (which carries the account's language preferences) and PUTs `/library/parts/{id}` only for an explicit pick, as LG does; previously every start wrote `subtitleStreamID=0`, clearing the server-side subtitle choice. A text-overlay pick is recorded as that stream and never also burned in. **Host-implemented, not device-verified:** server subtitle search/download from the player's Audio and subtitles menu (`js/subtitle-search.js`): only ISO 639-1 languages are sent (PMS answers 500 for 3-letter codes), results are tied to their search generation, a pick PUTs the candidate and polls metadata (10 × 1.5 s) to identify the new stream, and SRT/WebVTT results open as the app overlay. A pick writes to the household's Plex library, so a device check of the download needs explicit owner authorization. **Host-fixed:** changing audio under a text overlay no longer sends `subtitleStreamID=0`, which would have deleted a downloaded subtitle. Account audio/subtitle language, mode and forced-subtitle preferences are now editable in Settings (`js/account-preferences.js`). Still missing: LG's audio boost/loudness controls. Native subtitle styling and audio processing need capability evidence before promising equivalence |
+| Playback/account preferences | `screens/src/preferences.rs` (`page_fields`, `field_options`) | Samsung persists Original/fixed quality limits, locale, next-episode mode, Continue Watching action and the 5/10/15/30/60-second seek interval. Direct Play Auto/Force/Off is offered and passed to negotiation; model capability predictions come from Samsung's documented specifications, with exact observed tuples distinguished. Settings edits account audio/subtitle language, mode and forced preferences through `account-preferences.js`; unchanged fields are not written. Default track choice honors PMS `Stream.selected`. LG's adaptive quality Auto and client-side language/codec ranking remain unmatched; native playback and account-update acceptance remain separate |
 | File information | `screens/src/tracks_panel.rs` | **Host-implemented in this follow-up:** a read-only detail inspector renders PMS-reported version/part container, size and bitrate, video resolution/profile/aspect and per-stream technical fields including reported Dolby Vision descriptors. Missing fields are omitted rather than interpreted as negative facts. `file-info.test.js` covers representative multi-track metadata. This is not a named-model file/playback certification |
 | Platform and additional domains | LG Starfish/ACB/FFmpeg and platform lifecycle; Samsung AVPlay | LG-specific native mechanisms cannot be copied or certified by a browser. Music/photos/DVR/catalogue source paths do not close movie/show gaps; live tuning/licensed playback and Store distribution remain separate blockers |
 
@@ -235,7 +295,7 @@ this table complete merely by adding unavailable controls or copying LG's privat
 | Order | Remaining work | Done means | Constraint |
 |---|---|---|---|
 | 1 | Oldest-target network/runtime compatibility | Actual packaged app completes account/PMS metadata and artwork requests, cancellation, deadline and byte-limit checks with normal TLS and no token-bearing redirect follow | Strict ES5 parsing does not establish fetch/streaming support. Do not substitute unrestricted XHR, which automatically follows redirects, for `redirect: error` |
-| 2 | Named-model direct/transcode policy | Model/firmware-bound capability profile is detected and tested; original/direct play, conservative fallback and quality changes preserve identity, aspect and actual stream reporting | **Host-implemented (2026-10-11 revision):** `js/model-register.js` binds exact retail model, family, firmware and Tizen version; only the two video observations below are admitted. Audio/HDR/subtitles and other tuples remain unknown, so the current complete-stream policy transcodes conservatively. Unknown identities, mismatches and blocked productinfo APIs remain unverified; Settings and Diagnostics expose that uncertainty. Host tests cover model matching, conservative PMS requests and localized UI warnings. Earlier per-platform claims are withdrawn; this revised policy is not device-verified. **Device-verified** on one model (UE55MU6172) for a 1080p H.264 MKV and a 3840x1600 HEVC file with subtitles off, confirmed by PMS `decision=directplay`. Progress readback after direct play passed on build `c9cb6895`: 92 s of play from 40%, read back within 1.5 s of the last reported position, then the original offset restored. Other media tuples and models are uncertified |
+| 2 | Named-model direct/transcode policy | Model/firmware-bound capability profile is detected and tested; original/direct play, conservative fallback and quality changes preserve identity, aspect and actual stream reporting | `js/model-register.js` binds exact retail model, family, firmware and Tizen version to the two video observations below. Other identities use documented Samsung capability predictions, not measured acceptance; a supported prediction can request the original, with server/decoder fallback unless Force is set. Settings distinguishes documented and observed evidence. **Device-verified on the older build** on one model (UE55MU6172) for a 1080p H.264 MKV and a 3840x1600 HEVC file with subtitles off, confirmed by PMS `decision=directplay`. Progress readback after direct play passed on build `c9cb6895`: 92 s of play from 40%, read back within 1.5 s of the last reported position, then the original offset restored. Current-artifact acceptance and other media tuples/models remain unverified |
 | 3 | Native playback parity matrix | H.264/HEVC, applicable UHD/HDR/audio, embedded/external/burned subtitles, versions, chapters/markers, multipart joins and seeks pass on each claimed support row | Requires actual AVPlay and panel/audio evidence, not fake adapter success |
 | 4 | Plex progress and queue acceptance | Resume, final stop/read-back, video PlayQueue identity, Up Next/auto-next cancellation and watch confirmations match expected server state | **Partly device-verified** on one model: resume from a mid-file offset, final stop and readback pass, and the original offset was restored (build `c9cb6895`, owner-authorized writes). Queue identity, Up Next, auto-next cancellation and watch confirmations remain unverified on the device. Guest alone does not make household writes disposable |
 | 5 | Remote/navigation acceptance | Every LG-parity route has focus/Back/retry behavior; held OK/context menu, scrub/repeats, long titles, all three locales, player More/submenus and five-second auto-hide work on the remote | Owner's brief manual testing is useful feedback, not a complete matrix |
@@ -258,7 +318,7 @@ to watch/change, or by an authorized test procedure naming disposable records.
 ## Allowed upstream wording before these gates close
 
 “A separate experimental Samsung Tizen Web client is implemented, with host-tested Plex contracts
-and developer install/launch observed on one 2017 model. Native acceptance and support coverage
+and developer install/launch observed on five Samsung TVs from 2017 to 2025. Native acceptance and support coverage
 are still in progress.”
 
 Do **not** replace that with “Samsung ready,” “full LG parity,” “all 2017+ TVs supported,” or

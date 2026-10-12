@@ -33,5 +33,5 @@ if "--no-publish" not in sys.argv:
     subprocess.run(["gh", "release", "create", f"samsung-v{version}", str(out), f"{out}.sha256",
                     "--repo", "dragoshont/plx-native", "--target", head, "--prerelease",
                     "--title", f"Plx for Samsung {version}",
-                    "--notes", "Install: see docs/install-samsung.md. Signed for Developer Mode TVs (no Samsung account needed)."],
+                    "--notes", "Install with the tizen-tv-builder toolkit: https://github.com/dragoshont/plx-native/blob/main/docs/install-samsung.md"],
                    check=True)

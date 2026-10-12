@@ -87,6 +87,10 @@
         return text;
     }
     var pendingRestore = null;
+    // Home moves vertically with a GPU transform on .home-track instead of scrolling the screen:
+    // native scrolling repaints the whole Home on Tizen's older engines (50-150 ms per shelf on a
+    // 2017 set), while translate3d is a compositor move (one 16.7 ms frame).
+    var homeY = 0;
     if (window.PlexPreferences) {
         try {
             preferences = window.PlexPreferences.load(window.localStorage);
@@ -140,7 +144,8 @@
         if (cancelServerConnection) { cancelServerConnection(); return; }
         var previous = navigation.pop();
         if (!previous) {
-            if (currentClient) { loadHome(false); }
+            if (currentClient && screen.className.indexOf("screen-home") === -1) { loadHome(false); return; }
+            confirmExit();
             return;
         }
         pendingRestore = previous;
@@ -371,20 +376,31 @@
         return node;
     }
 
+    function moveHome(y) {
+        var track = screen.querySelector(".home-track");
+        if (!track) { return false; }
+        homeY = Math.max(0, Math.round(y));
+        track.style.webkitTransform = track.style.transform = "translate3d(0," + (-homeY) + "px,0)";
+        screen.scrollTop = 0;
+        return true;
+    }
+
     function revealControl(node) {
         if (!node.getBoundingClientRect) { return; }
         var browse = screen.querySelector(".browse-header");
         if (browse && browse.contains(node)) { return; }
+        var homeTrack = screen.className.indexOf("screen-home") !== -1 && screen.querySelector(".home-track");
         if (screen.className.indexOf("screen-home") !== -1) {
             if (node.parentNode && /home-feature-actions/.test(node.parentNode.className || "")) {
                 screen.className = "screen screen-home";
-                screen.scrollTop = 0;
+                if (!moveHome(0)) { screen.scrollTop = 0; }
                 return;
             }
             if (node.plexCard && node.parentNode && /shelf-row/.test(node.parentNode.className || "")) {
                 var shelf = node.parentNode.parentNode;
-                screen.scrollTop += shelf.getBoundingClientRect().top -
-                    browse.getBoundingClientRect().bottom - 12;
+                var shift = shelf.getBoundingClientRect().top - browse.getBoundingClientRect().bottom - 12;
+                if (homeTrack) { moveHome(homeY + shift); }
+                else { screen.scrollTop += shift; }
                 screen.className = "screen screen-home shelves-focused";
             }
         }
@@ -400,7 +416,11 @@
                 }
                 if (item.left < bounds.left + 8) { parent.scrollLeft -= bounds.left + 8 - item.left; }
                 else if (item.right > bounds.right - 8) { parent.scrollLeft += item.right - bounds.right + 8; }
-                if (item.top < top) { parent.scrollTop -= top - item.top; }
+                if (parent === screen && homeTrack) {
+                    // Home's vertical position belongs to moveHome; scrolling would reintroduce the repaint.
+                    if (item.top < top) { moveHome(homeY - (top - item.top)); }
+                    else if (item.bottom > bounds.bottom - 8) { moveHome(homeY + item.bottom - bounds.bottom + 8); }
+                } else if (item.top < top) { parent.scrollTop -= top - item.top; }
                 else if (item.bottom > bounds.bottom - 8) { parent.scrollTop += item.bottom - bounds.bottom + 8; }
             }
             if (parent === screen) { break; }
@@ -1073,8 +1093,11 @@
         homeSections = sections;
         screen.className = "screen screen-home";
         browseHeader(null);
+        homeY = 0;
+        var track = element("div", "home-track");
+        screen.appendChild(track);
         var homeTitle = element("h2", "page-title home-title", translate("Home"));
-        screen.appendChild(homeTitle);
+        track.appendChild(homeTitle);
         var favorites = favoriteKeys();
         var browsable = sections.filter(function (section) {
             return ["movie", "show", "artist", "photo"].indexOf(section.type) !== -1;
@@ -1154,14 +1177,14 @@
                 });
             }
             updateFeature();
-            screen.appendChild(hero);
+            track.appendChild(hero);
         }
 
         if (!browsable.length) {
             var sectionPanel = element("section", "content-panel");
             addSectionHeading(sectionPanel, translate("Libraries"));
             sectionPanel.appendChild(element("p", "empty-state", translate("No libraries were returned by this server.")));
-            screen.appendChild(sectionPanel);
+            track.appendChild(sectionPanel);
         }
 
         var hubPanel = element("section", "content-panel home-shelves");
@@ -1181,7 +1204,7 @@
             });
             hubPanel.appendChild(hubSection);
         });
-        screen.appendChild(hubPanel);
+        track.appendChild(hubPanel);
         setStatus(usingRelay ? "Connected through Plex relay (bandwidth limited)." : "");
         var restoringFocus = !!pendingRestore;
         focusFirst();
@@ -2311,6 +2334,36 @@
         if (controls.length) { controls[controls.length - 1].focus(); }
     }
 
+    // Samsung's Return key policy: Back on the app's home page shows an exit confirmation, and the
+    // app terminates only on an explicit choice (developer.samsung.com, "Terminating Applications").
+    // Stay is focused so a repeated press never quits; Back dismisses like Stay.
+    function confirmExit() {
+        var returnFocus = document.activeElement;
+        var old = document.getElementById("player-menu");
+        if (old) { old.parentNode.removeChild(old); }
+        var dialog = element("section", "player-menu exit-prompt");
+        dialog.id = "player-menu";
+        dialog.setAttribute("role", "alertdialog");
+        dialog.setAttribute("aria-modal", "true");
+        var title = element("h2", "", translate("Exit Plx?"));
+        title.id = "exit-prompt-title";
+        dialog.setAttribute("aria-labelledby", title.id);
+        dialog.appendChild(title);
+        function dismiss() {
+            if (dialog.parentNode) { dialog.parentNode.removeChild(dialog); }
+            if (returnFocus && returnFocus.focus && screen.contains(returnFocus)) { returnFocus.focus(); }
+            else { focusFirst(); }
+        }
+        dialog.plexDismiss = dismiss;
+        var stay = button(dialog, "Stay", dismiss, false, "none");
+        button(dialog, "Exit", function () {
+            try { window.tizen.application.getCurrentApplication().exit(); }
+            catch (error) { setStatus("Plx could not close itself. Hold Back on the remote to exit.", true); }
+        }, false, "none");
+        screen.appendChild(dialog);
+        stay.focus();
+    }
+
     var QUALITY_NAMES = { "1080h": ["1080", "20"], "1080": ["1080", "8"], "720": ["720", "4"],
         "720l": ["720", "2"], "480": ["480", "0.7"] };
     var SUBTITLE_COLORS = ["white", "grey_85", "grey_70", "grey_55", "grey_40", "grey_28", "yellow"];
@@ -2959,6 +3012,7 @@
         var current = player.quality();
         var originalDirect = window.PlexPlayback && window.PlexPlayback.plan(playerItem, {
             mediaIndex: playerSettings.mediaIndex, quality: "original", profile: playerSettings.profile,
+            directPlay: preferences.directPlay,
             overlaySubtitle: playerSettings.overlaySubtitle, audioId: playerSettings.audioId,
             subtitleId: playerSettings.subtitleId }).direct;
         menu.appendChild(element("p", "help-text", translate("Now playing") + ": " + modeName(current.mode) + " · " +
@@ -3326,7 +3380,7 @@
             var firstCard = screen.querySelector(".media-card");
             if (featuredAction) {
                 screen.className = "screen screen-home";
-                screen.scrollTop = 0;
+                if (!moveHome(0)) { screen.scrollTop = 0; }
             }
             if (featuredAction || firstCard) { (featuredAction || firstCard).focus(); return; }
         }
@@ -3453,6 +3507,7 @@
             }
             if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; setStatus("Auto-play cancelled."); return; }
             var menu = document.getElementById("player-menu");
+            if (menu && menu.plexDismiss) { menu.plexDismiss(); return; }
             if (menu) {
                 if (player && menu.querySelector("button") &&
                         Array.prototype.some.call(menu.querySelectorAll("button"), function (control) {

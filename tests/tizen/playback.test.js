@@ -111,6 +111,38 @@ async function run() {
     assert(!preferredRig.calls.some(function (call) { return call[0] === "streams"; }));
     assert.deepStrictEqual(preferredSession.selection(), { audioId: 32, subtitleId: 41, explicit: false });
     await preferredSession.stop();
+    var selectedAudio = JSON.parse(JSON.stringify(item));
+    var selectedProfile = {
+        evidence: "synthetic-profile", containers: ["mp4"], video: ["h264"], audio: ["aac", "ac3"],
+        maxWidth: 1920, maxHeight: 1080
+    };
+    selectedAudio.Media[0].Part[0].Stream = [
+        { id: 31, streamType: 2, codec: "aac" },
+        { id: 32, streamType: 2, codec: "truehd", selected: true }
+    ];
+    var selectedAudioPlan = playback.plan(selectedAudio, { profile: selectedProfile, quality: "original" });
+    assert.strictEqual(selectedAudioPlan.direct, false,
+        "Direct-play eligibility must inspect the selected audio, not the media's default codec");
+    assert.strictEqual(selectedAudioPlan.reason, "audio-codec");
+    assert.strictEqual(selectedAudioPlan.query.directStream, 1,
+        "An unsupported selected audio track may be converted without re-encoding supported video");
+    selectedAudio.Media[0].audioCodec = "truehd";
+    selectedAudioPlan = playback.plan(selectedAudio, {
+        profile: selectedProfile, quality: "original", audioId: 31, subtitleId: 0
+    });
+    assert.strictEqual(selectedAudioPlan.direct, true,
+        "A supported explicit audio choice must not inherit the default track's codec refusal");
+    for (var forcedItem of [preferred, multipart]) {
+        var forcedRig = rig();
+        var forcedSession = playback.create({
+            client: forcedRig.client, adapter: forcedRig.adapter, item: forcedItem,
+            settings: { profile: selectedProfile, quality: "original", directPlay: "force" }
+        });
+        await assert.rejects(forcedSession.start(), /force|forced/i,
+            "Force must refuse required subtitle burning or multipart joining instead of silently transcoding");
+        assert.strictEqual(forcedRig.calls.length, 0,
+            "A refused Force request must not select streams, allocate a transcode or open AVPlay");
+    }
     var explicitRig = rig();
     var explicitSession = playback.create({ client: explicitRig.client, adapter: explicitRig.adapter, item: preferred,
         settings: { audioId: 31, subtitleId: 0 } });

@@ -14,7 +14,7 @@ state and progress. This is a full client in development, not a replacement medi
 
 ## Operating context
 
-The current owner test device is a 2017 Samsung UE55MU6172. The wider investigation includes
+The owner's TVs are a 2017 UE55MU6172, two 2019 UE43RU7092, a QE65Q80C and a 2025 QE55QN70F. The wider investigation includes
 2018+ televisions and The Frame; those models are not certified by this device's results.
 The app is an ES5 Tizen Web application with AVPlay, separate from the existing LG Rust app.
 Host DOM tests use synthetic accounts, servers and AVPlay. Browser renders prove layout, not

@@ -7,6 +7,9 @@ Tizen Studio 6.1 installation, Tizen CLI 2.5.25, SDB 4.2.36, Samsung signing, De
 hello/probe apps and the current Plex client installed and launched. The gotchas
 below are the ones actually hit. Where a page changes, Samsung's wins. Ask the owner before installing anything.
 
+**Only want to install Plx?** Follow the [Samsung installation guide](install-samsung.md): one
+toolkit command installs a released `.wgt`. This page is for building and developing the client.
+
 ## What you are building
 
 A Samsung TV app is a small website packaged as a `.wgt` file. You sign it with a certificate that
@@ -18,103 +21,13 @@ route needs a computer and a Samsung developer certificate containing **your** T
 An LG `.ipk` or Homebrew Channel package cannot install on Samsung. If you only want a supported
 one-click app today, this experimental build is not that yet.
 
-## Install PlexTv on your Samsung TV: step by step
+## Installing Plx
 
-You need a computer on the same network as the TV, a free Samsung account and about 30 minutes.
-Commands are for macOS/Linux; on Windows run the same commands in Command Prompt, with the
-`tizen-studio\tools` folders on `PATH`.
-
-**A. Prepare the computer (once)**
-
-1. Download and install [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html).
-2. Open **Package Manager** → **Extension SDK**. Install **TV Extensions** and
-   **Samsung Certificate Extension**.
-3. Add the command-line tools to `PATH`:
-   ```sh
-   export PATH="$HOME/tizen-studio/tools:$HOME/tizen-studio/tools/ide/bin:$PATH"
-   ```
-4. Find the computer's IP address on the TV's network: `ipconfig getifaddr en0` on Mac
-   (`en1` if you use the other adapter), or `ipconfig` on Windows.
-
-**B. Prepare the TV (once)**
-
-5. On the TV open **Apps**. Press **1 2 3 4 5** on the remote.
-6. Switch **Developer Mode** to **On**. Enter the computer's IP from step 4. Press **OK**.
-7. Turn the TV fully off and on again. Hold the power button until it restarts.
-8. Note the TV's IP address: **Settings → General → Network → Network Status → IP Settings**.
-
-**C. Connect**
-
-9. In **Terminal** (on Mac use Terminal.app and allow the "Local Network" prompt):
-   ```sh
-   sdb connect TV_IP:26101
-   sdb devices
-   ```
-   `sdb devices` prints one line: the serial (`TV_IP:26101`), `device`, and the TV's name.
-   Use that name wherever this guide says `TV_NAME`.
-10. Read the TV's DUID:
-    ```sh
-    sdb -s TV_IP:26101 shell 0 getduid
-    ```
-
-**D. Create your certificate (once per set of TVs)**
-
-11. Open Tizen Studio → **Tools → Certificate Manager** → **+**.
-12. Choose **Samsung** → **TV**. Name the profile `plex`.
-13. **Create a new author certificate.** Enter a name and a password. Sign in with your
-    Samsung account.
-14. **Create a new distributor certificate.** Keep the privilege level **Public**. Check that the
-    DUID from step 10 is in the list; add it if it is missing. Click **Finish**.
-15. Close Certificate Manager.
-16. Allow the TV to accept apps signed with this certificate:
-    ```sh
-    tizen install-permit -t TV_NAME
-    ```
-
-**E. Build and install PlexTv**
-
-17. Get the source and copy the app out of the checkout:
-    ```sh
-    git clone --branch dragoshont-samsung-tizen-feasibility https://github.com/dragoshont/plx-native.git
-    cp -R plx-native/samsung/PlexTv ~/PlexTv
-    ```
-18. Choose a package ID of exactly 10 letters or digits (`<PKGID>` below). In
-    `~/PlexTv/config.xml`, change the `tizen:application` line to:
-    ```xml
-    <tizen:application id="<PKGID>.Plx" package="<PKGID>" required_version="3.0"/>
-    ```
-    Keep this ID for every future update.
-19. Build and sign:
-    ```sh
-    tizen build-web -- ~/PlexTv
-    tizen package -t wgt -s plex -- ~/PlexTv/.buildResult
-    ```
-    The last line prints the path of the signed `.wgt`.
-20. Install and start:
-    ```sh
-    tizen install -n /path/printed/above.wgt -t TV_NAME
-    tizen run -p <PKGID>.Plx -t TV_NAME
-    ```
-21. On the TV, scan the QR code, or go to `plex.tv/link` and type the code shown. Pick your
-    profile and your server. Your libraries and watch progress come from your Plex Media Server.
-    The app stays in **Apps** as **Plex Tizen Development**.
-
-**F. Later**
-
-- **Update:** `git pull` in `plx-native`, copy `samsung/PlexTv` again and set the **same**
-  package ID. Then repeat steps 19–20. You stay signed in.
-- **Add another TV:** do steps 5–10 on it, then in Certificate Manager create a new distributor
-  certificate for the `plex` profile listing **all** DUIDs. Then run step 16 for the new TV and
-  steps 19–20.
-- **Certificate expired:** when signing or installing starts failing with a certificate error,
-  repeat steps 11–16, then steps 19–20.
-- **Remove:** on the TV, **Apps → Settings (gear) → Plex Tizen Development → Delete**.
-
-Problems at a step: connection (step 9) → [section 4](#4-turn-on-developer-mode-on-the-tv);
-certificate or `install failed[118]` (steps 11–16, 20) → [section 3](#3-signing-certificate);
-install and uninstall commands → [section 7](#7-signing-for-other-people-more-tvs-and-homebrew).
-
-The rest of this guide explains each step in detail.
+Use the [Samsung installation guide](install-samsung.md). It installs a released package with
+`python3 tools/tizen.py` from [tizen-tv-builder](https://github.com/dragoshont/tizen-tv-builder):
+`scan`, `cert add` for your TV's DUID (one Samsung sign-in) and `install`. You do not need Tizen
+Studio's IDE, Certificate Manager or the `tizen` command for that route. The sections below explain
+what those steps do, for development and troubleshooting.
 
 ## 1. Find out exactly which TV you have
 
@@ -209,63 +122,39 @@ See the [product specification](samsung-tizen-client-spec.md) for current featur
 acceptance gaps, and the [development process](samsung-tizen-development-process.md) for the reusable
 workflow. The installed x86_64 Tizen 10 emulator did not launch on this Apple-Silicon host.
 
-### Install the current Samsung client
+### Build and install your own package
 
-Complete sections 1–4 first: identify the TV, install the SDK/TV Extension, create the Samsung
-certificate profile with its DUID, and enable Developer Mode. Keep Certificate Manager closed
-while using the command line. The steps below are for macOS/Linux with the Tizen CLI and SDB
-on `PATH`; on Windows use the equivalent SDK tools and a copied source folder.
+Complete sections 1–4 first, or let the toolkit's `cert add` create the certificate for you.
 
-1. Download or clone **this fork's Samsung branch**, not an LG release:
+1. Clone this repository's `main` branch and run the host gates above:
    ```sh
-   git clone --branch dragoshont-samsung-tizen-feasibility https://github.com/dragoshont/plx-native.git
+   git clone https://github.com/dragoshont/plx-native.git
    cd plx-native
    ```
-   Record `git rev-parse HEAD`. Follow the host-test/source-build commands above first.
-2. Copy `samsung/PlexTv` outside the checkout so your private signing setup and build output
-   cannot enter a commit. In the copy's `config.xml`, replace the application line with:
-   ```xml
-   <tizen:application id="<PACKAGE>.PlexTv" package="<PACKAGE>" required_version="3.0"/>
-   ```
-   Replace `<PACKAGE>` with your own 10-character alphanumeric package ID (for example one
-   generated by Tizen Studio). These are development IDs, not Store-approved identifiers. Reuse them for updates; changing
-   them creates a separate app. Never put an account token, server address or certificate in
-   this folder.
-3. Build and sign the copy with your existing Samsung certificate profile:
+2. Build a signed package. The version is yours to choose:
    ```sh
-   tizen build-web -- /path/to/PlexTv
-   tizen package -t wgt -s YOUR_PROFILE -- /path/to/PlexTv/.buildResult
+   python3 samsung/build.py 0.0.1
    ```
-   Package the SDK's `.buildResult` output, not the source directory; otherwise build output
-   can be duplicated inside the widget. The SDK prints the signed `.wgt` path; use that exact
-   file, not an earlier build. On macOS,
-   `shasum -a 256 /path/to/app.wgt` records its checksum (PowerShell: `Get-FileHash -Algorithm SHA256`).
-4. Connect and install:
+   It writes `samsung/dist/Plx-0.0.1.wgt` and its `.sha256`, with the fixed application ID
+   `PlxNative0.Plx`, the same ID as the released packages, so your build updates or replaces an
+   installed Plx rather than appearing as a second app. Nothing private enters the checkout:
+   the author certificate lives outside it.
+3. Install it with the toolkit, exactly as for a release:
    ```sh
-   sdb connect TV_IP:26101
-   sdb devices
-   tizen install -n /path/to/app.wgt -s TARGET_SERIAL
+   python3 tools/tizen.py install /path/to/plx-native/samsung/dist/Plx-0.0.1.wgt TV_IP
    ```
-   Replace `TARGET_SERIAL` with the exact serial printed by `sdb devices`. Complete the
-   certificate-install-permit step from section 3 before the first install. Stop on an error;
-   a successfully signed package is not proof it installed.
-5. Open **Plex Tizen Development** from the TV's Apps screen. Scan the QR or enter the displayed
-   code at `plex.tv/link`, select your profile (PIN only if protected), then your server.
-   The TV and PMS keep your existing library and progress. Sign-in is saved automatically
-   in unencrypted TV storage. Settings can turn this off; sign-out deletes the saved token.
-   Keep the same app/package IDs and signing identity when updating; uninstalling or clearing
-   app data removes the saved sign-in. Restart/update retention still requires native verification.
-6. Start with read-only Home/library/detail/search navigation. For playback, use content you
-   intend to watch or explicitly disposable test records. See the
-   [remaining acceptance gates](samsung-upstream-readiness.md#required-before-a-parity-announcement).
-   To update, build/sign the new source with the **same author identity and app IDs**, then
-   install its `.wgt` again. To remove it, delete the app through the TV's Apps management UI.
+   The toolkit re-signs with your active profile, installs and checks the TV's app list.
+   A TV refuses an update signed by a different author: remove Plx first
+   (`python3 tools/tizen.py remove TV_IP PlxNative0.Plx`).
+4. Open **Plx** from the TV's Apps screen. Scan the QR or enter the displayed code at
+   `plex.tv/link`, choose your profile (PIN only if protected), then your server. Sign-in is
+   saved automatically in unencrypted TV storage; Settings can turn this off and sign-out
+   deletes it.
 
-The observed target is UE55MU6172 (2017, Tizen 3.0; previously recorded firmware
-`T-KTMDEUC-1410.1`). Installation on that set does not certify another model. Before moving to
-a newer TV, add its DUID to your distributor certificate and record its exact model/firmware;
-repeat installation, sign-in, the same navigation loop, then codec and standby/Art Mode checks.
-Do not reuse the older set's Inspector port or assume its decoder results carry over.
+Plx has been installed and used on a 2017 UE55MU6172 (Tizen 3.0), two 2019 UE43RU7092 sets
+(Tizen 5.0), a QE65Q80C and a 2025 QE55QN70F. That is not a support list for other models:
+each new TV needs its DUID in your certificate, and codec, remote and standby behaviour can
+differ by model year.
 
 ### Mac emulator: acceleration and Apple Silicon
 

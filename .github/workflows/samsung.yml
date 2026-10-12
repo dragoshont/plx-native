@@ -12,7 +12,7 @@ name: Samsung Tizen
 
 on:
   push:
-    branches: [main, 'release/v*', 'dragoshont-samsung-tizen-feasibility']
+    branches: [main, 'release/v*']
     # A samsung-vX.Y.Z tag publishes Plx-X.Y.Z.wgt as a prerelease (path filters do not apply to tags).
     tags: ['samsung-v*']
     paths:
@@ -125,4 +125,4 @@ jobs:
           gh release create "samsung-v$VERSION" samsung/dist/Plx-$VERSION.wgt samsung/dist/Plx-$VERSION.wgt.sha256 \
             --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
             --title "Plx for Samsung $VERSION" \
-            --notes "Install: see docs/install-samsung.md. Signed for Developer Mode TVs (no Samsung account needed)."
+            --notes "Install with the tizen-tv-builder toolkit: https://github.com/dragoshont/plx-native/blob/main/docs/install-samsung.md"

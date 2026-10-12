@@ -162,6 +162,43 @@ async function run() {
             "The feature needs a distinct primary action");
         assert(window.document.querySelector(".account-control"),
             "Utilities must be reachable from the top navigation");
+        // Samsung's Return key policy: Back on the app's home page asks before exiting; the app
+        // exits only on an explicit Yes. developer.samsung.com/smarttv/develop/guides/fundamentals/
+        // terminating-applications.html
+        var exits = 0;
+        window.tizen = { application: { getCurrentApplication: function () {
+            return { exit: function () { exits += 1; } };
+        } } };
+        function back() {
+            window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 10009, bubbles: true }));
+        }
+        var homeFocus = window.document.querySelector(".home-feature-primary");
+        homeFocus.focus();
+        back();
+        var exitPrompt = window.document.getElementById("player-menu");
+        assert(exitPrompt && /exit-prompt/.test(exitPrompt.className), "Back on Home asks before leaving the app");
+        assert.strictEqual(exitPrompt.getAttribute("role"), "alertdialog");
+        assert.strictEqual(exitPrompt.querySelector("h2").textContent, "Exit Plx?");
+        assert.strictEqual(window.document.activeElement.textContent, "Stay",
+            "Stay is focused, so a second accidental OK does not quit");
+        assert.strictEqual(window.document.querySelector(".home-track") !== null, true, "Home stays underneath");
+        back();
+        assert(!window.document.getElementById("player-menu"), "Back dismisses the exit prompt");
+        assert.strictEqual(window.document.activeElement, homeFocus, "Dismissing restores the focused Home control");
+        assert.strictEqual(exits, 0);
+        back();
+        click("Stay");
+        assert(!window.document.getElementById("player-menu"));
+        assert.strictEqual(window.document.activeElement, homeFocus, "Stay restores focus");
+        assert.strictEqual(exits, 0, "Only an explicit Exit closes the app");
+        back();
+        click("Exit");
+        assert.strictEqual(exits, 1, "Exit calls tizen.application.getCurrentApplication().exit()");
+        delete window.tizen;
+        click("Exit");
+        assert(window.document.querySelector(".status").textContent.indexOf("Hold Back") !== -1,
+            "Without the Tizen Application API, Exit explains the remote's own force-exit");
+        click("Stay");
         var selectedHome = window.document.querySelector('.home-navigation button[aria-current="page"]');
         selectedHome.focus();
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
@@ -182,6 +219,27 @@ async function run() {
             "Up from the first shelf restores the visible feature");
         assert(!window.document.querySelector("#screen").classList.contains("shelves-focused"));
         var firstShelfCard = window.document.querySelector(".shelf-row .media-card");
+        var homeScreen = window.document.querySelector("#screen");
+        var stubbed = [[firstShelfCard.parentNode.parentNode, { left: 0, top: 800, right: 1920, bottom: 1200 }],
+            [window.document.querySelector(".browse-header"), { left: 0, top: 0, right: 1920, bottom: 100 }],
+            [homeScreen, { left: 0, top: 0, right: 1920, bottom: 1080 }],
+            [firstShelfCard, { left: 100, top: 860, right: 340, bottom: 1220 }]];
+        stubbed.forEach(function (pair) {
+            pair.push(pair[0].getBoundingClientRect);
+            pair[0].getBoundingClientRect = function () { return pair[1]; };
+        });
+        // After moveHome the card sits under the header; report that so the reveal pass is stable.
+        stubbed[3][1] = { left: 100, top: 172, right: 340, bottom: 532 };
+        firstShelfCard.focus();
+        assert(/translate3d\(0,\s*-688px,\s*0\)/.test(window.document.querySelector(".home-track").style.transform),
+            "A shelf below the hero is brought under the header by a GPU transform: " +
+            window.document.querySelector(".home-track").style.transform);
+        assert.strictEqual(homeScreen.scrollTop, 0,
+            "Home must not scroll natively; a native scroll repaints the whole screen on older Tizen engines");
+        stubbed.forEach(function (pair) { pair[0].getBoundingClientRect = pair[2]; });
+        window.document.querySelector(".home-feature-primary").focus();
+        assert(/translate3d\(0,\s*0px,\s*0\)/.test(window.document.querySelector(".home-track").style.transform),
+            "Returning to the hero resets the Home track");
         var secondShelf = window.document.createElement("section");
         secondShelf.className = "shelf";
         var secondRow = window.document.createElement("div");

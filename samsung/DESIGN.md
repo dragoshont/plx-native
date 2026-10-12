@@ -30,7 +30,9 @@ Near-black `#101012` ground, neutral `#222224` surfaces, white `#f2f2f7` foregro
 do not download fonts. Ordinary screen copy is 24px or larger, page headings 48px, identity
 headings 56px; cinematic Home/detail type scales with viewport height (Home title `7vh`).
 Button focus fills only the control with white and dark text, without an outer border or halo.
-Media focus uses a small lift and brighter artwork; Home reveals only the focused caption. It never frames the
+Media focus uses a small lift and brighter artwork; on Home the lift alone carries focus (a
+compositor-only transform with a static shadow; measured 60 fps idle and along a shelf and about
+56 fps between shelves on a 2017 set). Home reveals only the focused caption. It never frames the
 whole poster and caption. Selected settings have a separate indicator. Transport controls use
 icons with retained accessible names; other controls keep visible labels.
 
@@ -61,14 +63,18 @@ revealed using rectangle-based nearest-edge scrolling, without depending on mode
 `scrollIntoView` options. Card focus is restored by media identity after a library page append.
 
 Displaying, focusing or cycling a Home feature never initiates playback. Its explicit Play/Continue
-button does; info opens details. Biography and availability lookups never play. Resume uses the
+button does; info opens details. Back on the app's first page (Home, or sign-in/profile/server
+selection before Home) shows Samsung's required "Exit Plx?" confirmation with Stay focused; Back or
+Stay dismisses it and only Exit terminates the app. Biography and availability lookups never play. Resume uses the
 PMS-selected on-deck **episode**, not its show ID. A missing on-deck episode leaves season browsing
 available. All watched-state, Watchlist and DVR changes retain explicit confirmation.
 Home episode shelves use the series poster when supplied, retaining episode number/title and
 progress. Episode lists retain their stills rather than making every episode indistinguishable.
 Original-file metadata, the PMS-reported stream and the requested transcode limit are distinct.
 Missing stream metadata is labelled unreported, never substituted with the chosen limit.
-This does not enable or advertise unevidenced original/direct playback.
+Original/direct playback is requested when Samsung's published media specifications (or an exact
+observed model entry) predict support; the server or the decoder can still refuse, and Plx then
+converts unless Direct Play is set to Force.
 
 ## Evidence and boundaries
 
