@@ -81,11 +81,20 @@ jobs:
         env:
           AUTHOR_P12_B64: ${{ secrets.SAMSUNG_AUTHOR_P12_B64 }}
           AUTHOR_PW: ${{ secrets.SAMSUNG_AUTHOR_PW }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          echo "skip=0" >> "$GITHUB_OUTPUT"
           if [[ "$GITHUB_REF" == refs/tags/samsung-v* ]]; then
             version="${GITHUB_REF#refs/tags/samsung-v}"
             [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag $GITHUB_REF"; exit 1; }
             if [ -z "$AUTHOR_P12_B64" ] || [ -z "$AUTHOR_PW" ]; then
+              # samsung/release.py signs with the private release certificate on the
+              # maintainer's machine and creates this tag together with its release.
+              if gh release view "samsung-v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                echo "::notice::samsung-v$version was published by samsung/release.py; no CI signing secrets, nothing to rebuild."
+                echo "skip=1" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
               echo "::error::release secrets SAMSUNG_AUTHOR_P12_B64 / SAMSUNG_AUTHOR_PW are not set"; exit 1
             fi
             umask 077
@@ -101,19 +110,22 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Install pinned test dependencies
+        if: steps.plan.outputs.skip != '1'
         run: npm ci --prefix tests/tizen --no-audit --no-fund
       - name: Build and sign
+        if: steps.plan.outputs.skip != '1'
         run: python3 samsung/build.py "${{ steps.plan.outputs.version }}"
       - name: Remove signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/author.p12"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.plan.outputs.skip != '1'
         with:
           name: Plx-${{ steps.plan.outputs.version }}
           path: samsung/dist/Plx-${{ steps.plan.outputs.version }}.wgt*
           if-no-files-found: error
       - name: Publish release
-        if: steps.plan.outputs.publish == '1'
+        if: steps.plan.outputs.publish == '1' && steps.plan.outputs.skip != '1'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.plan.outputs.version }}
