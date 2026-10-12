@@ -483,8 +483,8 @@ async function run() {
         await settle();
         assert.strictEqual(state, "PLAYING");
         assert.strictEqual(window.document.body.className, "playing");
-        assert.strictEqual(window.document.querySelector(".playback-controls").querySelectorAll("button").length, 4,
-            "Playback should expose only transport and More on the main overlay");
+        assert.strictEqual(window.document.querySelector(".playback-controls").querySelectorAll("button").length, 6,
+            "Playback exposes the transport, direct track controls and More on the main overlay");
         var scrubSurface = window.document.querySelector(".playback-progress");
         assert.strictEqual(scrubSurface.getAttribute("role"), "slider",
             "Playback position is a remote-focusable scrub surface, not a passive progress bar");
@@ -507,10 +507,17 @@ async function run() {
         assert.strictEqual(window.document.activeElement, playerControls[2],
             "Right from focused Pause / Play must focus Forward rather than scrub");
         remote("keydown", 39);
-        assert.strictEqual(window.document.activeElement, playerControls[3],
-            "Right from Forward must reach More");
+        assert.strictEqual(window.document.activeElement, playerControls[3], "Right from Forward reaches Subtitles");
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[4], "Right from Subtitles reaches Audio");
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[5], "Right from Audio reaches More");
         remote("keydown", 37);
-        assert.strictEqual(window.document.activeElement, playerControls[2], "Left from More returns to Forward");
+        assert.strictEqual(window.document.activeElement, playerControls[4], "Left from More returns to Audio");
+        remote("keydown", 37);
+        assert.strictEqual(window.document.activeElement, playerControls[3], "Left from Audio returns to Subtitles");
+        remote("keydown", 37);
+        assert.strictEqual(window.document.activeElement, playerControls[2], "Left from Subtitles returns to Forward");
         remote("keydown", 37);
         assert.strictEqual(window.document.activeElement, playerControls[1], "Left from Forward returns to Pause / Play");
         remote("keydown", 37);
@@ -520,8 +527,10 @@ async function run() {
         remote("keydown", 39);
         assert.strictEqual(window.document.activeElement, playerControls[2], "Right from Pause / Play reaches Forward");
         remote("keydown", 39);
-        assert.strictEqual(window.document.activeElement, playerControls[3],
-            "Right traverses Pause / Play and Forward to More");
+        remote("keydown", 39);
+        remote("keydown", 39);
+        assert.strictEqual(window.document.activeElement, playerControls[5],
+            "Right traverses track controls and Forward to More");
         assert.strictEqual(state, "PLAYING", "Directional traversal must not toggle playback");
         assert.strictEqual(seekTargets.length, seeksBeforeNavigation, "Focused HUD navigation must not seek");
         var seeksBeforeOptions = seekTargets.length;
@@ -535,7 +544,7 @@ async function run() {
         assert.strictEqual(seekTargets.length, seeksBeforeOptions, "Menu navigation must not seek");
         remote("keydown", 27);
         assert(!window.document.getElementById("player-menu"), "Back closes playback options");
-        assert.strictEqual(window.document.activeElement, playerControls[3],
+        assert.strictEqual(window.document.activeElement, playerControls[5],
             "Back from playback options restores focus to More");
         var pauseControl = Array.from(window.document.querySelectorAll("button")).find(function (node) {
             return node.textContent === "Pause / Play";
@@ -636,19 +645,24 @@ async function run() {
         await settle();
         assert.strictEqual(position, 42000, "The remote fast-forward key uses the saved 15-second interval");
         click("More");
-        click("Chapters and markers");
-        assert.strictEqual(hudTimers.size, 0, "An open menu must suspend HUD hiding");
-        click("Chapter one");
+        click("Chapters");
+        assert.strictEqual(hudTimers.size, 0, "The chapter strip must suspend HUD hiding");
+        var chapter = window.document.querySelector(".chapter-card");
+        assert(chapter && chapter.textContent.indexOf("Chapter one") !== -1, "Chapter cards label their selection");
+        chapter.click();
         await settle();
         assert.strictEqual(position, 20000);
-        click("Close menu");
         click("More");
+        click("Markers");
+        click("Close menu");
         assert(!requests.some(function (request) { return request.method === "PUT" && /^\/library\/parts\//.test(request.path); }),
             "Starting playback with no track choice must not overwrite the PMS stream selection");
+        click("More");
         click("Audio and subtitles");
         click("Text size: Medium");
         assert(window.document.querySelector(".player-menu").textContent.includes("Text size: Large"),
             "Caption style controls update the persisted selection");
+        click("English");
         click("Text overlay / English");
         await settle();
         var subtitleOverlay = window.document.getElementById("subtitle-text");

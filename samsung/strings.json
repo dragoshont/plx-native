@@ -73,6 +73,42 @@
   "Jump to a letter": { "es": "Ir a una letra", "be": "Перайсці да літары" },
   "Quality and media version": { "es": "Calidad y versión multimedia", "be": "Якасць і версія медыя" },
   "Chapters and markers": { "es": "Capítulos y marcadores", "be": "Раздзелы і маркеры" },
+  "No chapters available.": { "es": "No hay capítulos disponibles.", "be": "Раздзелы недаступныя." },
+  "Episode {number}": { "es": "Episodio {number}", "be": "Серыя {number}" },
+  "Rating": { "es": "Calificación", "be": "Рэйтынг" },
+  "Subtitle timing": { "es": "Sincronización de subtítulos", "be": "Сінхранізацыя субтытраў" },
+  "Use LEFT and RIGHT to adjust. OK or Back closes this control.": {
+    "es": "Usa IZQUIERDA y DERECHA para ajustar. OK o Atrás cierra este control.",
+    "be": "Націскайце ЎЛЕВА і ЎПРАВА для рэгулявання. OK або «Назад» закрывае гэты элемент."
+  },
+  "Live timing is available for app-rendered text subtitles only; device-native timing is unchanged.": {
+    "es": "La sincronización en directo solo está disponible para subtítulos de texto de la app; no cambia la sincronización del televisor.",
+    "be": "Жывое рэгуляванне даступнае толькі для тэкставых субтытраў праграмы; сінхранізацыя тэлевізара не змяняецца."
+  },
+  "Subtitle delay: {value}": { "es": "Retardo de subtítulos: {value}", "be": "Затрымка субтытраў: {value}" },
+  "State": { "es": "Estado", "be": "Стан" },
+  "Up Next": { "es": "A continuación", "be": "Далей" },
+  "Next episode starts in {seconds}s": {
+    "es": "El siguiente episodio empieza en {seconds}s",
+    "be": "Наступная серыя пачнецца праз {seconds} с"
+  },
+  "Loading next episode...": { "es": "Cargando el siguiente episodio...", "be": "Загрузка наступнай серыі..." },
+  "The next episode could not be loaded.": {
+    "es": "No se pudo cargar el siguiente episodio.",
+    "be": "Не ўдалося загрузіць наступную серыю."
+  },
+  "Playback failed. Stop and retry.": { "es": "Error de reproducción. Detén y vuelve a intentarlo.", "be": "Не ўдалося прайграць. Спыніце і паспрабуйце зноў." },
+  "Playback problem": { "es": "Problema de reproducción", "be": "Праблема прайгравання" },
+  "Retry playback": { "es": "Reintentar reproducción", "be": "Паўтарыць прайграванне" },
+  "Restart": { "es": "Reiniciar", "be": "Пачаць нанова" },
+  "Stop playback": { "es": "Detener reproducción", "be": "Спыніць прайграванне" },
+  "Markers": { "es": "Marcadores", "be": "Маркеры" },
+  "No markers available.": { "es": "No hay marcadores disponibles.", "be": "Маркеры недаступныя." },
+  "Back to languages": { "es": "Volver a los idiomas", "be": "Назад да моў" },
+  "No subtitle tracks are available.": {
+    "es": "No hay pistas de subtítulos disponibles.",
+    "be": "Дарожкі субтытраў недаступныя."
+  },
   "Audio and subtitles": { "es": "Audio y subtítulos", "be": "Аўдыё і субтытры" },
   "Quality and version": { "es": "Calidad y versión", "be": "Якасць і версія" },
   "Playback information": { "es": "Información de reproducción", "be": "Інфармацыя пра прайграванне" },
