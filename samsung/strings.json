@@ -78,6 +78,7 @@
   "Text size": { "es": "Tamaño del texto", "be": "Памер тэксту" },
   "Text position": { "es": "Posición del texto", "be": "Размяшчэнне тэксту" },
   "Text color": { "es": "Color del texto", "be": "Колер тэксту" },
+  "Text background": { "es": "Fondo del texto", "be": "Фон тэксту" },
   "Subtitle delay": { "es": "Retraso de subtítulos", "be": "Затрымка субтытраў" },
   "These settings apply only to the app-rendered SRT/WebVTT text overlay, not device-native or burned subtitles.": {
     "es": "Estos ajustes solo afectan a la superposición SRT/WebVTT dibujada por la aplicación, no a los subtítulos nativos del dispositivo ni incrustados en el vídeo.",

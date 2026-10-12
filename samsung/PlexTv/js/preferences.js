@@ -15,12 +15,15 @@
     var subtitleSizes = ["small", "medium", "large", "extra_large"];
     var subtitlePositions = ["low", "middle", "high"];
     var subtitleColors = ["white", "grey_85", "grey_70", "grey_55", "grey_40", "grey_28", "yellow"];
+    // Off is the LG look (outlined text); On adds a dark box behind the line.
+    var subtitleBackgrounds = ["off", "on"];
     var subtitleDelays = [-2000, -1000, -500, 0, 500, 1000, 2000];
     function validate(value) {
         var skipInterval = value && value.skipInterval !== undefined ? value.skipInterval : 10;
         var subtitleSize = value && value.subtitleSize !== undefined ? value.subtitleSize : "medium";
         var subtitlePosition = value && value.subtitlePosition !== undefined ? value.subtitlePosition : "low";
         var subtitleColor = value && value.subtitleColor !== undefined ? value.subtitleColor : "white";
+        var subtitleBackground = value && value.subtitleBackground !== undefined ? value.subtitleBackground : "off";
         var subtitleDelayMs = value && value.subtitleDelayMs !== undefined ? value.subtitleDelayMs : 0;
         var directPlay = value && value.directPlay !== undefined ? value.directPlay : "auto";
         // Builds before the Next episode choice saved only an on/off auto-play flag.
@@ -33,6 +36,7 @@
                 (value.continueAction !== undefined && ["details", "play"].indexOf(value.continueAction) === -1) ||
                 skipIntervals.indexOf(skipInterval) === -1 || subtitleSizes.indexOf(subtitleSize) === -1 ||
                 subtitlePositions.indexOf(subtitlePosition) === -1 || subtitleColors.indexOf(subtitleColor) === -1 ||
+                subtitleBackgrounds.indexOf(subtitleBackground) === -1 ||
                 subtitleDelays.indexOf(subtitleDelayMs) === -1 || directPlayModes.indexOf(directPlay) === -1) {
             throw new Error("Saved preferences are invalid. Reset app preferences in Settings.");
         }
@@ -40,7 +44,7 @@
         return { quality: value.quality, language: value.language, nextEpisode: nextEpisode,
             continueAction: value.continueAction || "details", skipInterval: skipInterval,
             subtitleSize: subtitleSize, subtitlePosition: subtitlePosition, subtitleColor: subtitleColor,
-            subtitleDelayMs: subtitleDelayMs, directPlay: directPlay };
+            subtitleBackground: subtitleBackground, subtitleDelayMs: subtitleDelayMs, directPlay: directPlay };
     }
     return {
         load: function (storage) {
@@ -53,6 +57,6 @@
         reset: function (storage) { storage.removeItem(key); },
         qualities: qualities.slice(), directPlayModes: directPlayModes.slice(),
         nextEpisodeModes: nextEpisodeModes.slice(), subtitleSizes: subtitleSizes.slice(),
-        subtitleColors: subtitleColors.slice()
+        subtitleColors: subtitleColors.slice(), subtitleBackgrounds: subtitleBackgrounds.slice()
     };
 }));

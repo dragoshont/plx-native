@@ -260,6 +260,12 @@ body.playing {
     white-space: pre-line;
     font-size: 38px;
     color: #ffffff;
+    /* The LG client's caption: a dark outline at (+-2, 0) and (0, +-2), no box behind it. */
+    text-shadow: 2px 0 0 rgba(0, 0, 0, 0.85), -2px 0 0 rgba(0, 0, 0, 0.85),
+        0 2px 0 rgba(0, 0, 0, 0.85), 0 -2px 0 rgba(0, 0, 0, 0.85);
+}
+
+.subtitle-text.subtitle-background-on {
     background: rgba(8, 8, 10, 0.78);
 }
 
