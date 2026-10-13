@@ -45,6 +45,9 @@ CARGO_INCREMENTAL=0 cargo +nightly build --release --features gles \
 dotnet publish host/Probe.csproj -c Release
 ```
 
+The host tests honor `CARGO_TARGET_DIR` when locating the ordinary library, so
+host builds can use a target directory outside the checkout.
+
 Without `--features gles`, the library exports only `plx_probe_entry`.
 `--features gles` additionally exports the graphics experiment and stage
 diagnostics. The ARM artifact is PIC ELF32 ARM EABI5 `ET_DYN`, soft-float,
@@ -62,9 +65,15 @@ closes descriptors and returns an explicit status. Error codes are:
 failures. No panic or error is a successful receipt.
 Panics terminate the entire process: ARM uses Linux `exit_group(134)` with
 an undefined-instruction fallback if the syscall unexpectedly returns, and
-macOS uses `abort()`. They never spin or unwind across the managed/native ABI.
+macOS uses `_exit(134)`. The nonzero exit remains fatal but does not raise
+`SIGABRT`, which made intentional Python ctypes regression subprocesses produce
+macOS crash reports and "Python quit unexpectedly" dialogs. `_exit` bypasses
+host finalization; it does not recover from a panic or return a successful receipt.
+Panics never spin or unwind across the managed/native ABI.
 The host tests build a separate `panic-test` library and require its compiled
-panic entry to abort within two seconds. This feature is rejected on non-macOS
+panic entry to exit with status 134 within two seconds, even with a live
+non-daemon host thread, without returning or running Python exit handlers.
+This feature is rejected on non-macOS
 targets; its test entry is absent from the ordinary and GLES package exports.
 
 Wire framing is `PLX-RUST-V1:\n` followed by the **raw 32-byte nonce**.

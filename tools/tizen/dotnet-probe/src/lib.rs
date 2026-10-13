@@ -80,8 +80,8 @@ mod os {
         fn c_connect(fd: c_int, address: *const u8, len: u32) -> c_int;
         #[link_name = "write"]
         fn c_write(fd: c_int, bytes: *const u8, size: usize) -> isize;
-        #[link_name = "abort"]
-        fn c_abort() -> !;
+        #[link_name = "_exit"]
+        fn c_exit(status: c_int) -> !;
     }
 
     pub unsafe fn open(path: *const c_char) -> isize {
@@ -103,7 +103,7 @@ mod os {
         c_write(fd as c_int, bytes.as_ptr(), bytes.len())
     }
     pub unsafe fn terminate() -> ! {
-        c_abort()
+        c_exit(134)
     }
 }
 

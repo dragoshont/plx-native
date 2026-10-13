@@ -14,8 +14,10 @@ import unittest
 class ReceiptTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        target = Path(os.environ.get(
+            "CARGO_TARGET_DIR", Path(__file__).parent / "target"))
         cls.library = ctypes.CDLL(str(
-            Path(__file__).parent / "target/release/libplx_rust_receipt.dylib"))
+            target / "release/libplx_rust_receipt.dylib"))
         cls.entry = cls.library.plx_probe_entry
         cls.entry.argtypes = [ctypes.c_char_p]
         cls.entry.restype = ctypes.c_int
@@ -55,12 +57,20 @@ class ReceiptTests(unittest.TestCase):
             library = Path(target) / "release/libplx_rust_receipt.dylib"
             result = subprocess.run([
                 sys.executable, "-c",
-                "import ctypes, resource, sys; "
-                "resource.setrlimit(resource.RLIMIT_CORE, (0, 0)); "
-                "ctypes.CDLL(sys.argv[1]).plx_probe_test_panic()",
+                "import atexit, ctypes, os, sys, threading; "
+                "panic = ctypes.CDLL(sys.argv[1]).plx_probe_test_panic; "
+                "panic.argtypes = []; panic.restype = None; "
+                "atexit.register(lambda: os.write(1, b'atexit-ran\\n')); "
+                "worker = threading.Thread(target=threading.Event().wait); "
+                "worker.start(); assert worker.is_alive(); "
+                "os.write(1, b'worker-ready\\n'); "
+                "panic(); "
+                "os.write(1, b'panic-returned\\n')",
                 str(library),
             ], capture_output=True, timeout=2)
-            self.assertEqual(result.returncode, -6)
+            self.assertEqual(result.returncode, 134)
+            self.assertEqual(result.stdout, b"worker-ready\n")
+            self.assertEqual(result.stderr, b"")
 
     def test_packaged_library_has_no_panic_test_export(self):
         self.assertFalse(hasattr(self.library, "plx_probe_test_panic"))
