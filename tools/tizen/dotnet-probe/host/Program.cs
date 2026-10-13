@@ -51,10 +51,41 @@ sealed class Probe : OpenTK.Platform.Tizen.TizenGameApplication
         };
     }
 
-    static void Main(string[] args)
+    internal static void RunGraphics(string[] args)
     {
         using (var app = new Probe { GLMajor = 2, GLMinor = 0 })
             app.Run(args);
+    }
+}
+
+static class Launcher
+{
+    [DllImport("libplx_rust_receipt.so", CallingConvention = CallingConvention.Cdecl)]
+    static extern int plx_probe_stage(string path, uint stage);
+
+    static void Main(string[] args)
+    {
+        string path = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(typeof(Launcher).Assembly.Location), "..", "res", "receipt.bin"));
+        plx_probe_stage(path, 99);
+        try
+        {
+            Start(args);
+        }
+        catch (Exception error)
+        {
+            uint stage = error is System.IO.FileNotFoundException ? 201u :
+                error is TypeLoadException ? 202u : error is BadImageFormatException ? 203u :
+                error is MissingMethodException ? 204u : 205u;
+            plx_probe_stage(path, stage);
+            Console.Error.WriteLine("PLX graphics startup failed: " + error);
+        }
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    static void Start(string[] args)
+    {
+        Probe.RunGraphics(args);
     }
 }
 #else
