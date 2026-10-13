@@ -94,6 +94,18 @@ sealed class Probe : CoreUIApplication
     [DllImport("libplx_rust_receipt.so", CallingConvention = CallingConvention.Cdecl)]
     static extern int plx_probe_entry(string path);
 
+#if WINDOW_CONTROL
+    [DllImport("libplx_rust_receipt.so", CallingConvention = CallingConvention.Cdecl)]
+    static extern int plx_probe_stage(string path, uint stage);
+
+    void Stage(uint stage)
+    {
+        int result = plx_probe_stage(DirectoryInfo.Resource + "receipt.bin", stage);
+        if (result != 0)
+            throw new InvalidOperationException("Rust window stage failed: " + result);
+    }
+#endif
+
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -113,6 +125,22 @@ sealed class Probe : CoreUIApplication
             }
             Console.WriteLine("PLX managed-only control sent");
 #else
+#if WINDOW_CONTROL
+            Stage(300);
+            var window = new ElmSharp.Window("PlxRustWindowProbe");
+            try
+            {
+                Stage(301);
+                window.Resize(320, 240);
+                window.Show();
+                Stage(302);
+            }
+            finally
+            {
+                window.Unrealize();
+            }
+            Stage(303);
+#endif
             int result = plx_probe_entry(DirectoryInfo.Resource + "receipt.bin");
             Console.WriteLine("PLX Rust entry result: " + result);
 #endif

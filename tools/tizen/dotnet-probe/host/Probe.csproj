@@ -17,4 +17,7 @@
   <PropertyGroup Condition="'$(GraphicsProbe)' == 'true'">
     <DefineConstants>$(DefineConstants);GRAPHICS_PROBE</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(WindowControl)' == 'true'">
+    <DefineConstants>$(DefineConstants);WINDOW_CONTROL</DefineConstants>
+  </PropertyGroup>
 </Project>
