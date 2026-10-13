@@ -7,7 +7,9 @@
 > LG binary, shared renderer, decoder backend or finished client. The newer
 > evidence supersedes Samsung-wide interpretations of the historical verdict
 > below; the 2017 target still lacks a proven Rust route. See the
-> [native probe and device register](../tools/tizen/dotnet-probe/README.md).
+> [native probe and device register](../tools/tizen/dotnet-probe/README.md) and
+> [the bounded runtime experiments report](samsung-rust-runtime-results.md)
+> for attempts, verified results, unsupported runtimes and unresolved routes.
 
 > **Scope update 2026-10-09:** the floor is now **2017 (Tizen 3.0, Chromium M47)**, set by the oldest
 > sets the owner has (a 2017 MU series). 2017 is the hardest tier: M47 predates much of ES2015+, so the
