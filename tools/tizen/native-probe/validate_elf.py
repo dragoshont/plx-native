@@ -98,6 +98,8 @@ def validate_elf(path_or_bytes, verbose=True):
         raise ElfValidationError(f"Expected ET_EXEC (2), got {e_type}")
     if e_machine != 40:
         raise ElfValidationError(f"Expected EM_ARM (40), got {e_machine}")
+    if e_version != 1:
+        raise ElfValidationError(f"Expected header EV_CURRENT (1), got {e_version}")
 
     # EABI version check: top byte of e_flags
     eabi_ver = (e_flags >> 24) & 0xFF
@@ -145,6 +147,8 @@ def validate_elf(path_or_bytes, verbose=True):
 
         # Check alignment consistency
         if p_align > 1:
+            if p_align & (p_align - 1):
+                raise ElfValidationError(f"PH {i}: Alignment is not a power of two")
             if (p_vaddr % p_align) != (p_offset % p_align):
                 raise ElfValidationError(f"PH {i}: Alignment error: vaddr ({hex(p_vaddr)}) % align ({p_align}) != offset ({hex(p_offset)}) % align ({p_align})")
 
@@ -209,6 +213,8 @@ def validate_elf(path_or_bytes, verbose=True):
     # 6. Parse Section Headers & Verify Code Section Mapping
     sections = []
     shstrtab = b""
+    if e_shnum == 0:
+        raise ElfValidationError("Probe requires section headers for code-entry validation")
     if e_shnum > 0:
         # Load shstrtab
         shstr_off = e_shoff + e_shstrndx * e_shentsize
@@ -254,6 +260,9 @@ def validate_elf(path_or_bytes, verbose=True):
 
         if code_section is None:
             raise ElfValidationError(f"e_entry ({hex(e_entry)}) does not reside inside any allocated executable section (SHF_ALLOC | SHF_EXECINSTR)")
+        section_entry_offset = code_section["offset"] + actual_entry_vaddr - code_section["addr"]
+        if code_section["type"] == 8 or section_entry_offset != entry_file_offset:
+            raise ElfValidationError("Executable section and PT_LOAD entry file mappings disagree")
 
         if verbose:
             print(f"  Entry {hex(e_entry)} resolves to section '{code_section['name']}' at offset {hex(entry_file_offset)}")
@@ -261,7 +270,11 @@ def validate_elf(path_or_bytes, verbose=True):
         # 7. Check Symbol Table for _start
         for sec in sections:
             if sec["type"] == 2: # SHT_SYMTAB
+                if sec["entsize"] != 16 or sec["size"] % 16:
+                    raise ElfValidationError("Invalid symbol table entry size")
                 strtab_sec = sections[sec["link"]] if sec["link"] < len(sections) else None
+                if strtab_sec is None or strtab_sec["type"] != 3:
+                    raise ElfValidationError("Symbol table does not link to a string table")
                 if strtab_sec and strtab_sec["offset"] + strtab_sec["size"] <= flen:
                     strtab = data[strtab_sec["offset"]:strtab_sec["offset"] + strtab_sec["size"]]
                     sym_entsize = sec["entsize"] if sec["entsize"] > 0 else 16
@@ -274,6 +287,8 @@ def validate_elf(path_or_bytes, verbose=True):
                             if sym_name == "_start":
                                 if (st_value & ~1) != actual_entry_vaddr:
                                     raise ElfValidationError(f"Symbol _start value ({hex(st_value)}) does not match e_entry ({hex(e_entry)})")
+                                if st_value != e_entry or st_shndx != code_section["index"]:
+                                    raise ElfValidationError("Symbol _start mode or section does not match entry")
                                 if verbose:
                                     print(f"  Confirmed symbol _start matches entry: {hex(st_value)} (size={st_size}) in section index {st_shndx}")
 

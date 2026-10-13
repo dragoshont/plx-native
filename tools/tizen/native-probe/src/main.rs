@@ -11,11 +11,9 @@ const FD_STDOUT: usize = 1;
 #[inline(always)]
 unsafe fn sys_exit(code: usize) -> ! {
     asm!(
-        "mov r7, {sys}",
-        "mov r0, {code}",
         "svc #0",
-        sys = in(reg) SYS_EXIT,
-        code = in(reg) code,
+        in("r7") SYS_EXIT,
+        in("r0") code,
         options(noreturn)
     );
 }
@@ -24,17 +22,11 @@ unsafe fn sys_exit(code: usize) -> ! {
 unsafe fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let ret: isize;
     asm!(
-        "mov r7, {sys}",
-        "mov r0, {fd}",
-        "mov r1, {buf}",
-        "mov r2, {len}",
         "svc #0",
-        sys = in(reg) SYS_WRITE,
-        fd = in(reg) fd,
-        buf = in(reg) buf,
-        len = in(reg) len,
-        lateout("r0") ret,
-        lateout("r7") _,
+        in("r7") SYS_WRITE,
+        inlateout("r0") fd => ret,
+        in("r1") buf,
+        in("r2") len,
         options(nostack)
     );
     ret

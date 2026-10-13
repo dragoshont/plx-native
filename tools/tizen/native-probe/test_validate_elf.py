@@ -142,6 +142,33 @@ def run_tests():
     struct.pack_into("<I", data, 24, entry + 4)
     mutations.append(("Symbol _start Mismatch", data, "Symbol _start value (0x20118) does not match e_entry"))
 
+    data = bytearray(valid_data)
+    struct.pack_into("<I", data, 20, 0)
+    mutations.append(("Invalid Header Version", data, "Expected header EV_CURRENT"))
+
+    data = bytearray(valid_data)
+    struct.pack_into("<I", data, e_phoff + 28, 3)
+    mutations.append(("Non-Power-of-Two Alignment", data, "Alignment is not a power of two"))
+
+    data = bytearray(valid_data)
+    struct.pack_into("<H", data, 48, 0)
+    mutations.append(("Absent Code Section Table", data, "Probe requires section headers"))
+
+    shoff = struct.unpack_from("<I", valid_data, 32)[0]
+    shentsize, shnum = struct.unpack_from("<HH", valid_data, 46)
+    for index in range(shnum):
+        section_offset = shoff + index * shentsize
+        section_type, flags = struct.unpack_from("<II", valid_data, section_offset + 4)
+        if flags & 6 == 6:
+            data = bytearray(valid_data)
+            offset = struct.unpack_from("<I", data, section_offset + 16)[0]
+            struct.pack_into("<I", data, section_offset + 16, offset + 4)
+            mutations.append(("Conflicting Section Entry Mapping", data, "entry file mappings disagree"))
+        if section_type == 2:
+            data = bytearray(valid_data)
+            struct.pack_into("<I", data, section_offset + 36, 1)
+            mutations.append(("Short Symbol Table Entries", data, "Invalid symbol table entry size"))
+
     # Run mutations
     passed = 0
     total = len(mutations)

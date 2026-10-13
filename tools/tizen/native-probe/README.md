@@ -5,7 +5,7 @@ This artifact documents a **HOST-ONLY** investigation into cross-compiling an is
 
 ### Explicit Negative Boundaries:
 1. **NO Device Execution Claimed**: This probe proves host cross-compilation and ELF construction for ARMv7 Linux; it does **not** prove runtime execution or Tizen OS startup compatibility.
-2. **NO Retail TV Native Route Established**: Auditing retail 2017 Tizen 3.0 (UE55MU6172) confirmed that SDB exposes only `wascmd` (`0 vd_appinstall`), which manages web applications (`app_type = 2`). All 26 third-party apps on the set run inside the Chromium web runtime. There is no established standalone retail 2017 native TPK route or verified Partner workaround.
+2. **NO Retail TV Native Route Established**: The worker observed web-app installation through `0 vd_appinstall` on the 2017 Tizen 3.0 UE55MU6172. A hand-built TPK containing an invalid executable failed with code 110; this does not prove that valid native packages are prohibited. There is no established standalone retail 2017 native TPK route or verified Partner workaround.
 3. **NO Browser / WebAssembly / NaCl Substitution**: Upstream's contract requires native execution with GLES2 and direct widgets. Historical NaCl (`.nexe`/`.nmf`) packaged inside WGT containers is browser-hosted and is explicitly excluded from this native architecture contract.
 4. **NO Speculative Platform Adapters**: Hypothetical window/surface bindings (`elm_win` or raw Wayland) are documented as speculative interfaces pending native runtime availability, not implemented or proven.
 
@@ -20,7 +20,7 @@ This artifact documents a **HOST-ONLY** investigation into cross-compiling an is
 ## Upstream Module Reuse & Dependency Seam Map (Grounded in Source)
 
 ### Tier A: Direct Reuse Candidates (Platform-Agnostic Pure Rust)
-These modules contain pure Rust layout math, state engines, and theme tokens with no OS or webOS FFI:
+These are source-level reuse candidates, not modules compiled into the probe. Their complete crate dependency closures still need validation against an established runtime:
 1. **Geometry & Crop**:
    - `rust-modules/gfx/src/gfx/geom.rs` (Lines 16–58):
      - `Crop` (`Centre`, `Headshot`), `Crop::top_share`.
@@ -71,11 +71,11 @@ These modules compile standard OpenGL ES 2.0 / EGL calls, but depend on a native
      - Separates drawable resolution from physical 4K panel resolution.
    - `rust-modules/platform/src/tv/window.rs` (Lines 1–60):
      - Drives platform bus pump (`pump_bus`), window binding (`bind_window`), opaque region routing (`opaque_route`), and frame presentation probes.
-     - **Hypothetical Samsung Contract**: In a native environment, requires wrapping native window/surface creation (e.g. hypothetical EGL / Wayland / Enlightenment surface hooks). *Note: No such native surface API is accessible on retail 2017 Smart TVs without root.*
+     - **Hypothetical Samsung Contract**: In a native environment, requires wrapping native window/surface creation. EGL / Wayland / Enlightenment are investigation candidates, not established APIs accessible to this application on this TV. No root requirement has been proven.
 2. **Application Lifecycle & OS Daemon**:
    - `rust-modules/src/app/boot.rs` & `rust-modules/platform/src/webos.rs`:
      - Specific to webOS Luna Service bus (`luna-send`, `PMLog`, `LS2` handles).
-     - **Hypothetical Samsung Contract**: Would require Tizen native application lifecycle (`ui_app_lifecycle_callback_s`), currently blocked by retail package installer restrictions.
+     - **Hypothetical Samsung Contract**: Needs a lifecycle adapter for an established runtime. Generic Tizen native lifecycle APIs do not establish retail TV support; installation and runtime applicability remain unresolved.
 3. **Hardware Playback Seam**:
    - `src/starfish.c` & `rust-modules/media/`:
      - LG webOS StarfishMediaAPIs / ACB hardware video plane composition.
@@ -95,8 +95,23 @@ CARGO_INCREMENTAL=0 cargo +nightly build \
   --release
 ```
 
-Run tightened ELF validator and complete 16-case regression suite:
+Run the ELF validator and malformed-binary regression suite:
 ```bash
 python3 -O validate_elf.py target/armv7-unknown-linux-gnueabi/release/rust-armv7-probe
 python3 -O test_validate_elf.py
 ```
+
+The validator checks the unstripped probe's structural contract, not arbitrary ARM
+program semantics. A passing ELF result does not mean the code executed, that its
+syscalls are allowed on a TV, or that a Tizen package is valid.
+
+## Deployment references
+
+- [Samsung Tizen profile documentation](https://github.com/Samsung/tizen-docs/blob/master/docs/application/profiles/index.md)
+  lists TV web and .NET application types. This current statement is not proof of
+  the exact policy on 2017 firmware.
+- [Samsung NaCl build documentation](https://developer.samsung.com/smarttv/develop/extension-libraries/nacl/managing-nacl-projects/building-nacl-projects.html)
+  describes ARMv7 binaries and browser-consumed manifests. That browser-hosted
+  route does not satisfy the standalone architecture requested here.
+- [Samsung general specifications](https://developer.samsung.com/smarttv/develop/specifications/general-specifications.html)
+  documents .NET TV support beginning with Tizen 4.0, not this Tizen 3.0 target.
