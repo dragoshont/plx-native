@@ -8,6 +8,9 @@ changed.
 The user subsequently chose hardware acceleration and optimization of the
 existing Samsung Plx app instead of a Rust port. Rust/.NET/NaCl porting is now
 parked; its results below are retained, not a reason to require a rewrite.
+The subsequent [current-app acceleration assessment](samsung-acceleration-assessment.md)
+demonstrates working WebGL and compositor promotion on the Q80C without Rust.
+It does not establish the separate native Rust GLES surface or a product speedup.
 
 ## What can be stated with confidence
 

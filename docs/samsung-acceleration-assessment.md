@@ -133,6 +133,14 @@ remain in private session storage. No addresses, DUIDs, credentials, household
 content or certificate files are published. Only the owned probe/forward was
 removed; no SDB restart, IDE kill or other television operation was needed.
 
+The final absence/preserved-production listing was checked during teardown,
+but its raw response was not retained. The saved result contains the cleanup
+assertions and successful full-ID uninstall transcript; the earlier failed
+removal listing must not be cited as the final state. Parent verification
+independently matched the signed archive and committed probe bytes, release CSS,
+WebGL pixel/driver result, layer reasons and bounded ABBA records. It did not
+perform another live production/probe query or claim GPU-counter evidence.
+
 ## Primary references
 
 - [Samsung Web engine specifications](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html): current Tizen/Chromium table and Graphics/WebGL feature support, retrieved 2026-10-13.
