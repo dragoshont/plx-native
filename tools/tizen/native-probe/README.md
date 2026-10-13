@@ -22,7 +22,7 @@ This artifact documents a **HOST-ONLY** investigation into cross-compiling an is
 ### Tier A: Direct Reuse Candidates (Platform-Agnostic Pure Rust)
 These are source-level reuse candidates, not modules compiled into the probe. Their complete crate dependency closures still need validation against an established runtime:
 1. **Geometry & Crop**:
-   - `rust-modules/gfx/src/gfx/geom.rs` (Lines 16–58):
+   - `rust-modules/gfx/src/gfx/geom.rs`:
      - `Crop` (`Centre`, `Headshot`), `Crop::top_share`.
      - `Rect` (`Rect::new`, `Rect::FULL` [1920x1080], `Rect::cover_uv`, `Rect::inset`).
      - `Zoom`: 2D zoom factor calculations.
@@ -49,18 +49,18 @@ These modules compile standard OpenGL ES 2.0 / EGL calls, but depend on a native
 1. **GLES2 Drawing Engine & Shaders**:
    - `rust-modules/gfx/src/gfx.rs` (Lines 1–90):
      - Shader programs compiled via embedded GLSL:
-       - `shaders/fs_src.frag` / vertex shader: Textured RGBA card rendering.
-       - `shaders/fs_glass.frag`: SDF rounded rectangles, focus rings, ambient lighting.
-       - `shaders/fs_flat.frag`: 4-corner ambient gradient.
-     - Draw primitives: `draw_rect`, `draw_rrect`, `draw_focus_ring`, `draw_tex`.
+       - `shaders/fs_src.frag` / `vs_src.vert`: Main textured/shape rendering.
+       - `shaders/fs_glass.frag`: Glass material rendering.
+       - `shaders/fs_flat.frag`: Uniform-color fill, not a gradient.
+     - Draw primitives include `draw_rect`, `draw_rrect`, `draw_tex`.
      - **Required Platform Glue**: Standard EGL context initialization (`eglGetDisplay`, `eglCreateWindowSurface`, `eglMakeCurrent`).
 2. **Text Rasterization**:
    - `rust-modules/gfx/src/text.rs`:
-     - Text glyph quad atlas management and rendering into GLES2 textures.
-     - **Required Platform Glue**: Font rasterizer. Upstream uses `SDL2_ttf` / FreeType. On Samsung TV, requires either an embedded FreeType library or system font rasterizer.
+     - SDL2_ttf font cache and text-texture LRU, with GLES rendering.
+     - **Required Platform Glue**: Existing calls include `TTF_RenderUTF8_Blended` and `SDL_FreeSurface`. FreeType alone is not a drop-in replacement for the SDL2_ttf/SDL surface contract.
 3. **Image Decoding**:
    - `rust-modules/gfx/src/img.rs`:
-     - Pure Rust JPEG/PNG image decoding via `image` crate (replaces legacy `stb_image`). Directly portable.
+     - `img_decode_owned` uses the Rust `image` crate. The module also includes C `malloc`/`free`, logging and GL upload paths, so the whole module is not pure Rust or proven directly portable.
 
 ---
 
