@@ -43,3 +43,6 @@ probe absence and unchanged production registration. Release both leases.
 Transport failure is BLOCKED, not a successful graphics fallback. These
 cases do not establish Settings-screen pixels, product speedup, frame rate,
 video decoding, panel/video-plane composition or native GLES access.
+
+See the [dated named-device register](../../../docs/samsung-graphics-device-matrix.md)
+for observed results and blocked targets.
