@@ -1,0 +1,6 @@
+/target/
+/host/bin/
+/host/obj/
+/host/lib/
+/host/res/receipt.bin
+*.tpk

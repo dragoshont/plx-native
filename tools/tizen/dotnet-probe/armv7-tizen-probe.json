@@ -1,0 +1,18 @@
+{
+  "abi": "eabi",
+  "arch": "arm",
+  "data-layout": "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
+  "dynamic-linking": true,
+  "executables": true,
+  "features": "+v7,+thumb2,+soft-float,-neon",
+  "linker": "rust-lld",
+  "linker-flavor": "gnu-lld",
+  "llvm-floatabi": "soft",
+  "llvm-target": "armv7-unknown-linux-gnueabi",
+  "max-atomic-width": 64,
+  "os": "linux",
+  "panic-strategy": "abort",
+  "position-independent-executables": true,
+  "relocation-model": "pic",
+  "target-pointer-width": 32
+}
