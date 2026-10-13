@@ -44,8 +44,10 @@ with zipfile.ZipFile(args.package) as archive:
     app.set("package", "PlxBench01")
     manifest.find("{http://www.w3.org/ns/widgets}name").text = "PlxGraphicsBenchmark"
     for child in list(manifest):
-        if child.tag.endswith(("access", "privilege", "metadata")):
+        if child.tag.endswith(("access", "metadata")) or child.tag.endswith("privilege") and child.get("name") == "http://tizen.org/privilege/internet":
             manifest.remove(child)
+    policy = ET.SubElement(manifest, "{http://tizen.org/ns/widgets}content-security-policy")
+    policy.text = "default-src 'self' data: blob:; script-src 'self'; connect-src 'none'; object-src 'none'"
     ET.register_namespace("", "http://www.w3.org/ns/widgets")
     ET.register_namespace("tizen", "http://tizen.org/ns/widgets")
     ET.ElementTree(manifest).write(args.output / "config.xml", encoding="utf-8", xml_declaration=True)

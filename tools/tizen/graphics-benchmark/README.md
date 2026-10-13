@@ -17,6 +17,9 @@ in-memory object and external network APIs explicitly refuse requests.
 After product modules load, the Plex adapter supplies only original
 synthetic metadata and local PNG Blobs; playback/account operations refuse.
 No Internet privilege or external-access rule is included.
+The public API declarations used by the unchanged modules remain in the
+manifest for the SDK audit; CSP additionally denies every network connection
+and embedded object, while adapters prohibit any player construction.
 
 The real manual-connect, Settings toggle, featured-title button, Detail,
 Back and D-pad navigation handlers execute. Settings is activated by a
