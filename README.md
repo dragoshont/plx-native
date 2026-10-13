@@ -6,7 +6,7 @@ An independently maintained, unofficial Plex client for Samsung TVs. **No root r
 
 The UI is inspired by [Gleb Linnik's LG client](https://github.com/GLinnik21/plx-native).
 
-The implementation uses **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**, not a standalone native Rust application. Platform acceleration does not mean all application work runs on the GPU; the optional WebGL artwork path remains off by default because it did not improve the measured workload.
+The implementation uses **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**.
 
 **[Install on Samsung](docs/install-samsung.md)** · **[Samsung releases](https://github.com/dragoshont/plx-native/releases?q=samsung-v)** · **[Report a Samsung issue](https://github.com/dragoshont/plx-native/issues)** · **[Tizen TV Builder toolkit](https://github.com/dragoshont/tizen-tv-builder)**
 
