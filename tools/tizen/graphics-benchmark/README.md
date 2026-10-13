@@ -83,7 +83,7 @@ production Plx:
 python3 "$KIT/tools/tizen.py" benchmark run \
   --endpoint http://127.0.0.1:PORT --target PAGE_ID --device-alias tv-xxxxxx \
   --app PlxBench01.Probe --contract /ABS/PRIVATE_STAGE-descriptor.json \
-  --warmup 0 --samples 1 --timeout 240 \
+  --warmup 0 --samples 1 --timeout 120 \
   --authorized --reviewed-account-free --output /ABS/PRIVATE/raw.json
 python3 "$KIT/tools/tizen.py" benchmark validate /ABS/PRIVATE/raw.json
 python3 "$KIT/tools/tizen.py" benchmark summarize /ABS/PRIVATE/raw.json
@@ -91,7 +91,12 @@ python3 "$KIT/tools/tizen.py" benchmark summarize /ABS/PRIVATE/raw.json
 
 `KIT` names the Tizen TV Builder checkout containing its benchmark command;
 `PORT`, `PAGE_ID`, alias and paths must come from the verified owned session.
-Consult the toolkit's benchmark documentation for its version/availability.
+The command is available in toolkit commit
+[`e09c9f345170c7ada8309fc9be95ae8ae38e85e8`](https://github.com/dragoshont/tizen-tv-builder/commit/e09c9f345170c7ada8309fc9be95ae8ae38e85e8)
+on `dragoshont-reusable-tv-benchmark-toolkit`; it is not yet a default-branch or
+published-plugin feature. Use a separate checkout pinned to that revision if
+your installed toolkit does not have the command. The overall timeout is
+bounded to 120 seconds; slower workloads fail rather than silently extending it.
 The caller owns inspector-forward creation/removal and final app cleanup;
 the benchmark command does not replace those steps or prove a user-supplied
 adapter is safe.

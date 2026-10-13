@@ -15,6 +15,11 @@ remote, detach the fork, delete history or grant use of upstream trademarks.
 The upstream author's latest message has not been reproduced or interpreted
 as legal permission in this record.
 
+The GitHub repository description now identifies an independently maintained
+Samsung Web/AVPlay client and credits the design inspiration. A fresh API
+read still reports `fork: true`, parent `GLinnik21/plx-native`, default branch
+`main`; no external rename, detachment or branch rewrite was performed.
+
 ## Compatibility during transition
 
 Keep these stable until an explicit migration is designed and accepted:
@@ -95,10 +100,30 @@ rules: original samples, labelled warmups, OFF/ON ordering, model/source
 binding, absent counters never represented as zero, and no callback timing
 reported as panel FPS.
 
-The toolkit implementation is being delivered separately; until its tested
-commit and commands are recorded here, a README link is not proof that the
-benchmark is installed in the kit. Do not copy the GPL workload into an
-MIT-only module or remove its provenance to claim reuse.
+The toolkit implementation is committed and pushed at
+[`e09c9f345170c7ada8309fc9be95ae8ae38e85e8`](https://github.com/dragoshont/tizen-tv-builder/commit/e09c9f345170c7ada8309fc9be95ae8ae38e85e8)
+on `dragoshont-reusable-tv-benchmark-toolkit`. Its real commands are
+`tizen.py benchmark run`, `benchmark validate` and `benchmark summarize`.
+This is feature-branch delivery, not a default-branch merge or plugin release.
+
+It attaches only to an explicitly identified existing inspector page, verifies
+the supplied adapter contract, takes the toolkit's canonical/target leases,
+collects bounded ABBA requests and retains raw observations. The caller still
+owns fixture deployment and inspector-forward/app cleanup. It never installs
+or launches production Plx.
+
+The app's GPL `toolkit-adapter.js` bridges its existing exact-release workload
+to that protocol; the staged descriptor binds the public 0.2.7 package and
+fixture source. All four product blocks and cancellation run in host tests.
+The toolkit validator accepted the actual app descriptor. Independent parent
+checks reran 16 benchmark tests plus the MIT fixture test and recomputed the
+offline fixture summary: warmup excluded, n=16 per mode, median 2.5, P95 4;
+unknown GPU counters remain null rather than zero. The child also reported its
+full 448-test Python suite passing on the clean committed tree.
+
+The original device performance results were not rerun through this newly
+integrated toolkit interface. Do not describe host protocol/summary checks as
+new TV acceptance. No GPL app implementation was relicensed as MIT.
 
 ## Remaining external migration decisions
 

@@ -31,7 +31,7 @@ These are implemented features, not a promise that every codec or workflow works
 
 **The existing interface already uses accelerated browser compositing.** Home movement uses `translate3d`; our device probes observed compositor promotion and accelerated scrolling on the Q80C. GPU compositing moves and combines UI layers; it does not mean all JavaScript, layout, image decoding or painting runs on the GPU.
 
-Samsung's Web runtime also provides **WebGL**, the browser's OpenGL ES-based drawing API. We verified real shader/texture draws and pixel readback on the Q80C, QN70F, MU6172 and one RU7092. This is hardware-backed graphics access through the browser, not unrestricted native EGL/GLES access like a native application.
+Samsung's Web runtime also provides **WebGL**, the browser's OpenGL ES-based drawing API. We verified real shader/texture draws and pixel readback on the Q80C, QN70F, MU6172 and one RU7092, with driver-reported Mali backends. This is browser graphics access, not unrestricted native EGL/GLES access; GPU counters and execution time were not measured.
 
 0.2.7 adds **Settings → Graphics → New graphics enhancements**, **OFF by default**. It selects an optional WebGL renderer for Home/Detail background artwork, with a shared backend, resource limits and automatic fallback. It does not turn the whole TV's GPU on or off; existing Home compositing and AVPlay remain unchanged.
 
@@ -69,7 +69,7 @@ Two distinct RU7092 devices were observed: four model generations, **five device
 
 Our [reproducible Plx benchmark](tools/tizen/graphics-benchmark/README.md) uses the exact released app code with inert Plex adapters, synthetic images and in-memory settings. It repeats Home, Detail and navigation work in **OFF / ON / ON / OFF** order, retains warmups and original samples, and separates main-thread/API timing from graphics correctness.
 
-Reusable measurement tooling belongs in Tizen TV Builder; the GPL-licensed Plx workload and its product-specific adapters belong here. This keeps the toolkit useful for other TV apps without copying this app's screens, credentials or business logic into it. See [the repository transition record](docs/samsung-project-transition.md) for delivery status and licensing boundaries.
+**The reusable benchmark is now implemented in the toolkit:** [`benchmark run`, `validate` and `summarize`](https://github.com/dragoshont/tizen-tv-builder/blob/e09c9f345170c7ada8309fc9be95ae8ae38e85e8/docs/benchmark.md). It is available at that pinned commit on `dragoshont-reusable-tv-benchmark-toolkit`, not yet in the toolkit's default branch or a newly released plugin. The GPL-licensed Plx workload stays here and connects through a tested adapter. This keeps the MIT toolkit useful for other TV apps without copying this app's screens, credentials or business logic into it. See [the transition record](docs/samsung-project-transition.md) for delivery and licensing boundaries.
 
 ## Development and deployment
 
