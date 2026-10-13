@@ -35,6 +35,12 @@ this owned probe on an authorized target. A fresh crypto-generated challenge is
 passed to the actual Rust export. JavaScript displays and retains the returned
 result in `window.rustWasmReceipt`; it does not compute the response.
 
+Use the official Tizen CLI to package the reviewed stage directly. The installed
+`tizen-tv-builder` 0.1.0 package wrapper excludes `.wasm` from its staging
+allowlist, so it would omit the executable module. Inspect the resulting WGT
+and verify that `probe.wasm` matches the compiled artifact before installation.
+Do not modify the installed toolkit to bypass this limitation.
+
 Capture that object through an ordinary authorized Web Inspector session and
 independently check the response against the packaged Rust source. Retain
 source/package hashes, current firmware, challenge/result and cleanup evidence.
