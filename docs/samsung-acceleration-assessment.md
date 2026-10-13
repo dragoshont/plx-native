@@ -4,6 +4,11 @@
 Its Home already requests compositor-based movement. No additional product
 speedup was established, so this investigation changes no production code.**
 
+The subsequent user-requested [optional graphics backend](samsung-optional-graphics.md)
+adds an off-by-default WebGL artwork path with automatic fallback. It preserves
+existing acceleration and does not turn these assessment measurements into a
+claim that the new path is faster.
+
 ## Exact product and target
 
 Private companion metadata maps **livingroom tv** to **QE65Q80CATXXH**, a 2023

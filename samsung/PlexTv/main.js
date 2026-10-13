@@ -70,8 +70,35 @@
     var subtitleSearchGeneration = 0;
     var preferences = { quality: "original", nextEpisode: "countdown", language: "en", continueAction: "details",
         skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low", subtitleColor: "white",
-        subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto" };
+        subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto", enhancedGraphics: false };
     var preferenceError = "";
+    var graphics = null;
+    var graphicsFailure = false;
+
+    function graphicsFallback() {
+        graphicsFailure = true;
+        setStatus("New graphics enhancements are unavailable here. Existing graphics remain active.", true);
+    }
+
+    function clearGraphics() {
+        if (graphics) { graphics.clear(); }
+    }
+
+    function presentBackdrop(image) {
+        if (!preferences.enhancedGraphics || !currentClient || document.hidden ||
+                !screen.contains(image) || image.getAttribute("data-artwork-state") !== "loaded") { return; }
+        if (!window.PlexGraphics) { graphicsFallback(); return; }
+        try {
+            if (!graphics) {
+                graphics = window.PlexGraphics.create({ document: document, onError: graphicsFallback });
+                graphics.setEnabled(true);
+            }
+            graphics.present(image);
+        } catch (error) {
+            clearGraphics();
+            graphicsFallback();
+        }
+    }
     function directPlayProfile() {
         if (preferences.directPlay === "off" || !window.PlexCapabilities) { return null; }
         return window.PlexCapabilities.detect({ userAgent: navigator.userAgent,
@@ -162,6 +189,7 @@
     }
 
     function resetImages() {
+        clearGraphics();
         imageGeneration += 1;
         imageQueue = [];
         imageDecodes.slice().forEach(function (cancel) { cancel(); });
@@ -1158,6 +1186,7 @@
             features.forEach(function () { dots.appendChild(element("span", "feature-dot")); });
             hero.appendChild(dots);
             function updateFeature() {
+                clearGraphics();
                 featured = features[featuredIndex];
                 title.textContent = featured.grandparentTitle || featured.title;
                 meta.textContent = [translate(featured.type === "episode" || featured.type === "show" ? "TV Shows" : "Movie"),
@@ -1169,8 +1198,9 @@
                 nextArt.alt = "";
                 hero.replaceChild(nextArt, art);
                 art = nextArt;
+                var loadedArt = nextArt;
                 queueImage(art, currentClient, featured.art || featured.grandparentArt || featured.thumb,
-                    { width: 1280, height: 720 }, 4 * 1024 * 1024, null, true);
+                    { width: 1280, height: 720 }, 4 * 1024 * 1024, function () { presentBackdrop(loadedArt); }, true);
                 Array.prototype.forEach.call(dots.children, function (dot, index) {
                     dot.className = "feature-dot" + (index === featuredIndex ? " selected" : "");
                 });
@@ -1717,6 +1747,7 @@
             screen.appendChild(backdrop);
             queueImage(backdrop, client, backdropPath, { width: 1280, height: 720 }, 4 * 1024 * 1024, function () {
                 backdrop.className = "detail-backdrop detail-backdrop-ready";
+                presentBackdrop(backdrop);
             }, true);
         }
         screen.appendChild(element("div", "detail-scrim"));
@@ -3740,6 +3771,27 @@
                 if (savePreferences()) { backView(); }
             });
         }, false, "language");
+        if (accountToken || currentClient) {
+            var graphicsSettings = group(menu, translate("Graphics"), "settings-group");
+            var graphicsToggle = button(graphicsSettings, translate("New graphics enhancements: {state}", {
+                state: translate(preferences.enhancedGraphics ? "On" : "Off")
+            }), function () {
+                var previous = preferences.enhancedGraphics;
+                preferences.enhancedGraphics = !previous;
+                if (!savePreferences()) { preferences.enhancedGraphics = previous; return; }
+                graphicsFailure = false;
+                if (graphics) { graphics.setEnabled(preferences.enhancedGraphics && !!currentClient); }
+                openSettings();
+            }, false, "settings");
+            graphicsToggle.setAttribute("aria-pressed", String(preferences.enhancedGraphics));
+            graphicsSettings.appendChild(element("p", "help-text", translate(
+                "Optional WebGL artwork rendering. Off by default. Existing Home acceleration and AVPlay stay enabled. Unsupported features automatically use the existing renderer.")));
+            graphicsSettings.appendChild(element("p", "help-text", translate(graphicsFailure ?
+                "New graphics enhancements are unavailable here. Existing graphics remain active." :
+                preferences.enhancedGraphics ?
+                    "Support is checked when artwork loads. This setting does not force hardware video decoding or promise faster playback." :
+                    "Only new graphics enhancements are off. Existing acceleration is unchanged.")));
+        }
         var privacy = group(menu, translate("Privacy and data"), "settings-group");
         var storageWarning = "";
         if (accountToken && window.PlexSession) {
@@ -3777,6 +3829,8 @@
                 if (window.PlexFavorites) { window.PlexFavorites.reset(window.localStorage); }
                 if (window.PlexRecents) { window.PlexRecents.reset(window.localStorage); }
                 preferences = window.PlexPreferences.load(window.localStorage);
+                graphicsFailure = false;
+                if (graphics) { graphics.setEnabled(false); }
                 window.PlexI18n.setLanguage(preferences.language);
                 openSettings();
             } catch (error) { setStatus("Could not reset preferences. Check app storage permissions.", true); }
@@ -4152,6 +4206,7 @@
     screen.addEventListener("click", function () { if (player) { showHud(); } });
     document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
+            clearGraphics();
             cancelScrub();
             cancelHold();
             if (nextTimer !== null) { clearTimeout(nextTimer); nextTimer = null; }
@@ -4185,6 +4240,7 @@
         }
     });
     window.addEventListener("pagehide", function () {
+        if (graphics) { graphics.dispose(); graphics = null; }
         stopAuthorization();
         resetImages();
         if (viewCleanup) { viewCleanup(); viewCleanup = null; }

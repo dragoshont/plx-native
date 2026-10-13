@@ -1,4 +1,25 @@
 {
+  "Graphics": { "es": "Gráficos", "be": "Графіка" },
+  "New graphics enhancements: {state}": {
+    "es": "Nuevas mejoras gráficas: {state}",
+    "be": "Новыя графічныя паляпшэнні: {state}"
+  },
+  "Optional WebGL artwork rendering. Off by default. Existing Home acceleration and AVPlay stay enabled. Unsupported features automatically use the existing renderer.": {
+    "es": "Renderizado opcional de imágenes con WebGL. Desactivado por defecto. La aceleración actual de Inicio y AVPlay siguen activas. Las funciones no compatibles usan automáticamente el renderizador actual.",
+    "be": "Неабавязковы рэндэрынг ілюстрацый праз WebGL. Па змаўчанні выключаны. Наяўнае паскарэнне галоўнага экрана і AVPlay застаюцца ўключанымі. Непадтрыманыя функцыі аўтаматычна выкарыстоўваюць наяўны рэндэрэр."
+  },
+  "New graphics enhancements are unavailable here. Existing graphics remain active.": {
+    "es": "Las nuevas mejoras gráficas no están disponibles aquí. Los gráficos actuales siguen activos.",
+    "be": "Новыя графічныя паляпшэнні тут недаступныя. Наяўная графіка застаецца актыўнай."
+  },
+  "Support is checked when artwork loads. This setting does not force hardware video decoding or promise faster playback.": {
+    "es": "La compatibilidad se comprueba al cargar las imágenes. Este ajuste no fuerza la decodificación de vídeo por hardware ni garantiza una reproducción más rápida.",
+    "be": "Падтрымка правяраецца пры загрузцы ілюстрацый. Гэта налада не прымушае апаратнае дэкадзіраванне відэа і не абяцае хутчэйшае прайграванне."
+  },
+  "Only new graphics enhancements are off. Existing acceleration is unchanged.": {
+    "es": "Solo las nuevas mejoras gráficas están desactivadas. La aceleración actual no cambia.",
+    "be": "Выключаны толькі новыя графічныя паляпшэнні. Наяўнае паскарэнне не змяняецца."
+  },
   "This file can't be played. It may be damaged or not analyzed on the Plex server.": {
     "es": "No se puede reproducir este archivo. Puede estar dañado o sin analizar en el servidor Plex.",
     "be": "Гэты файл нельга прайграць. Магчыма, ён пашкоджаны або не прааналізаваны на серверы Plex."
