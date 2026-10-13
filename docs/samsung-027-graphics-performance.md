@@ -152,7 +152,7 @@ unsupported, so those counters remain unavailable rather than fabricated.
 | Target | Current verified runtime | Firmware boundary |
 | --- | --- | --- |
 | QE65Q80CATXXH | Tizen 9.0, ARMv7, Chromium 120.0.6099.5, Mali-G51 | Most recent earlier API observation T-PTMCDEUC-0090-2220.4; this run's read-only REST API omitted firmware |
-| UE55MU6172 | Tizen 3.0, ARMv7, Chrome 47 engine, Mali-450 MP | Most recent earlier API observation T-KTMDEUC-1410.1; this run's REST API omitted firmware |
+| UE55MU6172 | Tizen 3.0, ARMv7, Mali-450 MP; current UA reports Tizen 3.0 without a Chrome number, most recent independent inspector identified Chrome 47.0.2526.69 | Most recent earlier API observation T-KTMDEUC-1410.1; this run's REST API omitted firmware |
 
 Public source **6527197599d042bd52990222aa02cbbfc110ce05**, public WGT SHA256
 `98de8a0990a443aa0912b00596686d84fe4297ba7dcee5bc4d8f2d9ad76c5944`.
