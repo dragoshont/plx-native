@@ -6,11 +6,18 @@ use core::panic::PanicInfo;
 #[cfg(feature = "gles")]
 mod gles;
 
+#[cfg(all(feature = "panic-test", not(target_os = "macos")))]
+compile_error!("The panic-test export is host-only and must not be packaged for TV.");
+
+#[cfg(all(feature = "panic-test", target_os = "macos"))]
+#[no_mangle]
+pub extern "C" fn plx_probe_test_panic() -> ! {
+    panic!("panic termination regression")
+}
+
 #[panic_handler]
 fn panic(_: &PanicInfo<'_>) -> ! {
-    loop {
-        core::hint::spin_loop();
-    }
+    unsafe { os::terminate() }
 }
 
 #[cfg(all(target_os = "linux", target_arch = "arm"))]
@@ -48,6 +55,10 @@ mod os {
     pub unsafe fn write(fd: isize, bytes: &[u8]) -> isize {
         call(4, fd as usize, bytes.as_ptr() as usize, bytes.len())
     }
+    pub unsafe fn terminate() -> ! {
+        call(248, 134, 0, 0); // ARM Linux exit_group: terminate every managed/native thread.
+        asm!("udf #0", options(noreturn, nostack));
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -69,6 +80,8 @@ mod os {
         fn c_connect(fd: c_int, address: *const u8, len: u32) -> c_int;
         #[link_name = "write"]
         fn c_write(fd: c_int, bytes: *const u8, size: usize) -> isize;
+        #[link_name = "abort"]
+        fn c_abort() -> !;
     }
 
     pub unsafe fn open(path: *const c_char) -> isize {
@@ -88,6 +101,9 @@ mod os {
     }
     pub unsafe fn write(fd: isize, bytes: &[u8]) -> isize {
         c_write(fd as c_int, bytes.as_ptr(), bytes.len())
+    }
+    pub unsafe fn terminate() -> ! {
+        c_abort()
     }
 }
 

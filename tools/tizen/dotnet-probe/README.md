@@ -60,6 +60,12 @@ resource path passed by C#, sends one datagram on a nonblocking ARM socket,
 closes descriptors and returns an explicit status. Error codes are:
 10-13 configuration/path/read/close failures; 20-23 socket/connect/write/close
 failures. No panic or error is a successful receipt.
+Panics terminate the entire process: ARM uses Linux `exit_group(134)` with
+an undefined-instruction fallback if the syscall unexpectedly returns, and
+macOS uses `abort()`. They never spin or unwind across the managed/native ABI.
+The host tests build a separate `panic-test` library and require its compiled
+panic entry to abort within two seconds. This feature is rejected on non-macOS
+targets; its test entry is absent from the ordinary and GLES package exports.
 
 Wire framing is `PLX-RUST-V1:\n` followed by the **raw 32-byte nonce**.
 Private metadata represents that nonce as hex; compare with `bytes.fromhex`,

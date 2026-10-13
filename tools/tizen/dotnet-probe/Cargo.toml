@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [features]
 gles = []
+panic-test = []
 
 [profile.release]
 opt-level = "z"

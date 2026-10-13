@@ -4,6 +4,9 @@ import ctypes
 from pathlib import Path
 import secrets
 import socket
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -40,6 +43,27 @@ class ReceiptTests(unittest.TestCase):
 
     def test_null_path(self):
         self.assertEqual(self.entry(None), 10)
+
+    def test_panic_terminates_process(self):
+        with tempfile.TemporaryDirectory(prefix="plx-panic-test-") as target:
+            environment = dict(os.environ, CARGO_INCREMENTAL="0", CARGO_TARGET_DIR=target)
+            subprocess.run([
+                "cargo", "+nightly", "build", "--manifest-path",
+                str(Path(__file__).parent / "Cargo.toml"), "--release",
+                "--features", "panic-test",
+            ], env=environment, check=True, capture_output=True, timeout=120)
+            library = Path(target) / "release/libplx_rust_receipt.dylib"
+            result = subprocess.run([
+                sys.executable, "-c",
+                "import ctypes, resource, sys; "
+                "resource.setrlimit(resource.RLIMIT_CORE, (0, 0)); "
+                "ctypes.CDLL(sys.argv[1]).plx_probe_test_panic()",
+                str(library),
+            ], capture_output=True, timeout=2)
+            self.assertEqual(result.returncode, -6)
+
+    def test_packaged_library_has_no_panic_test_export(self):
+        self.assertFalse(hasattr(self.library, "plx_probe_test_panic"))
 
     def test_missing_path(self):
         with tempfile.TemporaryDirectory() as folder:
