@@ -2,6 +2,7 @@
     "use strict";
     var capture = window.graphicsBenchmarkCapture;
     var result = { phase: "idle", blocks: [], errors: [] };
+    var cancelled = false;
     window.graphicsBenchmarkResult = result;
     function assert(value, message) { if (!value) { throw new Error(message); } }
     function find(pattern) {
@@ -10,6 +11,7 @@
         })[0];
     }
     function click(pattern) {
+        assert(!cancelled, "Benchmark cancelled.");
         var node = find(pattern);
         assert(node, "Missing synthetic control: " + String(pattern));
         node.focus();
@@ -19,6 +21,7 @@
         return new Promise(function (resolve, reject) {
             var until = performance.now() + 8000;
             function poll() {
+                if (cancelled) { reject(new Error("Benchmark cancelled.")); return; }
                 var image = document.querySelector(selector);
                 if (image && image.getAttribute("data-artwork-state") === "loaded") { resolve(image); }
                 else if (performance.now() >= until) { reject(new Error("Synthetic backdrop did not finish real decode.")); }
@@ -28,9 +31,10 @@
         });
     }
     function frames(count) {
-        return new Promise(function (resolve) {
+        return new Promise(function (resolve, reject) {
             var gaps = [], before = null;
             function tick(time) {
+                if (cancelled) { reject(new Error("Benchmark cancelled.")); return; }
                 if (before !== null) { gaps.push(time - before); }
                 before = time;
                 if (--count > 0) { requestAnimationFrame(tick); }
@@ -71,8 +75,9 @@
         var card = document.querySelector(".shelf-row .media-card");
         assert(card, "Synthetic shelf is missing real product cards.");
         card.focus();
-        return new Promise(function (resolve) {
+        return new Promise(function (resolve, reject) {
             function step(time) {
+                if (cancelled) { reject(new Error("Benchmark cancelled.")); return; }
                 if (before !== null) { gaps.push(time - before); }
                 before = time;
                 var code = count % 2 ? 37 : 39, start = performance.now();
@@ -89,6 +94,7 @@
         });
     }
     window.graphicsBenchmarkConnect = function () {
+        assert(!cancelled, "Benchmark cancelled.");
         assert(result.phase === "idle", "Benchmark connection already started.");
         result.phase = "connecting";
         document.querySelector('input[name="server"]').value = "https://benchmark.synthetic.invalid";
@@ -99,6 +105,7 @@
         return "connecting";
     };
     window.graphicsBenchmarkBlock = function (order, enabled) {
+        assert(!cancelled, "Benchmark cancelled.");
         assert(result.phase === "ready", "Previous benchmark operation is not complete.");
         assert(typeof enabled === "boolean" && order >= 0 && order < 4, "Invalid ABBA block.");
         result.phase = "running";
@@ -122,6 +129,7 @@
                     work = work.then(function () {
                         return operation(block, "detail", index, function () { click(/^Open details$/); }, "img.detail-backdrop");
                     }).then(function () {
+                        assert(!cancelled, "Benchmark cancelled.");
                         capture.operation = order + ":home-return:" + index;
                         var back = new Event("keydown", { bubbles: true, cancelable: true });
                         Object.defineProperty(back, "keyCode", { value: 10009 });
@@ -140,6 +148,7 @@
         return "started";
     };
     window.graphicsBenchmarkNavigation = function (order) {
+        assert(!cancelled, "Benchmark cancelled.");
         assert(result.phase === "ready", "Image work is not settled.");
         var block = result.blocks[order];
         assert(block && block.order === order && !block.navigation, "Invalid navigation block.");
@@ -152,5 +161,12 @@
             result.phase = "ready";
         }).catch(function (error) { result.phase = "failed"; result.errors.push(error.message); });
         return "started";
+    };
+    window.graphicsBenchmarkCancel = function () {
+        cancelled = true;
+        window.dispatchEvent(new Event("pagehide"));
+        window.localStorage.removeItem("plx-tizen-preferences");
+        result.phase = "cancelled";
+        return true;
     };
 }());

@@ -1,5 +1,11 @@
 # PlxNative Privacy Policy
 
+> **Scope:** this retained policy describes the upstream LG implementation and
+> its services. It is not the privacy statement for the Samsung Web package.
+> See [Samsung data handling](samsung/PRIVACY.md) for this repository's active
+> product. Retaining this history does not make the upstream author responsible
+> for the independent Samsung client.
+
 Applies to PlxNative 0.6.0. Last updated 4 September 2026.
 
 ## Who is responsible for PlxNative data

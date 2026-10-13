@@ -1,5 +1,12 @@
 # Trademarks, brand assets, and non-affiliation
 
+> **Inherited notice:** the PlxNative identity and brand reservation below
+> belong to the upstream LG project. This independently maintained Samsung
+> repository preserves that reservation; it does not acquire branding rights
+> by forking. Existing package/display names are retained during transition,
+> not presented as an endorsement or completed independent-brand clearance.
+> See [the transition record](docs/samsung-project-transition.md).
+
 The [GPL-3.0-or-later grant](LICENSE) covers this project's own source code. This file covers the things a
 licence grant does not: the marks that identify the project, and whose software this interoperates
 with.

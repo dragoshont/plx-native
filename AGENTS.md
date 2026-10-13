@@ -1,5 +1,22 @@
 # Project instructions
 
+## Independent Samsung product direction
+
+This repository's actively maintained product is the Samsung Tizen Web client
+under `samsung/`. Read `docs/samsung-project-transition.md` before changing
+repository identity, public positioning, release routing or inherited material.
+The LG tree and the detailed guidance below remain intact for source provenance
+and work on that tree; they do not make the Samsung package a native Rust/GLES
+application. Do not apply LG `.ipk` release steps to a Samsung `.wgt`.
+
+For Samsung-only changes use `tools/tizen/test.sh` and the matching Tizen skill;
+record actual model/runtime and keep device work serial/account-safe. Existing
+acceleration stays enabled; the experimental artwork mode is default-off and
+has not demonstrated a speedup. App-specific GPL workloads stay here; reusable
+MIT toolkit machinery belongs in `dragoshont/tizen-tv-builder` without stripping
+licence obligations. Preserve package IDs/signing continuity, copyright and
+reserved upstream trademarks during transition.
+
 ## Project
 
 PlxNative is a production-quality native Plex client for rooted LG webOS 4.5 TVs. Most of the

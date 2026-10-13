@@ -36,29 +36,29 @@ const gl = new Proxy({ NO_ERROR: 0 }, { get(target, key) {
     return () => {};
 } });
 w.HTMLCanvasElement.prototype.getContext = () => gl;
-async function wait() {
-    const deadline = Date.now() + 12000;
-    while (Date.now() < deadline) {
-        if (w.graphicsBenchmarkResult.phase === "ready") return;
-        if (w.graphicsBenchmarkResult.phase === "failed") throw new Error(w.graphicsBenchmarkResult.errors.join("; ") +
-            "; operation=" + w.graphicsBenchmarkCapture.operation + "; screen=" + w.document.getElementById("screen").className +
-            "; status=" + w.document.getElementById("status").textContent);
-        await new Promise(resolve => setTimeout(resolve, 10));
-    }
-    throw new Error("Host benchmark routing deadline");
-}
 (async () => {
     try {
         for (const script of Array.from(w.document.querySelectorAll("script[src]"))) {
             w.eval(fs.readFileSync(path.join(stage, script.getAttribute("src")), "utf8"));
         }
-        w.graphicsBenchmarkConnect();
-        await wait();
-        for (let order = 0; order < 2; order++) {
-            w.graphicsBenchmarkBlock(order, order === 1);
-            await wait();
-            w.graphicsBenchmarkNavigation(order);
-            await wait();
+        assert.equal(w.__tvBenchmark.describe().app_id, "PlxBench01.Probe");
+        for (let order = 0; order < 4; order++) {
+            const request = { id: "host:" + order, block: order, mode: order === 1 || order === 2 ? "on" : "off",
+                phase: "sample", index: 0 };
+            assert.equal(w.__tvBenchmark.begin(request), true);
+            const deadline = Date.now() + 12000;
+            let sample;
+            do {
+                await new Promise(resolve => setTimeout(resolve, 10));
+                sample = w.__tvBenchmark.poll(request.id);
+                assert.notEqual(sample.state, "error", JSON.stringify(w.graphicsBenchmarkResult.errors));
+            } while (sample.state === "pending" && Date.now() < deadline);
+            assert.equal(sample.state, "complete", "Toolkit adapter operation deadline");
+            assert.equal(sample.metrics.featured_ready_ms.length, 6);
+            assert.equal(sample.metrics.detail_ready_ms.length, 6);
+            assert.equal(sample.metrics.warmup_featured_ready_ms.length, 1);
+            assert.equal(sample.metrics.warmup_detail_ready_ms.length, 1);
+            if (request.mode === "off") { assert.equal(sample.metrics.context_ms, null); }
         }
         assert.equal(w.graphicsBenchmarkCapture.networkAttempts, 0);
         assert.equal(w.graphicsBenchmarkCapture.playbackAttempts, 0);
@@ -69,7 +69,11 @@ async function wait() {
         }
         assert.equal(w.graphicsBenchmarkResult.blocks[0].operations.flatMap(op => op.calls).filter(call => call.method === "getContext").length, 0);
         assert(w.graphicsBenchmarkResult.blocks[1].operations.flatMap(op => op.calls).filter(call => call.method === "getContext").length >= 14);
-        assert.equal(JSON.parse(w.localStorage.getItem("plx-tizen-preferences")).enhancedGraphics, true);
-        console.log("Real published Home/Settings/featured/Detail/back/navigation routes and inert safety: passed (host mocks, not timing evidence)");
+        assert.equal(JSON.parse(w.localStorage.getItem("plx-tizen-preferences")).enhancedGraphics, false);
+        assert.equal(w.__tvBenchmark.cancel(), true);
+        assert.equal(w.localStorage.getItem("plx-tizen-preferences"), null);
+        assert.equal(w.document.querySelectorAll(".plex-graphics-backdrop").length, 0);
+        assert.throws(() => w.__tvBenchmark.begin({ id: "again", block: 0, mode: "off", phase: "sample", index: 0 }));
+        console.log("Real published routes, inert safety and toolkit ABBA adapter: passed (host mocks, not timing evidence)");
     } finally { w.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
