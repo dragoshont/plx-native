@@ -13,6 +13,7 @@ The optional managed-only control has a different packet prefix.
 | Same target | Ordinary .NET P/Invoke of Rust cdylib | Both observed | Exact Rust-generated nonce packet, checked against target source address | Probe absent |
 | Same target | Optional OpenTK GLES host | Both observed, twice | No final receipt; added Rust stage diagnostics also produced no packets | Probes absent |
 | Same target | Isolated entry before OpenTK host startup | Both observed | Exact Rust stage 99 packet; no lifecycle/render/exception/final graphics packet | Probe absent |
+| Same target | CoreUIApplication / ElmSharp window control | Both observed | Four exact Rust stage packets around window construction, show request and destruction, then final Rust receipt | Probe absent |
 | Same target | Separate `../wasm-probe` browser comparison | Both observed | Actual Rust export result matched an independent challenge calculation | Probe and owned inspector forward removed |
 | UE55MU6172 / Tizen 3.0 / ARMv7 | Owned web capability control | Both observed | Inspector observed `WebAssembly` undefined and NaCl/PNaCl MIME entries advertised | Probe and owned inspector forward removed |
 | Same 2017 target | .NET / Wasm | **Unsupported; skipped** | Samsung minima are Tizen 4.0 / 5.5 respectively | No installation attempted |
@@ -121,7 +122,7 @@ error alone does not diagnose certificate or permit state.
 Hold `/tmp/tizen-tv-<alias>.lock` around connect/install/launch/inspect/uninstall,
 not around building. Use fresh probe identities and never overwrite a registered
 identity. Verify final absence and remove only owned forwards. Authorized SDB
-restart was used once; Tizen Studio IDE remained running. No remote keys,
+Restart restored dropped developer connections; Tizen Studio IDE remained running. No remote keys,
 household playback, Plex writes, root or firmware changes were performed.
 
 ## Graphics boundary and architecture options
@@ -142,6 +143,19 @@ accidental packaging omission. The startup failure cause remains undetermined.
 The pre-OpenTK receipt narrows the next investigation to platform host/runtime
 startup rather than ordinary Rust loading. This is **not** a passed graphics
 gate, and another unchanged launch is not a useful next test.
+
+The `-p:WindowControl=true` alternative uses the already-proven
+`CoreUIApplication`/ElmSharp host without OpenTK. Stage 300 precedes
+`ElmSharp.Window` construction; 301 follows it; 302 follows `Resize` and `Show`;
+303 follows `Unrealize`. All four nonce-bound packets and the final Rust
+receipt were retained from one installed/launch attempt, followed by removal.
+This proves the window API calls returned, **not** displayed pixels, event-loop
+rendering or a current GL context. The installed API 5 ElmSharp/NUI references
+did not expose a `GLView`/`GLWindow` callback contract. No such API was invented,
+and the next graphics step still needs a TV-supported surface/context contract.
+The earlier stage 99 receiver validated the full source/nonce-bound packet but
+retained only its decoded code, not the raw packet; the window control retains
+every raw stage packet for independent verification.
 
 Even a success would prove only the original shader subset and framebuffer
 readback/swap, not the `plx_gfx` draw primitives, text, screen widgets or panel
