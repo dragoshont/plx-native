@@ -36,3 +36,21 @@ The 2017 update needs a reachable developer connection. The Sebi installed versi
 On a confirmed updated TV, open Plx and use **Settings → Graphics → New graphics enhancements** to opt in. No extra GPU path is enabled automatically by this release.
 
 See [the shared backend contract](samsung-optional-graphics.md), [named-device rendering evidence](samsung-graphics-device-matrix.md) and [release notes](release-notes/samsung-v0.2.7.md). Original signed artifacts, profile evidence, command output and device metadata remain private.
+
+## Update: 2026-10-14, approved 2017 deployment
+
+After the user powered on the 2017 TV and explicitly approved deployment,
+**UE55MU6172 was updated from 0.2.6 to 0.2.7**. Fresh model/capability and
+private identity checks matched the prior installation record. Original and
+installed versions were obtained through an owned metadata helper, and the
+parent independently verified both version RPCs.
+
+The existing matching personal author and the previously verified release
+payload were reused. Production Plx was not launched or uninstalled; settings
+were unchanged. The metadata helper/forward were removed, final registration
+evidence retained and both Samsung leases released. No other TV, certificate,
+security setting or Plex record was changed during this grant.
+
+The initial offline attempt above remains a historical result, not the current
+MU deployment status. The unrelated Bedroom test-app cleanup and Sebi
+version-confirmation limitations remain as documented.
