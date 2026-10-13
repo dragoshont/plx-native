@@ -12,6 +12,7 @@ The optional managed-only control has a different packet prefix.
 | QE65Q80CATXXH / Tizen 9.0 / ARMv7 | Managed-only control | Both observed | Exact managed nonce packet | Probe absent |
 | Same target | Ordinary .NET P/Invoke of Rust cdylib | Both observed | Exact Rust-generated nonce packet, checked against target source address | Probe absent |
 | Same target | Optional OpenTK GLES host | Both observed, twice | No final receipt; added Rust stage diagnostics also produced no packets | Probes absent |
+| Same target | Isolated entry before OpenTK host startup | Both observed | Exact Rust stage 99 packet; no lifecycle/render/exception/final graphics packet | Probe absent |
 | Same target | Separate `../wasm-probe` browser comparison | Both observed | Actual Rust export result matched an independent challenge calculation | Probe and owned inspector forward removed |
 | UE55MU6172 / Tizen 3.0 / ARMv7 | Owned web capability control | Both observed | Inspector observed `WebAssembly` undefined and NaCl/PNaCl MIME entries advertised | Probe and owned inspector forward removed |
 | Same 2017 target | .NET / Wasm | **Unsupported; skipped** | Samsung minima are Tizen 4.0 / 5.5 respectively | No installation attempted |
@@ -129,10 +130,18 @@ The optional `-p:GraphicsProbe=true` host follows the installed vendor
 OpenTK.Tizen `3.0.2` / `TizenGameApplication` template. Rust loads the **unchanged
 upstream** `vs_src.vert` and `fs_flat.frag` through `include_str!`, compiles,
 draws, reads a pixel and deletes GL objects. C# supplies an ordinary EGL
-function resolver and swaps the host window. Neither graphics attempt produced
-an execution-stage or post-swap receipt. The cause remains undetermined;
-installation and launcher acknowledgement do not establish callback/context
-startup. This is **not** a passed graphics gate.
+function resolver and swaps the host window. Neither initial graphics attempt
+produced an execution-stage or post-swap receipt. A third, discriminating
+attempt separated the managed entry from the OpenTK-dependent startup method
+and observed its exact Rust stage 99 packet before that method. No subsequent
+OnCreate, render, caught-exception or final packet was observed. This establishes
+native entry in the graphics package, but not host/context initialization.
+OpenTK.Tizen 3.0.2 contains a reference assembly only, not a deployable runtime
+asset; its absence from the signed package is therefore not proof of an
+accidental packaging omission. The startup failure cause remains undetermined.
+The pre-OpenTK receipt narrows the next investigation to platform host/runtime
+startup rather than ordinary Rust loading. This is **not** a passed graphics
+gate, and another unchanged launch is not a useful next test.
 
 Even a success would prove only the original shader subset and framebuffer
 readback/swap, not the `plx_gfx` draw primitives, text, screen widgets or panel
