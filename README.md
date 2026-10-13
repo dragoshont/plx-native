@@ -1,8 +1,12 @@
 # Plex client for Samsung Tizen
 
-An independently maintained, unofficial Plex client for Samsung TVs, built with **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**. Current installations are named **Plx**.
+An independently maintained, unofficial Plex client for Samsung TVs. **No root required.** It uses Samsung's platform-native acceleration through the supported Tizen Web stack: GPU-composited UI layers for movement and fades, WebGL for optional graphics, and AVPlay for platform video playback rather than a JavaScript video decoder.
 
-The starting point was [Gleb Linnik's PlxNative for LG webOS](https://github.com/GLinnik21/plx-native): a content-first interface, remote-friendly navigation, poster shelves and an uncluttered player. This project takes that design direction into Samsung's supported application ecosystem. It is **not the LG native Rust/GLES application running on Samsung**, and it is not maintained or endorsed by the upstream author.
+**I've tested the client on Tizen 4.0 and newer.** The recorded device checks below distinguish individual runtimes and features; they are not blanket certification of every model or codec.
+
+The UI is inspired by [Gleb Linnik's LG client](https://github.com/GLinnik21/plx-native).
+
+The implementation uses **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**, not a standalone native Rust application. Platform acceleration does not mean all application work runs on the GPU; the optional WebGL artwork path remains off by default because it did not improve the measured workload.
 
 **[Install on Samsung](docs/install-samsung.md)** · **[Samsung releases](https://github.com/dragoshont/plx-native/releases?q=samsung-v)** · **[Report a Samsung issue](https://github.com/dragoshont/plx-native/issues)** · **[Tizen TV Builder toolkit](https://github.com/dragoshont/tizen-tv-builder)**
 
@@ -16,7 +20,7 @@ The current release is [Samsung 0.2.7](https://github.com/dragoshont/plx-native/
 python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.7/Plx-0.2.7.wgt TV_IP
 ```
 
-Keep your existing author certificate for updates. Do not uninstall a working app to work around a signing mismatch. The existing `PlxNative0.Plx` application ID and repository URL are retained for update/link compatibility; they are not a claim of upstream endorsement.
+Keep your existing author certificate for updates. Do not uninstall a working app to work around a signing mismatch. The existing `PlxNative0.Plx` application ID, release filenames and repository URL are retained for update/link compatibility, not used as the independent project's branding.
 
 ## What the Samsung client does
 
@@ -52,7 +56,7 @@ Read the [full OFF/ON results](docs/samsung-027-graphics-performance.md), [accel
 
 ## TVs and compatibility
 
-The compatibility floor being developed against is **2017 / Tizen 3.0**, using conservative ES5-compatible shipped JavaScript. Model year is not a capability test; newer sets can receive OS upgrades.
+The maintainer reports testing on **Tizen 4.0 and newer**. The retained automated/device evidence below covers Tizen 5.0 and 9.0, plus additional legacy checks on **2017 / Tizen 3.0**. The Tizen 4.0 statement is owner-reported rather than a newly collected benchmark result. Shipped JavaScript remains conservative ES5-compatible. Model year is not a capability test; newer sets can receive OS upgrades.
 
 | Observed model | Current runtime in the recorded run | Scope of evidence |
 | --- | --- | --- |
@@ -67,9 +71,9 @@ Two distinct RU7092 devices were observed: four model generations, **five device
 
 [Tizen TV Builder](https://github.com/dragoshont/tizen-tv-builder) is the separate toolkit we built for discovery, developer connection/setup, signing, installation, inspection and safe serial device sessions. Its Python CLI and local portal were used to develop and deploy this client. AI assistance is optional; the CLI does not require an AI subscription.
 
-Our [reproducible Plx benchmark](tools/tizen/graphics-benchmark/README.md) uses the exact released app code with inert Plex adapters, synthetic images and in-memory settings. It repeats Home, Detail and navigation work in **OFF / ON / ON / OFF** order, retains warmups and original samples, and separates main-thread/API timing from graphics correctness.
+Our [reproducible app benchmark](tools/tizen/graphics-benchmark/README.md) uses the exact released app code with inert Plex adapters, synthetic images and in-memory settings. It repeats Home, Detail and navigation work in **OFF / ON / ON / OFF** order, retains warmups and original samples, and separates main-thread/API timing from graphics correctness.
 
-**The reusable benchmark is now implemented in the toolkit:** [`benchmark run`, `validate` and `summarize`](https://github.com/dragoshont/tizen-tv-builder/blob/e09c9f345170c7ada8309fc9be95ae8ae38e85e8/docs/benchmark.md). It is available at that pinned commit on `dragoshont-reusable-tv-benchmark-toolkit`, not yet in the toolkit's default branch or a newly released plugin. The GPL-licensed Plx workload stays here and connects through a tested adapter. This keeps the MIT toolkit useful for other TV apps without copying this app's screens, credentials or business logic into it. See [the transition record](docs/samsung-project-transition.md) for delivery and licensing boundaries.
+**The reusable benchmark is now implemented in the toolkit:** [`benchmark run`, `validate` and `summarize`](https://github.com/dragoshont/tizen-tv-builder/blob/e09c9f345170c7ada8309fc9be95ae8ae38e85e8/docs/benchmark.md). It is available at that pinned commit on `dragoshont-reusable-tv-benchmark-toolkit`, not yet in the toolkit's default branch or a newly released plugin. The GPL-licensed application workload stays here and connects through a tested adapter. This keeps the MIT toolkit useful for other TV apps without copying this app's screens, credentials or business logic into it. See [the transition record](docs/samsung-project-transition.md) for delivery and licensing boundaries.
 
 ## Development and deployment
 
@@ -95,7 +99,7 @@ The build example makes a local package; it does not publish or establish device
 
 This repository is still technically a GitHub fork. Independent maintenance does not require rewriting its history. LG Rust/C sources, documentation and licence notices remain as inherited/reference material; **this project's product direction and deployment target are Samsung**. The experimental Rust/.NET/NaCl work is parked, with [its actual results retained](docs/samsung-rust-runtime-results.md).
 
-For the maintained LG application, its support, website and releases, go to [GLinnik21/plx-native](https://github.com/GLinnik21/plx-native). Send Samsung-specific issues to [this repository](https://github.com/dragoshont/plx-native/issues), not the upstream author.
+Send Samsung-specific issues to [this repository](https://github.com/dragoshont/plx-native/issues). Retained LG material is reference/history, not the product maintained here.
 
 The URL and installed display/package names are preserved during transition. A distinct long-term name/artwork and any GitHub fork detachment are separate migration steps; no new branding rights or completed detachment are implied.
 
@@ -103,8 +107,8 @@ The URL and installed display/package names are preserved during transition. A d
 
 The Samsung app talks to Plex services and the selected media servers; sample playback can still update resume/watched state. Saved sign-in credentials use **unencrypted local Web storage**. No analytics or crash-upload feature is enabled in the Samsung client. See [Samsung data handling](samsung/PRIVACY.md); the retained root privacy document describes the LG implementation, not this package.
 
-Source remains **[GPL-3.0-or-later](LICENSE)** with inherited copyright and third-party notices intact. Credit for PlxNative's original work and design goes to **Gleb Linnik and its contributors**; Samsung implementation and toolkit work are maintained separately in this repository and [Tizen TV Builder](https://github.com/dragoshont/tizen-tv-builder).
+Source remains **[GPL-3.0-or-later](LICENSE)** with inherited copyright and third-party notices intact. The Samsung implementation and toolkit are maintained separately in this repository and [Tizen TV Builder](https://github.com/dragoshont/tizen-tv-builder).
 
-Independence does not turn inherited code into a new clean-room project or relicense GPL code as MIT. The toolkit's MIT licence does not relicense this app or its adapters. The upstream **PlxNative name and brand artwork are separately reserved**: read [TRADEMARKS.md](TRADEMARKS.md), [LICENSING.md](LICENSING.md) and [third-party notices](THIRD-PARTY-NOTICES.md).
+The toolkit's MIT licence does not relicense this app or its adapters. Inherited identity and artwork restrictions remain separate from the source licence: read [TRADEMARKS.md](TRADEMARKS.md), [LICENSING.md](LICENSING.md) and [third-party notices](THIRD-PARTY-NOTICES.md).
 
-This unofficial project is not affiliated with, endorsed by or sponsored by Plex, Samsung, LG or the PlxNative maintainer. Product and service names identify their respective owners.
+This unofficial project is not affiliated with, endorsed by or sponsored by Plex, Samsung, LG or the original UI project's maintainer. Product and service names identify their respective owners.
