@@ -6,7 +6,7 @@ async function run() {
     var tick;
     var context = { module: { exports: {} }, Promise: Promise,
         setInterval: function (callback) { tick = callback; return 1; }, clearInterval: function () {} };
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/playback"), "utf8"), context);
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/js/playback"), "utf8"), context);
     var item = { ratingKey: "1", type: "movie", Media: [{ videoCodec: "h264",
         Part: [{ id: "2", key: "/library/parts/2/file.mp4", Stream: [{ streamType: 1, codec: "h264" }] }] }] };
     var position = 0, state = "playing", calls = [], release;

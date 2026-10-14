@@ -6,7 +6,7 @@ of trademark registration, exclusivity or completed legal clearance. Existing
 businesses use VEMM in unrelated fields. Repository naming, domains and any
 formal clearance remain separate external decisions.
 
-The original Vemm vector mark and wordmark are maintained under
+The original Vemm vector mark, app-icon source and wordmark are maintained under
 `samsung/brand/`; `tools/tizen/build-icon.py` produces the packaged mark and
 launcher raster deterministically. Their source and output are offered under
 the repository's GPL-3.0-or-later terms.
@@ -17,10 +17,10 @@ project's active branding. The original reservation and description remain at
 [the pre-migration revision](https://github.com/dragoshont/plx-native/blob/f74610c8e8fda765245f548adcc6565becdca31b/TRADEMARKS.md).
 Retiring those assets does not grant rights to use them.
 
-Historical `Plx-*.wgt` filenames, repository URLs, `plx-tizen-*` saved-setting keys and
-`PlxNative0` / `PlxNative0.Plx` identifiers remain for release-link and installed
-app compatibility, not as a new branding claim. Published releases still show
-their original display identity and are not replaced by this source migration.
+Historical `Plx-*.wgt` filenames, repository URLs, `plx-tizen-*` keys and
+`PlxNative0` / `PlxNative0.Plx` identifiers remain accurate historical facts,
+not Vemm branding. Vemm uses separate `vemm-tizen-*` keys and
+`VemmTvApp0` / `VemmTvApp0.Vemm`; it does not replace or import the old app.
 
 Vemm is not affiliated with, endorsed by or sponsored by Plex, Samsung,
 Microsoft, Apple, LG or the upstream UI project's maintainer. The UI was

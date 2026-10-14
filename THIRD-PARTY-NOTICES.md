@@ -1,6 +1,6 @@
 # Third-party notices: Vemm Samsung client
 
-The active product is the Samsung Tizen Web application in `samsung/PlexTv/`.
+The active product is the Samsung Tizen Web application in `samsung/Vemm/`.
 This application's source is **GPL-3.0-or-later**, Copyright (c) 2026 Gleb Linnik
 and contributors; see [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md).
 Independent maintenance/removal of the native tree is not relicensing.
@@ -16,7 +16,7 @@ source URL. The original implementation, notices and build recipes remain at
 and historical release tags. Earlier MIT grants remain in
 [licenses/PlxNative-historical-MIT.txt](licenses/PlxNative-historical-MIT.txt).
 
-The original Vemm vector mark and wordmark live under `samsung/brand/`.
+The original Vemm vector mark, app-icon source and wordmark live under `samsung/brand/`.
 `tools/tizen/build-icon.py` deterministically rasterizes the launcher icon and
 copies the packaged mark; source and generated outputs use GPL-3.0-or-later.
 No upstream PLX logo, splash, fonts, movie art or website assets are shipped by

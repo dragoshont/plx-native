@@ -3,11 +3,11 @@
 var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
-var playback = require("../../samsung/PlexTv/js/playback.js");
-var product = require("../../samsung/PlexTv/js/product.js");
+var playback = require("../../samsung/Vemm/js/playback.js");
+var product = require("../../samsung/Vemm/js/product.js");
 
 var root = path.resolve(__dirname, "../..");
-var app = path.join(root, "samsung/PlexTv");
+var app = path.join(root, "samsung/Vemm");
 var config = fs.readFileSync(path.join(app, "config.xml"), "utf8");
 var index = fs.readFileSync(path.join(app, "index.html"), "utf8");
 var build = fs.readFileSync(path.join(root, "samsung/build.py"), "utf8");
@@ -25,18 +25,25 @@ assert(index.includes("<title>Vemm</title>"));
 assert(index.includes('src="brand/vemm-mark.svg"'));
 assert(index.includes("Your media. At its best."));
 assert(fs.existsSync(path.join(app, "brand/vemm-mark.svg")), "The packaged vector mark must exist");
+assert(fs.existsSync(path.join(root, "samsung/brand/vemm-app-icon.svg")), "The source app icon must exist");
 assert(fs.existsSync(path.join(root, "samsung/brand/vemm-wordmark.svg")), "The source wordmark must exist");
-assert(build.includes('PACKAGE_ID = "PlxNative0"'), "The installed package identity must not change");
-assert(build.includes('{PACKAGE_ID}.Plx'), "The installed application identity must not change");
+assert(build.includes('PACKAGE_ID = "VemmTvApp0"'), "Vemm must use its separate package identity");
+assert(config.includes('id="VemmTvApp0.Vemm" package="VemmTvApp0"'));
 assert(api.includes('require("./product")'));
 assert(api.includes("product && product.name"));
 assert(!api.includes('"Media for Tizen"'), "Plex protocol identity must use the current display product");
 
 var preferences = fs.readFileSync(path.join(app, "js/preferences.js"), "utf8");
 var session = fs.readFileSync(path.join(app, "js/session.js"), "utf8");
-["plx-tizen-preferences", "plx-tizen-account", "plx-tizen-save-sign-in"].forEach(function (key) {
-    assert(preferences.includes(key) || session.includes(key), "Saved storage key changed: " + key);
+["vemm-tizen-preferences", "vemm-tizen-account", "vemm-tizen-save-sign-in"].forEach(function (key) {
+    assert(preferences.includes(key) || session.includes(key), "Missing Vemm storage key: " + key);
 });
+
+var mark = fs.readFileSync(path.join(root, "samsung/brand/vemm-mark.svg"), "utf8");
+assert(mark.includes('stroke="#3B82F6"'));
+assert(mark.includes('stroke="#B7D0FF"'));
+assert.strictEqual((mark.match(/stroke-linecap="round"/g) || []).length, 2,
+    "The folded V uses two rounded capsule strokes");
 
 var profile = {
     status: "documented",

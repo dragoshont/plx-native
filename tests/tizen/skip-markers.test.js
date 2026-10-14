@@ -2,7 +2,7 @@
 // Skip Intro / Skip Credits rules, ported from the LG client's `marker_at` and skip pill.
 // Markers are the shape PMS returns under `includeMarkers=1`.
 var assert = require("assert");
-var skip = require("../../samsung/PlexTv/js/skip-markers");
+var skip = require("../../samsung/Vemm/js/skip-markers");
 
 var markers = [
     { id: 1, type: "intro", startTimeOffset: 30000, endTimeOffset: 90000 },

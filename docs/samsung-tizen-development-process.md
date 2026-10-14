@@ -141,10 +141,10 @@ App-local command family (this repository):
 
 ```sh
 npm ci --prefix tests/tizen --ignore-scripts
-tools/tizen/check-es5.sh samsung/PlexTv
+tools/tizen/check-es5.sh samsung/Vemm
 tools/tizen/test.sh
-tools/tizen/build-source.sh samsung/PlexTv
-tools/tizen/build-web.sh samsung/PlexTv <security-profile>
+tools/tizen/build-source.sh samsung/Vemm
+tools/tizen/build-web.sh samsung/Vemm <security-profile>
 ```
 
 These scripts only build and test **this** app with Samsung's official `tizen` CLI.

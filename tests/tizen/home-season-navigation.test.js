@@ -105,15 +105,15 @@ async function run() {
     Node.document = document;
     var window = {
         PlexApi: api,
-        PlexHomeHero: require("../../samsung/PlexTv/js/home-hero.js"),
+        VemmHomeHero: require("../../samsung/Vemm/js/home-hero.js"),
         Promise: Promise,
         URL: URL,
         Blob: Blob,
         fetch: function () { assert.fail("Synthetic Home navigation must not use the network"); },
         addEventListener: function () {}
     };
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/i18n.js"), "utf8"), window);
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/main.js"), "utf8"), {
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/js/i18n.js"), "utf8"), window);
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/main.js"), "utf8"), {
         document: document,
         window: window,
         console: console,
@@ -151,7 +151,7 @@ async function run() {
     await settle();
 
     var homeSeason = screen.querySelectorAll().find(function (node) {
-        return node.className === "media-card" && node.plexCard && node.plexCard.item.type === "season";
+        return node.className === "media-card" && node.vemmCard && node.vemmCard.item.type === "season";
     });
     assert(homeSeason, "Home renders the synthetic season card");
     homeSeason.events.click();

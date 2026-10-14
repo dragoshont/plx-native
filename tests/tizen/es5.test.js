@@ -2,7 +2,7 @@
 var fs = require("fs");
 var path = require("path");
 var acorn = require("acorn");
-var root = path.resolve(__dirname, "../../samsung/PlexTv");
+var root = path.resolve(__dirname, "../../samsung/Vemm");
 var files = [path.join(root, "main.js")].concat(fs.readdirSync(path.join(root, "js"))
     .filter(function (name) { return name.endsWith(".js"); })
     .map(function (name) { return path.join(root, "js", name); }));

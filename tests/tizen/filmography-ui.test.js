@@ -96,11 +96,11 @@ async function journey(indexFails, language, largeCareer) {
         selectServer: function () { return Promise.resolve({ relay: false, client: server }); },
         matchCredit: realApi.matchCredit
     };
-    var window = { PlexApi: api, PlexHomeHero: require("../../samsung/PlexTv/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob,
+    var window = { PlexApi: api, VemmHomeHero: require("../../samsung/Vemm/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob,
         fetch: function () { assert.fail("The synthetic API must not use the network"); },
         addEventListener: function () {} };
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/i18n.js"), "utf8"), window);
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/main.js"), "utf8"), {
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/js/i18n.js"), "utf8"), window);
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/main.js"), "utf8"), {
         document: document, window: window,
         setTimeout: function () { return 1; }, clearTimeout: function () {}
     });
@@ -123,7 +123,7 @@ async function journey(indexFails, language, largeCareer) {
     await settle();
     screen.querySelectorAll().find(function (node) { return node.className === "media-card"; }).events.click();
     await settle();
-    window.PlexI18n.setLanguage(language);
+    window.VemmI18n.setLanguage(language);
     click("Synthetic Actor");
     await settle();
     if (largeCareer) {
@@ -141,7 +141,7 @@ async function journey(indexFails, language, largeCareer) {
         return;
     }
     if (language === "es") {
-        assert.strictEqual(status.textContent, window.PlexI18n.text("{count} credits are in this library.", { count: 1 }));
+        assert.strictEqual(status.textContent, window.VemmI18n.text("{count} credits are in this library.", { count: 1 }));
         assert.notStrictEqual(status.textContent, "1 credits are in this library.");
         return;
     }
@@ -153,7 +153,7 @@ async function journey(indexFails, language, largeCareer) {
     assert.deepStrictEqual(opened, ["7", "41"]);
 }
 
-var realApi = require("../../samsung/PlexTv/js/plex-api");
+var realApi = require("../../samsung/Vemm/js/plex-api");
 async function run() {
     await journey(false, "en");
     await journey(true, "en");

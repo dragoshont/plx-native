@@ -75,11 +75,11 @@ async function run() {
         }; },
         selectServer: function () { return Promise.resolve({ relay: false, client: server }); }
     };
-    var window = { PlexApi: api, PlexHomeHero: require("../../samsung/PlexTv/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob,
+    var window = { PlexApi: api, VemmHomeHero: require("../../samsung/Vemm/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob,
         fetch: function () { assert.fail("The synthetic API must not use the network"); },
         addEventListener: function () {} };
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/i18n.js"), "utf8"), window);
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/main.js"), "utf8"), {
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/js/i18n.js"), "utf8"), window);
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/main.js"), "utf8"), {
         document: document, window: window,
         setTimeout: function () { return 1; }, clearTimeout: function () {}
     });

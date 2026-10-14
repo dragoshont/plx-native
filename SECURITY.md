@@ -1,16 +1,16 @@
 # Security policy
 
-Vemm Samsung client reports belong to **dragoshont/plx-native**, not the upstream
+Vemm Samsung client reports belong to **dragoshont/vemm**, not the upstream
 LG maintainer. Use this repository's
-[Security page](https://github.com/dragoshont/plx-native/security) for available
+[Security page](https://github.com/dragoshont/vemm/security) for available
 private reporting options. If none is offered, open a minimal
-[issue](https://github.com/dragoshont/plx-native/issues/new) requesting a private
+[issue](https://github.com/dragoshont/vemm/issues/new) requesting a private
 channel **without exploit details, credentials, personal data or raw logs**.
 There is no inherited bounty or response-time promise.
 
 ## Scope
 
-The maintained scope is `samsung/PlexTv/`, authentication/network/storage,
+The maintained scope is `samsung/Vemm/`, authentication/network/storage,
 AVPlay integration, WGT/source packaging and the app-specific host tools.
 Report a concrete failure and affected source/release, model, firmware and
 runtime when known. Include a synthetic reproduction where possible.

@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var playback = require("../../samsung/PlexTv/js/playback");
+var playback = require("../../samsung/Vemm/js/playback");
 var track = { ratingKey: "10", type: "track", duration: 180000,
     Media: [{ audioCodec: "flac", container: "flac", Part: [{ id: "20", key: "/library/parts/20/file.flac",
         Stream: [{ streamType: 2, codec: "flac" }] }] }] };

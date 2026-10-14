@@ -11,7 +11,7 @@
     function assertion(value, message) { if (!value) { throw new Error(message); } }
     function opacity(image) { return [image.style.getPropertyValue("opacity"), image.style.getPropertyPriority("opacity")]; }
     function sameOpacity(image, before) { var current = opacity(image); return current[0] === before[0] && current[1] === before[1]; }
-    function canCount() { return document.querySelectorAll(".plex-graphics-backdrop").length; }
+    function canCount() { return document.querySelectorAll(".vemm-graphics-backdrop").length; }
     function instrument() {
         document.createElement = function (name) {
             var node = originalCreate.call(document, name);
@@ -112,8 +112,8 @@
             setItem: function (key, value) { memory = value; },
             removeItem: function () { memory = null; }
         };
-        var prefs = PlexPreferences.load(storage);
-        active = PlexGraphics.create({
+        var prefs = VemmPreferences.load(storage);
+        active = VemmGraphics.create({
             onStatus: function (value) { receipt.statuses.push(value); },
             onError: function (error) { receipt.errors.push({ code: error.code, message: error.message }); }
         });
@@ -128,8 +128,8 @@
                 sameOpacity(image, before), "Default-off allocated or changed original pixels");
             receipt.cases.defaultOff = { result: "PASS", status: active.status(), contexts: receipt.contextRequests };
             prefs.enhancedGraphics = true;
-            PlexPreferences.save(storage, prefs);
-            active.setEnabled(PlexPreferences.load(storage).enhancedGraphics);
+            VemmPreferences.save(storage, prefs);
+            active.setEnabled(VemmPreferences.load(storage).enhancedGraphics);
             tag = "optIn";
             active.present(image);
             var state = active.status();
@@ -143,8 +143,8 @@
                 receipt.cases.optIn = { result: "COMPATIBILITY", status: state, sameDocumentBlobUpload: "unestablished" };
             }
             prefs.enhancedGraphics = false;
-            PlexPreferences.save(storage, prefs);
-            active.setEnabled(PlexPreferences.load(storage).enhancedGraphics);
+            VemmPreferences.save(storage, prefs);
+            active.setEnabled(VemmPreferences.load(storage).enhancedGraphics);
             assertion(canCount() === 0 && sameOpacity(image, before) && active.status().backend === "compatibility",
                 "Off-again did not restore original image and release canvas");
             receipt.cases.offAgain = { result: "PASS", status: active.status() };

@@ -10,7 +10,7 @@ function rig(response) {
         setTimeout: function (callback) { var id = ++next; timers.set(id, callback); return id; },
         clearTimeout: function (id) { timers.delete(id); }
     };
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/plex-api"), "utf8"), context);
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/js/plex-api"), "utf8"), context);
     var client = context.module.exports.createClient({
         baseUrl: "https://server.synthetic.invalid", token: "synthetic-server-token",
         fetch: function () { return Promise.resolve(response); }

@@ -1,5 +1,11 @@
 # Independent Samsung project transition
 
+> **Superseded active identity:** this document records the historical
+> Samsung-only/Plx transition. The Vemm candidate is now a separate app with
+> `VemmTvApp0.Vemm`, `vemm-tizen-*`, `Vemm-*` artifacts and `v*` tags. It does
+> not update or import the historical Plx installation. See
+> [the classified identity audit](vemm/08-legacy-identity-audit.md).
+
 ## Decision and current state
 
 The product maintained here is the Samsung Tizen Web client. Its visual direction

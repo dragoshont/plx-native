@@ -1,18 +1,18 @@
 # Contributing
 
-This repository maintains **Vemm for Samsung Tizen** independently. Vemm is a
-working brand; changing display identity does not authorize changing installed
-Samsung IDs, saved settings, signing identity or historical release names. Open
+This repository reviews **Vemm for Samsung Tizen** independently. Vemm is a
+separate app with package `VemmTvApp0`, application `VemmTvApp0.Vemm` and
+`vemm-tizen-*` local data. It does not import historical Plx state. Open
 Samsung issues and pull requests in
-[dragoshont/plx-native](https://github.com/dragoshont/plx-native), not against
+[dragoshont/vemm](https://github.com/dragoshont/vemm), not against
 the LG author's project. The native LG tree is retired from the active source;
 its history, copyright and source obligations remain. Samsung changes belong
 in `samsung/`, `tests/tizen/` and the Samsung-specific tools/docs.
 
 Read `docs/vemm/03-architecture.md`, then run
 `npm ci --prefix tests/tizen --ignore-scripts` and `tools/tizen/test.sh`
-for Samsung changes. Keep ES5/runtime compatibility, existing app/signing
-identity, default-off experimental features and original fallback behavior.
+for Samsung changes. Keep ES5/runtime compatibility, Vemm technical identity,
+default-off experimental features and original fallback behavior.
 Record exact model/current runtime for device claims; GPU/API access is not a
 performance result. No household account writes in automated tests.
 
@@ -32,4 +32,4 @@ Use the project verification workflow in `AGENTS.md`, and preserve unrelated cha
 
 See [building and distribution](docs/building.md) for unsigned host checks and
 matching complete-source archives. Do not publish an SDK-signed throwaway-author
-build as an update to an installed release. Main uses one squash commit per PR.
+build as a Vemm release. Main uses one squash commit per PR.

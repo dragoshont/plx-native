@@ -1,9 +1,11 @@
-# Install Vemm on Samsung Tizen
+# Install the historical Plx 0.2.7 Samsung package
 
-Published Samsung 0.2.7 appears as **Plx** on the TV. Current development source
-uses the **Vemm** working brand with original artwork; the package/app IDs,
-saved settings and existing author continuity are unchanged. This source
-transition does not replace any published asset or install an update.
+This guide installs the historical Samsung 0.2.7 package, which appears as
+**Plx**. It is retained for existing release users and provenance.
+
+**No Vemm package has been released.** Current Vemm source is a separate app
+(`VemmTvApp0.Vemm`) with separate settings and future signing identity. It does
+not update, uninstall or import data from Plx.
 
 Use **one command-line tool: `python3 tools/tizen.py`**.
 For the published 0.2.7 instructions below, it downloads the historical Plx
@@ -176,5 +178,5 @@ Resetting the profile that signed an installed app means that app must be
 removed before a new profile can install it again.
 Then continue from **cert add** in step 4.
 
-For building Vemm from source or deeper troubleshooting, see the
+For the unreleased Vemm source/build contract, see
 [developer guide](samsung-getting-started.md).

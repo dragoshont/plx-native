@@ -2,9 +2,9 @@
 // Favorite libraries, card context menu and video PlayQueue: the LG parity features of the Samsung
 // client. Every server is synthetic; nothing here can reach a real account.
 var assert = require("assert");
-var favorites = require("../../samsung/PlexTv/js/favorites");
-var menu = require("../../samsung/PlexTv/js/item-menu");
-var api = require("../../samsung/PlexTv/js/plex-api");
+var favorites = require("../../samsung/Vemm/js/favorites");
+var menu = require("../../samsung/Vemm/js/item-menu");
+var api = require("../../samsung/Vemm/js/plex-api");
 
 function memoryStorage() {
     var data = {};
@@ -32,7 +32,7 @@ async function run() {
     assert.deepStrictEqual(favorites.filter(sections, null), sections);
     assert.deepStrictEqual(favorites.filter(sections, ["3"]), [{ key: "3" }]);
     assert.deepStrictEqual(favorites.filter(sections, ["9"]), sections, "A stale selection never empties Home");
-    storage.setItem("plx-tizen-favorite-libraries", "{\"machine-a\":[\"x\"]}");
+    storage.setItem("vemm-tizen-favorite-libraries", "{\"machine-a\":[\"x\"]}");
     assert.throws(function () { favorites.load(storage, "machine-a"); }, /invalid/);
     favorites.reset(storage);
     assert.strictEqual(favorites.load(storage, "machine-a"), null);

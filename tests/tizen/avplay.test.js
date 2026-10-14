@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var av = require("../../samsung/PlexTv/js/avplay.js");
+var av = require("../../samsung/Vemm/js/avplay.js");
 
 function fake() {
     var state = "NONE";

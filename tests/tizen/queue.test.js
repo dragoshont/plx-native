@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var queue = require("../../samsung/PlexTv/js/queue");
+var queue = require("../../samsung/Vemm/js/queue");
 var tracks = [1, 2, 3].map(function (id) { return { type: "track", ratingKey: String(id), title: "Track " + id }; });
 var test = queue.create(tracks, 1, function () { return 0; });
 assert.strictEqual(test.current(), tracks[1]);

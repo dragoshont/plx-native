@@ -9,8 +9,8 @@ python3 -m unittest discover -s tests/tizen -p 'test_*.py' -v
 node tools/tizen/acceleration-probe/selftest.cjs
 node tools/tizen/graphics-benchmark/adapter.test.cjs
 python3 tools/tizen/build-icon.py
-node --check samsung/PlexTv/main.js
-for source in samsung/PlexTv/js/*.js; do
+node --check samsung/Vemm/main.js
+for source in samsung/Vemm/js/*.js; do
     node --check "$source"
 done
-tools/tizen/check-es5.sh samsung/PlexTv
+tools/tizen/check-es5.sh samsung/Vemm

@@ -22,7 +22,7 @@ A requirement marked **TBD** is not a permission to invent a platform capability
 Samsung documentation, an emulator probe, or a test on the named retail model before depending on
 it.
 
-**Implementation status:** `samsung/PlexTv/` remains a separate Tizen 3.0 Web app. It now contains
+**Implementation status:** `samsung/Vemm/` remains a separate Tizen 3.0 Web app. It now contains
 short-code/QR authorization, Home profiles/PIN entry, owned/shared server discovery, Home shelves,
 paged libraries, sort/filter/alphabet menus, collections, multi-server search, metadata/person
 details, an isolated AVPlay adapter, PMS playback negotiation/progress, player controls, chapters,
@@ -288,8 +288,9 @@ and redirect behavior still require named-device acceptance.
 
 ### 6.1 Product separation
 
-- Put the Samsung client in a new, independently buildable Tizen Web application directory. Keep
-  existing Samsung package identity, author continuity and historical releases unchanged.
+- Keep the Samsung client in the independently buildable `samsung/Vemm/` Tizen
+  Web application. Vemm uses `VemmTvApp0.Vemm` and its own future author;
+  historical Plx package identity/releases remain unchanged and separate.
   Native Rust/C references below describe the immutable
   [pre-migration source](https://github.com/dragoshont/plx-native/tree/f74610c8e8fda765245f548adcc6565becdca31b),
   not current local modules or build dependencies.

@@ -3,7 +3,7 @@
 // (as on LG). This guards the compensating control: the token-bearing URL never
 // reaches an error, event or anything else the UI can render or log.
 var assert = require("assert");
-var av = require("../../samsung/PlexTv/js/avplay.js");
+var av = require("../../samsung/Vemm/js/avplay.js");
 
 var SECRET = "synthetic-token-7f3a";
 var URL = "https://pms.synthetic.invalid/library/parts/1/file.mkv?X-Plex-Token=" + SECRET;

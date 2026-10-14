@@ -3,15 +3,15 @@
 
     python samsung/build.py [VERSION]
 
-Output: samsung/dist/Plx-VERSION.wgt (+ .sha256). Install it with
-    python samsung/install.py TV_IP samsung/dist/Plx-VERSION.wgt
+Output: samsung/dist/Vemm-VERSION.wgt (+ .sha256). Install it with
+    python samsung/install.py TV_IP samsung/dist/Vemm-VERSION.wgt
 
 Signing uses an author certificate plus the public Tizen distributor that ships with
 Tizen Studio, so the package installs on Developer Mode TVs without a Samsung account.
-The author certificate is PLX_AUTHOR_P12 + PLX_AUTHOR_PW if set, otherwise your own one in
-~/.config/plxnative/samsung-author (PLX_AUTHOR_DIR), created on first use. A TV refuses
-to update an app signed with a different author certificate. Preserve the existing
-author; do not uninstall a working app to bypass a mismatch.
+The author certificate is VEMM_AUTHOR_P12 + VEMM_AUTHOR_PW if set, otherwise your own one in
+~/.config/vemm/samsung-author (VEMM_AUTHOR_DIR), created on first use. Preserve that
+author for future Vemm updates. Vemm is a separate app and does not update or read the
+historical Plx installation.
 """
 import hashlib
 import os
@@ -24,7 +24,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-PACKAGE_ID = "PlxNative0"
+PACKAGE_ID = "VemmTvApp0"
+APP_ID = f"{PACKAGE_ID}.Vemm"
 LICENSE_FILES = (
     "Apache-2.0.txt", "FreeType.txt", "GCC-exception-3.1.txt", "HarfBuzz-Old-MIT.txt",
     "ICU4X.txt", "LGPL-2.1.txt", "LLVM-exception.txt", "MIT.txt",
@@ -84,7 +85,7 @@ def inline_passwords(profiles, pw):
 
     tree = ET.parse(profiles)
     for prof in tree.getroot().iter("profile"):
-        if prof.get("name") == "plx-build":
+        if prof.get("name") == "vemm-build":
             for item in prof.iter("profileitem"):
                 kind = item.get("distributor")
                 if kind in ("0", "1"):
@@ -93,12 +94,12 @@ def inline_passwords(profiles, pw):
 
 
 def author_cert(tizen, work):
-    p12, pw = os.environ.get("PLX_AUTHOR_P12"), os.environ.get("PLX_AUTHOR_PW")
+    p12, pw = os.environ.get("VEMM_AUTHOR_P12"), os.environ.get("VEMM_AUTHOR_PW")
     if p12:
         if not (Path(p12).is_file() and pw):
-            fail("PLX_AUTHOR_P12 must be a file and PLX_AUTHOR_PW must be set.")
+            fail("VEMM_AUTHOR_P12 must be a file and VEMM_AUTHOR_PW must be set.")
         return Path(p12), pw
-    key_dir = Path(os.environ.get("PLX_AUTHOR_DIR") or Path.home() / ".config/plxnative/samsung-author")
+    key_dir = Path(os.environ.get("VEMM_AUTHOR_DIR") or Path.home() / ".config/vemm/samsung-author")
     cert, pw_file = key_dir / "author.p12", key_dir / "author.pw"
     if not cert.is_file():
         print(f"Creating your Vemm update author certificate in {key_dir} (keep it for future updates)")
@@ -108,7 +109,7 @@ def author_cert(tizen, work):
         os.chmod(pw_file, 0o600)
         out = work / "cert"
         out.mkdir()
-        run(tizen, "certificate", "-a", "plx-author", "-p", pw_file.read_text(), "-n", "Plx author", "-f", "author", "--", out)
+        run(tizen, "certificate", "-a", "vemm-author", "-p", pw_file.read_text(), "-n", "Vemm author", "-f", "author", "--", out)
         shutil.move(str(out / "author.p12"), cert)
     return cert, pw_file.read_text().strip()
 
@@ -116,17 +117,15 @@ def author_cert(tizen, work):
 def stage(app, version):
     app.mkdir()
     for name in ("config.xml", "index.html", "main.js", "icon.png"):
-        shutil.copyfile(HERE / "PlexTv" / name, app / name)
+        shutil.copyfile(HERE / "Vemm" / name, app / name)
     for name in ("js", "css"):
-        shutil.copytree(HERE / "PlexTv" / name, app / name,
+        shutil.copytree(HERE / "Vemm" / name, app / name,
                         ignore=shutil.ignore_patterns(".*", "*.map", "*.wgt"))
-    shutil.copytree(HERE / "PlexTv" / "brand", app / "brand")
+    shutil.copytree(HERE / "Vemm" / "brand", app / "brand")
     cfg = app / "config.xml"
     text = cfg.read_text(encoding="utf-8")
     text, n1 = re.subn(r'(<widget [^>]*version=")[^"]*"', rf'\g<1>{version}"', text, count=1)
-    text, n2 = re.subn(r"<tizen:application required_version=",
-                       f'<tizen:application id="{PACKAGE_ID}.Plx" package="{PACKAGE_ID}" required_version=', text, count=1)
-    if n1 != 1 or n2 != 1:
+    if n1 != 1 or f'id="{APP_ID}" package="{PACKAGE_ID}"' not in text:
         fail("Could not stamp config.xml")
     cfg.write_text(text, encoding="utf-8")
     for name in ("LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md", "TRADEMARKS.md"):
@@ -139,7 +138,7 @@ def stage(app, version):
 def es5_check():
     node = shutil.which("node")
     if node and (ROOT / "tests/tizen/node_modules/acorn").is_dir():
-        run(node, ROOT / "tools/tizen/check-es5.js", HERE / "PlexTv")
+        run(node, ROOT / "tools/tizen/check-es5.js", HERE / "Vemm")
 
 
 def build(version, out_dir=HERE / "dist"):
@@ -170,14 +169,14 @@ def build(version, out_dir=HERE / "dist"):
                 profiles.write_text('<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
                                     '<profiles active="" version="3.1"/>\n', encoding="utf-8")
             # A temporary signing profile; the previous profiles.xml is restored below.
-            run(tizen, "security-profiles", "add", "-n", "plx-build", "-a", cert, "-p", pw,
+            run(tizen, "security-profiles", "add", "-n", "vemm-build", "-a", cert, "-p", pw,
                 "-d", dist / "tizen-distributor-signer.p12", "-dp", "tizenpkcs12passfordsigner",
                 "-dc", dist / "tizen-distributor-ca.cer")
             if sys.platform.startswith("linux"):
                 inline_passwords(profiles, pw)
             pkg_dir = work / "out"
             pkg_dir.mkdir()
-            run(tizen, "package", "-t", "wgt", "-s", "plx-build", "-o", pkg_dir, "--", app)
+            run(tizen, "package", "-t", "wgt", "-s", "vemm-build", "-o", pkg_dir, "--", app)
         finally:
             if backup is None:
                 profiles.unlink(missing_ok=True)
@@ -190,7 +189,7 @@ def build(version, out_dir=HERE / "dist"):
             if "signature1.xml" not in z.namelist():
                 fail("Package is not signed")
         out_dir.mkdir(parents=True, exist_ok=True)
-        out = out_dir / f"Plx-{version}.wgt"
+        out = out_dir / f"Vemm-{version}.wgt"
         shutil.move(str(pkgs[0]), out)
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
     (out_dir / f"{out.name}.sha256").write_text(f"{digest}  {out.name}\n")

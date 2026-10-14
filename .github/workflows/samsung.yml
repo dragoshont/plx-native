@@ -1,20 +1,20 @@
 name: Samsung Tizen
 
-# WHAT A GREEN RUN HERE MEANS: the Vemm Samsung web app under samsung/PlexTv parses as strict ES5 (the
+# WHAT A GREEN RUN HERE MEANS: the Vemm Samsung web app under samsung/Vemm parses as strict ES5 (the
 # 2017 Tizen 3.0 / Chromium M47 floor), its generated locale bundles match their sources, and its host contract
 # tests (Plex API, playback negotiation, UI state, source distribution) pass
 # against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
 # AVPlay plays anything, or that any Samsung model is supported. Those claims need observed TV
 # evidence (docs/samsung-upstream-readiness.md). No Rust, no ARM build, no LG artifact is touched.
-# Only an explicit samsung-v* tag invokes the wgt job, SDK installation and signing.
-# It signs Plx-VERSION.wgt with the release author certificate (secrets
-# SAMSUNG_AUTHOR_P12_B64, SAMSUNG_AUTHOR_PW) and publishes the release.
+# Only an explicit vX.Y.Z tag invokes the wgt job, SDK installation and signing.
+# It signs Vemm-VERSION.wgt with the Vemm release author certificate (secrets
+# VEMM_AUTHOR_P12_B64, VEMM_AUTHOR_PW) and publishes the release.
 
 on:
   push:
     branches: [main, 'release/v*']
-    # A samsung-vX.Y.Z tag publishes Plx-X.Y.Z.wgt as a prerelease (path filters do not apply to tags).
-    tags: ['samsung-v*']
+    # A vX.Y.Z tag publishes Vemm-X.Y.Z.wgt as a prerelease (path filters do not apply to tags).
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -41,7 +41,7 @@ jobs:
         run: python3 samsung/source_bundle.py --output "$RUNNER_TEMP/samsung-source"
 
   wgt:
-    if: startsWith(github.ref, 'refs/tags/samsung-v')
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: host
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -72,32 +72,32 @@ jobs:
       - name: Choose version and signing certificate
         id: plan
         env:
-          AUTHOR_P12_B64: ${{ secrets.SAMSUNG_AUTHOR_P12_B64 }}
-          AUTHOR_PW: ${{ secrets.SAMSUNG_AUTHOR_PW }}
+          AUTHOR_P12_B64: ${{ secrets.VEMM_AUTHOR_P12_B64 }}
+          AUTHOR_PW: ${{ secrets.VEMM_AUTHOR_PW }}
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "skip=0" >> "$GITHUB_OUTPUT"
-          if [[ "$GITHUB_REF" == refs/tags/samsung-v* ]]; then
-            version="${GITHUB_REF#refs/tags/samsung-v}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
             [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag $GITHUB_REF"; exit 1; }
             if [ -z "$AUTHOR_P12_B64" ] || [ -z "$AUTHOR_PW" ]; then
               # samsung/release.py signs with the private release certificate on the
               # maintainer's machine and creates this tag together with its release.
-              if gh release view "samsung-v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-                echo "::notice::samsung-v$version was published by samsung/release.py; no CI signing secrets, nothing to rebuild."
+              if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                echo "::notice::v$version was published by samsung/release.py; no CI signing secrets, nothing to rebuild."
                 echo "skip=1" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
-              echo "::error::release secrets SAMSUNG_AUTHOR_P12_B64 / SAMSUNG_AUTHOR_PW are not set"; exit 1
+              echo "::error::release secrets VEMM_AUTHOR_P12_B64 / VEMM_AUTHOR_PW are not set"; exit 1
             fi
             umask 077
             echo "$AUTHOR_P12_B64" | base64 -d > "$RUNNER_TEMP/author.p12"
-            echo "PLX_AUTHOR_P12=$RUNNER_TEMP/author.p12" >> "$GITHUB_ENV"
-            echo "PLX_AUTHOR_PW=$AUTHOR_PW" >> "$GITHUB_ENV"
+            echo "VEMM_AUTHOR_P12=$RUNNER_TEMP/author.p12" >> "$GITHUB_ENV"
+            echo "VEMM_AUTHOR_PW=$AUTHOR_PW" >> "$GITHUB_ENV"
             echo "publish=1" >> "$GITHUB_OUTPUT"
           else
             # Test build: signed with a throwaway author certificate, so it cannot update a
-            # release install on the TV (delete Plx first).
+            # release install on the TV (delete only an owned test install first).
             version="0.0.$GITHUB_RUN_NUMBER"
             echo "publish=0" >> "$GITHUB_OUTPUT"
           fi
@@ -117,10 +117,10 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: steps.plan.outputs.skip != '1'
         with:
-          name: Plx-${{ steps.plan.outputs.version }}
+          name: Vemm-${{ steps.plan.outputs.version }}
           path: |
-            samsung/dist/Plx-${{ steps.plan.outputs.version }}.wgt*
-            samsung/dist/Samsung-source-*.zip*
+            samsung/dist/Vemm-${{ steps.plan.outputs.version }}.wgt*
+            samsung/dist/Vemm-source-*.zip*
           if-no-files-found: error
       - name: Publish release
         if: steps.plan.outputs.publish == '1' && steps.plan.outputs.skip != '1'
@@ -128,12 +128,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.plan.outputs.version }}
         run: |
-          if gh release view "samsung-v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release samsung-v$VERSION already exists (published by samsung/release.py); leaving it."
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists (published by samsung/release.py); leaving it."
             exit 0
           fi
-          gh release create "samsung-v$VERSION" samsung/dist/Plx-$VERSION.wgt samsung/dist/Plx-$VERSION.wgt.sha256 \
-            samsung/dist/Samsung-source-*.zip samsung/dist/Samsung-source-*.zip.sha256 \
+          gh release create "v$VERSION" samsung/dist/Vemm-$VERSION.wgt samsung/dist/Vemm-$VERSION.wgt.sha256 \
+            samsung/dist/Vemm-source-*.zip samsung/dist/Vemm-source-*.zip.sha256 \
             --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
             --title "Vemm for Samsung $VERSION" \
-            --notes "Install with the tizen-tv-builder toolkit: https://github.com/dragoshont/plx-native/blob/main/docs/install-samsung.md"
+            --notes "Install with the tizen-tv-builder toolkit: https://github.com/dragoshont/vemm/blob/main/docs/install-samsung.md"

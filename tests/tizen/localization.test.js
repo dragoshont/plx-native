@@ -4,8 +4,8 @@ var vm = require("vm");
 var assert = require("assert");
 var acorn = require("acorn");
 var context = {};
-vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/i18n"), "utf8"), context);
-var source = fs.readFileSync(require.resolve("../../samsung/PlexTv/main"), "utf8");
+vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/js/i18n"), "utf8"), context);
+var source = fs.readFileSync(require.resolve("../../samsung/Vemm/main"), "utf8");
 var required = new Set();
 function copy(arg) {
     if (!arg) { return; }
@@ -26,15 +26,15 @@ function walk(node) {
     });
 }
 walk(acorn.parse(source, { ecmaVersion: 5 }));
-walk(acorn.parse(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/television-ui"), "utf8"), { ecmaVersion: 5 }));
-walk(acorn.parse(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/catalogue-ui"), "utf8"), { ecmaVersion: 5 }));
+walk(acorn.parse(fs.readFileSync(require.resolve("../../samsung/Vemm/js/television-ui"), "utf8"), { ecmaVersion: 5 }));
+walk(acorn.parse(fs.readFileSync(require.resolve("../../samsung/Vemm/js/catalogue-ui"), "utf8"), { ecmaVersion: 5 }));
 ["es", "be"].forEach(function (language) {
-    context.PlexI18n.setLanguage(language);
-    var missing = Array.from(required).filter(function (text) { return !context.PlexI18n.has(text); });
+    context.VemmI18n.setLanguage(language);
+    var missing = Array.from(required).filter(function (text) { return !context.VemmI18n.has(text); });
     assert.deepStrictEqual(missing, [], "Missing static app-copy translations: " + language);
-    assert.notStrictEqual(context.PlexI18n.text("Scheduled recordings"), "Scheduled recordings");
-    assert.strictEqual(context.PlexI18n.text("Synthetic server title"), "Synthetic server title");
-    assert(context.PlexI18n.text("Record / {title}", { title: "<Synthetic>" }).includes("<Synthetic>"));
-    assert(!context.PlexI18n.text("Resume at {time}", { time: "3:12" }).includes("{time}"));
+    assert.notStrictEqual(context.VemmI18n.text("Scheduled recordings"), "Scheduled recordings");
+    assert.strictEqual(context.VemmI18n.text("Synthetic server title"), "Synthetic server title");
+    assert(context.VemmI18n.text("Record / {title}", { title: "<Synthetic>" }).includes("<Synthetic>"));
+    assert(!context.VemmI18n.text("Resume at {time}", { time: "3:12" }).includes("{time}"));
 });
 console.log("Tizen English/Spanish/Belarusian static app-copy coverage: passed");

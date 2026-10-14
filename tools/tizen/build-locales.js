@@ -9,7 +9,9 @@ var catalogs = { es: {}, be: {} };
         var translated = JSON.parse(fs.readFileSync(path.join(root, "samsung/locales", language, name + ".json"), "utf8"));
         Object.keys(english).forEach(function (key) {
             var source = english[key].value;
-            if (typeof source === "string" && typeof translated[key] === "string" && source.indexOf("{") === -1) {
+            var legacy = /PlxNative|plxnative\.com/i;
+            if (typeof source === "string" && typeof translated[key] === "string" &&
+                    source.indexOf("{") === -1 && !legacy.test(source) && !legacy.test(translated[key])) {
                 catalogs[language][source] = translated[key];
             }
         });
@@ -23,7 +25,7 @@ Object.keys(additions).forEach(function (source) {
     });
 });
 var output = "(function (root) {\n    \"use strict\";\n    var catalogs = " + JSON.stringify(catalogs) +
-    ";\n    var language = \"en\";\n    root.PlexI18n = {\n" +
+    ";\n    var language = \"en\";\n    root.VemmI18n = {\n" +
     "        setLanguage: function (value) { language = value === \"es\" || value === \"be\" ? value : \"en\"; },\n" +
     "        has: function (value) { return language === \"en\" || Object.prototype.hasOwnProperty.call(catalogs[language], value); },\n" +
     "        error: function (error) {\n" +
@@ -40,7 +42,7 @@ var output = "(function (root) {\n    \"use strict\";\n    var catalogs = " + JS
     "            });\n" +
     "        }\n" +
     "    };\n}(this));\n";
-var target = path.join(root, "samsung/PlexTv/js/i18n.js");
+var target = path.join(root, "samsung/Vemm/js/i18n.js");
 if (process.argv[2] === "--write") { fs.writeFileSync(target, output); }
 else if (!fs.existsSync(target) || fs.readFileSync(target, "utf8") !== output) {
     throw new Error("Tizen translations are stale. Run node tools/tizen/build-locales.js --write.");

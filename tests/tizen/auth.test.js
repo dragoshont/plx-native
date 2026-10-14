@@ -1,7 +1,7 @@
 "use strict";
 
 var assert = require("assert");
-var createAuthClient = require("../../samsung/PlexTv/js/plex-api.js").createAuthClient;
+var createAuthClient = require("../../samsung/Vemm/js/plex-api.js").createAuthClient;
 
 function response(status, payload) {
     return {

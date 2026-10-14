@@ -3,7 +3,7 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var JSDOM = require("jsdom").JSDOM;
-var app = path.resolve(__dirname, "../../samsung/PlexTv");
+var app = path.resolve(__dirname, "../../samsung/Vemm");
 var movie = {
     ratingKey: "10", type: "movie", title: "Synthetic Movie", duration: 100000,
     summary: "Synthetic metadata", Chapter: [{ startTimeOffset: 20000, tag: "Chapter one" }],
@@ -258,7 +258,7 @@ async function run() {
         secondRow.className = "shelf-row";
         var secondShelfCard = window.document.createElement("button");
         secondShelfCard.className = "media-card";
-        secondShelfCard.plexCard = firstShelfCard.plexCard;
+        secondShelfCard.vemmCard = firstShelfCard.vemmCard;
         secondRow.appendChild(secondShelfCard);
         secondShelf.appendChild(secondRow);
         window.document.querySelector(".home-shelves").appendChild(secondShelf);
@@ -392,7 +392,7 @@ async function run() {
         var retainedCard = window.document.querySelectorAll(".media-card")[30];
         retainedCard.focus();
         click("Load more"); await settle();
-        assert.strictEqual(window.document.activeElement.plexCard.item.ratingKey, retainedCard.plexCard.item.ratingKey,
+        assert.strictEqual(window.document.activeElement.vemmCard.item.ratingKey, retainedCard.vemmCard.item.ratingKey,
             "Appending a page must preserve the focused title, not leave focus on the removed node");
         for (var page = 0; page < 3; page += 1) { click("Load more"); await settle(); }
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 200, "Bound DOM and metadata retained after 250 items");
@@ -427,8 +427,8 @@ async function run() {
         assert.strictEqual(window.document.querySelectorAll(".media-card").length, 1);
         assert(!window.document.body.textContent.includes("identifiers and permissions"),
             "Search results must not show developer-facing copy");
-        assert.deepStrictEqual(JSON.parse(window.localStorage.getItem("plx-tizen-recent-searches") || "{}")
-            [Object.keys(JSON.parse(window.localStorage.getItem("plx-tizen-recent-searches") || "{}"))[0]], ["Synthetic"],
+        assert.deepStrictEqual(JSON.parse(window.localStorage.getItem("vemm-tizen-recent-searches") || "{}")
+            [Object.keys(JSON.parse(window.localStorage.getItem("vemm-tizen-recent-searches") || "{}"))[0]], ["Synthetic"],
             "A search that ran is remembered for the profile");
         var searchInput = window.document.querySelector('input[type="search"]');
         searchInput.value = "";
@@ -743,9 +743,9 @@ async function run() {
         assert(window.document.querySelector(".synopsis"), "Foreground recovery must restore fresh details");
         assert.strictEqual(window.localStorage.length, 3,
             "Only the device identifier, explicitly saved preferences and recent searches are stored");
-        assert(window.localStorage.getItem("plx-tizen-recent-searches"));
-        assert(window.localStorage.getItem("plx-tizen-preferences"));
-        assert.strictEqual(window.localStorage.getItem("plx-tizen-account"), null, "Preference changes must not persist account credentials");
+        assert(window.localStorage.getItem("vemm-tizen-recent-searches"));
+        assert(window.localStorage.getItem("vemm-tizen-preferences"));
+        assert.strictEqual(window.localStorage.getItem("vemm-tizen-account"), null, "Preference changes must not persist account credentials");
         movie.type = "show";
         movie.OnDeck = { Metadata: onDeck };
         click("Back"); await settle();

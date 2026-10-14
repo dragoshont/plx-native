@@ -23,8 +23,9 @@ repository settings, signing material and devices were not mutated.
   constraints.
 - Established Vemm (`/vem/`) and **Your media. At its best.** as the working
   source identity without claiming trademark clearance.
-- Preserved `PlxNative0` / `PlxNative0.Plx`, `plx-tizen-*` storage keys,
-  author/signing paths, historical Plx release names and complete-source links.
+- Adopted the later separate-install decision: `VemmTvApp0` /
+  `VemmTvApp0.Vemm`, `vemm-tizen-*`, `Vemm-*`, `Vemm-source-*`, `v*`,
+  `VEMM_*` and `~/.config/vemm`; no historical token/setting import.
 - Added original SVG mark/wordmark sources and dependency-free deterministic
   launcher raster generation.
 - Added a small runtime product identity contract used by the HTML shell,
@@ -49,10 +50,18 @@ repository settings, signing material and devices were not mutated.
   and the Spanish `Fallback` label contained Belarusian text. Both were verified
   and corrected through the normal playback/localization workflows; the generic
   docstring warning is not a repository ES5/JavaScript gate.
+- Recreated the user-supplied rounded folded-V references as clean GPL SVG
+  mark/app-icon/wordmark sources using the approved palette and native system
+  text; presentation sheets are not shipped.
+- Completed a case-insensitive tracked path/content audit with explicit
+  `RETAIN_PROTOCOL_SERVICE`, `RETAIN_HISTORY_PROVENANCE` and
+  `MIGRATE_APP_OWNED` classifications. Active source moved to `samsung/Vemm/`;
+  Vemm-owned runtime globals/DOM/CSS identifiers were migrated while Plex
+  protocol/service names and Plx history remain.
 
 ## Partially completed
 
-- Vemm source branding is complete, but no Vemm-branded signed update has been
+- Vemm source branding is complete, but no signed Vemm package has been
   produced or installed.
 - Architecture is easier to understand and playback decisions are more
   explainable, but `main.js` remains the intentional presentation orchestrator.
@@ -66,11 +75,11 @@ repository settings, signing material and devices were not mutated.
 ## Deferred and externally held
 
 - Trademark/domain work, final legal clearance and repository naming.
-- GitHub repository rename, fork detachment, ownership transfer or public
-  settings changes.
+- Population of `dragoshont/vemm`, old fork disposition, ownership transfer or
+  public settings changes.
 - SDK installation/upgrades, certificate/profile access, signing, WGT
   publication and release creation.
-- Device connection, install/update/launch, Plex account/server operations,
+- Device connection, first install/update/launch, Plex account/server operations,
   playback writes, physical-remote checks and named-model acceptance.
 - Non-Samsung platform implementations or a universal platform framework.
 - Default-on WebGL, new graphics engines, AI upscaling or frame interpolation.
@@ -85,15 +94,15 @@ repository settings, signing material and devices were not mutated.
 | Independent adversarial review | `REVISE`; one major diagnostic defect and one minor CI wording issue found |
 | Review-fix regression (`product-ui.test.js`) | Passed; Reason remains and exactly one Position row updates |
 | `tools/tizen/test.sh` on clean `41c94775` | Passed |
-| `tools/tizen/build-source.sh samsung/PlexTv` on `41c94775` | Unsigned SDK source build passed |
+| `tools/tizen/build-source.sh samsung/Vemm` on `41c94775` | Unsigned SDK source build passed |
 | Tizen TV Builder `0.1.0` doctor | Tizen CLI `2.5.25`, SDB `4.2.36`, device not contacted |
-| Toolkit validate + unsigned build on offline staged app | Passed with `PlxNative0.Plx`, required version `3.0`, device not contacted |
+| Toolkit validate + unsigned build on offline staged app | Earlier compatibility candidate passed with `PlxNative0.Plx`; superseded by the separate-install decision |
 | Complete-source archive from `e8b002fd` | 262 entries; required Vemm source/tests/notices present; no `.p12`, `.pw`, `.wgt` or `node_modules` |
-| Offline package staging audit | 50 files; display name Vemm; compatibility ID `PlxNative0.Plx`; no private/signing artifacts |
+| Offline package staging audit | Earlier candidate passed; final separate-install staging evidence is recorded below |
 | Impeccable mechanical UI detector | No findings |
 | CodeRabbit review of exact `39cc9adb` | Low risk; two bounded findings verified and fixed, generic docstring warning intentionally not adopted |
 | `tools/tizen/test.sh` on clean `5b698444` | Passed after both CodeRabbit fixes |
-| `tools/tizen/build-source.sh samsung/PlexTv` on `5b698444` | Unsigned SDK source build passed |
+| `tools/tizen/build-source.sh samsung/Vemm` on `5b698444` | Unsigned SDK source build passed |
 | Complete-source archive from `5b698444` | 263 entries; review fixes/report present; no `.p12`, `.pw`, `.wgt` or `node_modules` |
 | Signed package, install, launch, device playback, Store review | Skipped — not authorized |
 
@@ -101,9 +110,9 @@ Resolved intermediate failures:
 
 - Host dependencies were initially absent; the pinned lockfile was restored
   with the repository-approved `npm ci` command.
-- Direct toolkit validation of the unstaged source manifest failed because the
-  committed source intentionally omits certificate-bound app/package IDs.
-  Validation of the offline staged manifest passed.
+- The earlier compatibility candidate omitted app/package IDs from source and
+  required staged-manifest validation. The separate Vemm app now commits its
+  public IDs and validates directly as `VemmTvApp0.Vemm`.
 - The first full host run exposed a VM context where `module.exports` existed
   without `require`; the product-module guard was corrected and the full gate
   passed.
@@ -121,7 +130,7 @@ Resolved intermediate failures:
 
 ## Known risks
 
-- A host/unsigned-build pass does not prove a signed update, author continuity
+- A host/unsigned-build pass does not prove a signed package, Vemm author continuity
   on a TV, native SVG rendering, AVPlay output, codec/HDR/audio/subtitle support,
   remote behavior or panel performance.
 - The word Vemm is not legally cleared. Current use is explicitly a working
@@ -135,26 +144,29 @@ Resolved intermediate failures:
 ## Outstanding decisions
 
 1. Human review of the broad brand/architecture PR.
-2. Whether Vemm receives legal clearance and becomes the repository name.
-3. Whether/when to authorize a signed update using the existing author.
+2. Whether Vemm receives final legal clearance.
+3. Whether/when to authorize a first signed Vemm package and establish its
+   retained Vemm author.
 4. Exact named-model acceptance scope before any support or release claim.
-5. Preservation-safe GitHub rename/fork strategy, if any.
+5. Population of `dragoshont/vemm` and preservation-safe disposition of the old
+   fork/repository.
 
 ## Changed-path inventory
 
 Product/runtime/assets:
 
-- `samsung/PlexTv/config.xml`
-- `samsung/PlexTv/index.html`
-- `samsung/PlexTv/css/style.css`
-- `samsung/PlexTv/icon.png`
-- `samsung/PlexTv/brand/vemm-mark.svg`
-- `samsung/PlexTv/js/product.js`
-- `samsung/PlexTv/js/plex-api.js`
-- `samsung/PlexTv/js/playback.js`
-- `samsung/PlexTv/js/i18n.js`
-- `samsung/PlexTv/main.js`
+- `samsung/Vemm/config.xml`
+- `samsung/Vemm/index.html`
+- `samsung/Vemm/css/style.css`
+- `samsung/Vemm/icon.png`
+- `samsung/Vemm/brand/vemm-mark.svg`
+- `samsung/Vemm/js/product.js`
+- `samsung/Vemm/js/plex-api.js`
+- `samsung/Vemm/js/playback.js`
+- `samsung/Vemm/js/i18n.js`
+- `samsung/Vemm/main.js`
 - `samsung/brand/README.md`
+- `samsung/brand/vemm-app-icon.svg`
 - `samsung/brand/vemm-mark.svg`
 - `samsung/brand/vemm-wordmark.svg`
 - `samsung/strings.json`
@@ -165,11 +177,13 @@ Build/release/workflow:
 - `samsung/build.py`
 - `samsung/install.py`
 - `samsung/release.py`
+- `samsung/source_bundle.py`
 - `.github/workflows/samsung.yml`
 
 Tests:
 
 - `tests/tizen/vemm-transition.test.js`
+- `tests/tizen/vemm-technical-identity.test.js`
 - `tests/tizen/manifest.test.js`
 - `tests/tizen/playback.test.js`
 - `tests/tizen/product-ui.test.js`
@@ -201,3 +215,4 @@ Current documentation/policy:
 - `docs/vemm/05-platform-capabilities.md`
 - `docs/vemm/06-implementation-report.md`
 - `docs/vemm/07-repository-and-release-migration.md`
+- `docs/vemm/08-legacy-identity-audit.md`

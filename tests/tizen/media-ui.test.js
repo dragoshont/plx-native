@@ -3,7 +3,7 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var JSDOM = require("jsdom").JSDOM;
-var app = path.resolve(__dirname, "../../samsung/PlexTv");
+var app = path.resolve(__dirname, "../../samsung/Vemm");
 var tracks = [1, 2].map(function (id) {
     return { ratingKey: String(id), type: "track", title: "Track " + id, duration: 180000,
         Media: [{ container: "flac", audioCodec: "flac", Part: [{ id: String(20 + id), key: "/library/parts/" + (20 + id) + "/file.flac",
@@ -111,7 +111,7 @@ async function run() {
     ["plex-api", "avplay", "playback", "queue", "photos", "television", "television-ui", "catalogue-ui", "subtitles", "preferences", "session", "i18n"].forEach(function (name) {
         window.eval(fs.readFileSync(path.join(app, "js", name + ".js"), "utf8"));
     });
-    window.localStorage.setItem("plx-tizen-account", JSON.stringify({ version: 1, unencryptedAccepted: true, token: "synthetic-account-token" }));
+    window.localStorage.setItem("vemm-tizen-account", JSON.stringify({ version: 2, storage: "unencrypted", token: "synthetic-account-token" }));
     window.eval(fs.readFileSync(path.join(app, "main.js"), "utf8"));
     function click(label) {
         var node = Array.from(window.document.querySelectorAll("button")).find(function (button) { return button.textContent === label; });

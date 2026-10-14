@@ -65,7 +65,7 @@ function memoryStorage(initial) {
     };
 }
 
-var FAVORITES = "plx-tizen-favorite-libraries";
+var FAVORITES = "vemm-tizen-favorite-libraries";
 var episode = { ratingKey: "50", type: "episode", title: "Synthetic Episode", viewOffset: 6000,
     grandparentRatingKey: "30", parentRatingKey: "40" };
 var movie = { ratingKey: "7", type: "movie", title: "Synthetic Movie", guid: "plex://movie/5d7768295af944001f1f7477" };
@@ -133,14 +133,14 @@ function boot(storage) {
             return Promise.resolve({ relay: false, client: entry.id === "machine-a" ? clients.a : clients.b });
         }
     };
-    var window = { PlexApi: api, PlexHomeHero: require("../../samsung/PlexTv/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob, localStorage: storage,
+    var window = { PlexApi: api, VemmHomeHero: require("../../samsung/Vemm/js/home-hero.js"), Promise: Promise, URL: URL, Blob: Blob, localStorage: storage,
         fetch: function () { assert.fail("The synthetic UI must not use the network"); },
         addEventListener: function () {} };
     ["i18n.js", "js/preferences.js", "js/favorites.js", "js/item-menu.js"].forEach(function (file) {
-        var path = require.resolve("../../samsung/PlexTv/" + (file === "i18n.js" ? "js/i18n.js" : file));
+        var path = require.resolve("../../samsung/Vemm/" + (file === "i18n.js" ? "js/i18n.js" : file));
         vm.runInNewContext(fs.readFileSync(path, "utf8"), window);
     });
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/main.js"), "utf8"), {
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/main.js"), "utf8"), {
         document: document, window: window, console: console,
         setTimeout: function (callback, delay) { timers.push({ callback: callback, delay: delay }); return timers.length; },
         clearTimeout: function (id) { if (timers[id - 1]) { timers[id - 1].callback = null; } }
@@ -214,7 +214,7 @@ async function holdMenuAndShortPress() {
     await app.signIn("Alpha (owned)");
     assert(!app.find("Start watching"), "An answered server skips onboarding");
     var deckCard = app.cards()[0];
-    assert.strictEqual(deckCard.plexCard.item.ratingKey, "50");
+    assert.strictEqual(deckCard.vemmCard.item.ratingKey, "50");
     deckCard.focus();
     app.key("keydown", 13);
     assert.deepStrictEqual(app.record.opened, [], "OK keydown on a card waits for key-up");
@@ -245,7 +245,7 @@ async function otherServers() {
     storage.setItem(FAVORITES, JSON.stringify({ "machine-a": ["1", "2"] }));
     var app = boot(storage);
     await app.signIn("Alpha (owned)");
-    var movieCard = app.cards().find(function (node) { return node.plexCard.item.ratingKey === "7"; });
+    var movieCard = app.cards().find(function (node) { return node.vemmCard.item.ratingKey === "7"; });
     movieCard.events.click();
     await app.settle();
     app.click("Other servers");

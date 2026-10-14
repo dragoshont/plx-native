@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var api = require("../../samsung/PlexTv/js/plex-api");
+var api = require("../../samsung/Vemm/js/plex-api");
 var calls = [];
 var account = api.createAccountClient({
     token: "synthetic-account-token",

@@ -2,7 +2,7 @@
 var assert = require("assert");
 var fs = require("fs");
 var JSDOM = require("jsdom").JSDOM;
-var css = fs.readFileSync(require.resolve("../../samsung/PlexTv/css/style.css"), "utf8");
+var css = fs.readFileSync(require.resolve("../../samsung/Vemm/css/style.css"), "utf8");
 
 function rule(selector) {
     var escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");

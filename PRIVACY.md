@@ -1,7 +1,8 @@
 # Privacy and data handling
 
-This project's active product is Vemm for Samsung Tizen. The complete
-current statement is [Samsung data handling](samsung/PRIVACY.md).
+This project's active product is Vemm for Samsung Tizen. Vemm is a separate app
+and does not import historical Plx credentials/preferences. The complete current
+statement is [Samsung data handling](samsung/PRIVACY.md).
 
 The client communicates with Plex and user-selected media servers. Normal
 playback can update progress/watched state. Saved sign-in uses **unencrypted

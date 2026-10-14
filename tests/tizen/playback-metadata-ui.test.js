@@ -3,7 +3,7 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var JSDOM = require("jsdom").JSDOM;
-var app = path.resolve(__dirname, "../../samsung/PlexTv");
+var app = path.resolve(__dirname, "../../samsung/Vemm");
 var movie = { ratingKey: "10", type: "movie", title: "Synthetic incomplete movie", duration: 100000,
     Media: [{ id: 20, Part: [{ id: 20, key: "/library/parts/20/file.mp4", size: 4000000 }] }] };
 
@@ -46,10 +46,10 @@ async function run() {
         }
         return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(payload); } });
     };
-    window.localStorage.setItem("plx-tizen-account", JSON.stringify({
+    window.localStorage.setItem("vemm-tizen-account", JSON.stringify({
         version: 2, storage: "unencrypted", token: "synthetic-account-token"
     }));
-    window.localStorage.setItem("plx-tizen-favorite-libraries", JSON.stringify({ "synthetic-server": ["1"] }));
+    window.localStorage.setItem("vemm-tizen-favorite-libraries", JSON.stringify({ "synthetic-server": ["1"] }));
     for (var script of window.document.querySelectorAll("script[src]")) {
         var src = script.getAttribute("src");
         if (src.indexOf("$WEBAPIS") === 0) { continue; }
@@ -99,9 +99,9 @@ async function run() {
         assert.strictEqual(nativeOpens, 0);
         var message = window.document.getElementById("status").textContent;
         for (var language of ["es", "be"]) {
-            window.PlexI18n.setLanguage(language);
-            assert(window.PlexI18n.has(message), "Unavailable-media guidance must have an explicit translation");
-            assert.notStrictEqual(window.PlexI18n.error(new Error(message)), message);
+            window.VemmI18n.setLanguage(language);
+            assert(window.VemmI18n.has(message), "Unavailable-media guidance must have an explicit translation");
+            assert.notStrictEqual(window.VemmI18n.error(new Error(message)), message);
         }
     } finally { dom.window.close(); }
     console.log("Tizen incomplete-media UI fails explicitly without playback writes: passed");

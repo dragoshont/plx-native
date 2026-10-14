@@ -3,7 +3,7 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var JSDOM = require("jsdom").JSDOM;
-var app = path.resolve(__dirname, "../../samsung/PlexTv");
+var app = path.resolve(__dirname, "../../samsung/Vemm");
 
 async function run() {
     var dom = new JSDOM(fs.readFileSync(path.join(app, "index.html"), "utf8"), {
@@ -21,7 +21,7 @@ async function run() {
         },
         removeItem: function (key) { delete data[key]; }
     } });
-    window.PlexGraphics = { create: function (options) {
+    window.VemmGraphics = { create: function (options) {
         state.created += 1;
         return {
             setEnabled: function (enabled) { state.enabled.push(enabled); },
@@ -82,7 +82,7 @@ async function run() {
         await settle();
     }
     function settings() { click(/^Account$/); click(/^Settings$/); }
-    function saved() { return JSON.parse(data["plx-tizen-preferences"]); }
+    function saved() { return JSON.parse(data["vemm-tizen-preferences"]); }
     try {
         assert(!find(/^New graphics enhancements:/), "Enhancements are not offered before connection/login");
         assert.strictEqual(state.created, 0);

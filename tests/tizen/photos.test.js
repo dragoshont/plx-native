@@ -7,7 +7,7 @@ async function run() {
     var context = { Promise: Promise,
         setTimeout: function (callback) { var id = {}; timers.set(id, callback); return id; },
         clearTimeout: function (id) { timers.delete(id); } };
-    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/PlexTv/js/photos"), "utf8"), context);
+    vm.runInNewContext(fs.readFileSync(require.resolve("../../samsung/Vemm/js/photos"), "utf8"), context);
     var image;
     function options(index) {
         return {
@@ -26,8 +26,8 @@ async function run() {
         };
     }
     async function settle() { for (var i = 0; i < 10; i += 1) { await Promise.resolve(); } }
-    assert.throws(function () { context.PlexPhotos.create(options(0.5)); }, /not available/);
-    var viewer = context.PlexPhotos.create(options(0));
+    assert.throws(function () { context.VemmPhotos.create(options(0.5)); }, /not available/);
+    var viewer = context.VemmPhotos.create(options(0));
     await settle();
     buttons["Next photo"](); await settle();
     pending[0].resolve({}); await settle();

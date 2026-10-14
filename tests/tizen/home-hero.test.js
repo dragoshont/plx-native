@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var hero = require("../../samsung/PlexTv/js/home-hero.js");
+var hero = require("../../samsung/Vemm/js/home-hero.js");
 
 function items(prefix, type, count) {
     var out = [];

@@ -39,7 +39,7 @@ var item = {
 };
 
 function playerFixture(trackOptions) {
-    var dom = new JSDOM(fs.readFileSync(path.join(root, "samsung/PlexTv/index.html"), "utf8"), {
+    var dom = new JSDOM(fs.readFileSync(path.join(root, "samsung/Vemm/index.html"), "utf8"), {
         url: "https://player.synthetic.invalid", runScripts: "outside-only"
     });
     var window = dom.window;
@@ -54,19 +54,19 @@ function playerFixture(trackOptions) {
     var timersNext = 1;
     window.fetch = function () { assert.fail("The player preview must not use the network"); };
     var i18nContext = {};
-    vm.runInNewContext(fs.readFileSync(path.join(root, "samsung/PlexTv/js/i18n.js"), "utf8"), i18nContext);
-    window.PlexI18n = i18nContext.PlexI18n;
-    window.PlexPreferences = {
+    vm.runInNewContext(fs.readFileSync(path.join(root, "samsung/Vemm/js/i18n.js"), "utf8"), i18nContext);
+    window.VemmI18n = i18nContext.VemmI18n;
+    window.VemmPreferences = {
         load: function () { return { quality: "original", nextEpisode: "countdown", language: "en",
             skipInterval: 10, subtitleDelayMs: trackOptions && trackOptions.initialDelay || 0,
             subtitleSize: "medium", subtitlePosition: "low",
             subtitleColor: "white", subtitleBackground: "off", directPlay: "auto" }; },
         save: function () {}
     };
-    window.PlexSkipMarkers = require("../../samsung/PlexTv/js/skip-markers.js");
-    window.PlexSubtitles = require("../../samsung/PlexTv/js/subtitles.js");
-    window.PlexAvplay = { create: function (options) { adapters += 1; callbacks.avplay = options; return {}; } };
-    window.PlexPlayback = {
+    window.VemmSkipMarkers = require("../../samsung/Vemm/js/skip-markers.js");
+    window.VemmSubtitles = require("../../samsung/Vemm/js/subtitles.js");
+    window.VemmAvplay = { create: function (options) { adapters += 1; callbacks.avplay = options; return {}; } };
+    window.VemmPlayback = {
         create: function (options) {
             playerSettings.push(options.settings);
             var state = "idle";
@@ -101,7 +101,7 @@ function playerFixture(trackOptions) {
         getMetadata: function () { return Promise.resolve({ ratingKey: "synthetic-next", type: "episode", title: "Next Synthetic Episode" }); },
         image: function () { return Promise.reject(new Error("No image request is permitted in this fixture")); }
     };
-    var source = fs.readFileSync(path.join(root, "samsung/PlexTv/main.js"), "utf8");
+    var source = fs.readFileSync(path.join(root, "samsung/Vemm/main.js"), "utf8");
     var boot = source.lastIndexOf('    addConnectForm("");');
     assert(boot !== -1, "The app boot boundary remains available to isolated UI tests");
     source = source.slice(0, boot) +

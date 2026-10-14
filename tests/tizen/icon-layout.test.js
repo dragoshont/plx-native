@@ -2,7 +2,7 @@
 var assert = require("assert");
 var fs = require("fs");
 var JSDOM = require("jsdom").JSDOM;
-var css = fs.readFileSync(require.resolve("../../samsung/PlexTv/css/style.css"), "utf8");
+var css = fs.readFileSync(require.resolve("../../samsung/Vemm/css/style.css"), "utf8");
 var dom = new JSDOM("<style>" + css + "</style><section class='home-utilities'>" +
     "<button class='menu-control menu-icon-settings'>Settings</button></section>");
 try {

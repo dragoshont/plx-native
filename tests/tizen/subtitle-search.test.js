@@ -3,8 +3,8 @@
 // rust-modules/plex/src/plex/subtitles.rs and rust-modules/data/src/subsearch.rs. Every server is
 // synthetic; nothing here can reach a real account.
 var assert = require("assert");
-var api = require("../../samsung/PlexTv/js/plex-api");
-var search = require("../../samsung/PlexTv/js/subtitle-search");
+var api = require("../../samsung/Vemm/js/plex-api");
+var search = require("../../samsung/Vemm/js/subtitle-search");
 
 function respond(status, payload) {
     var text = payload === undefined ? "" : JSON.stringify(payload);
@@ -154,7 +154,7 @@ run().catch(function (error) { console.error(error); process.exitCode = 1; });
 // Regression: changing audio under a text overlay used to send subtitleStreamID=0, which deletes a
 // downloaded subtitle on PMS. Only the explicit "Subtitles off" choice may select 0.
 (function () {
-    var mainSource = require("fs").readFileSync(require("path").join(__dirname, "../../samsung/PlexTv/main.js"), "utf8");
+    var mainSource = require("fs").readFileSync(require("path").join(__dirname, "../../samsung/Vemm/main.js"), "utf8");
     assert.ok(!/externalCues \? 0/.test(mainSource), "audio change must not clear the subtitle selection");
     assert.ok(/reload\(stream\.id, current\.subtitleId, externalCues\)/.test(mainSource));
     assert.strictEqual((mainSource.match(/reload\(current\.audioId, 0\)/g) || []).length, 1);

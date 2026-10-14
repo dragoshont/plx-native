@@ -16,12 +16,12 @@ def create(output, root=ROOT):
     sha = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    archive = output / f"Samsung-source-{sha}.zip"
+    archive = output / f"Vemm-source-{sha}.zip"
     checksum = archive.with_suffix(".zip.sha256")
     if archive.exists() or checksum.exists():
         raise FileExistsError("Refusing to replace an existing source archive or checksum")
     data = subprocess.check_output(
-        ["git", "-C", str(root), "archive", "--format=zip", f"--prefix=Samsung-source-{sha}/", "HEAD"])
+        ["git", "-C", str(root), "archive", "--format=zip", f"--prefix=Vemm-source-{sha}/", "HEAD"])
     with archive.open("xb") as stream:
         stream.write(data)
     with checksum.open("x", encoding="utf-8") as stream:

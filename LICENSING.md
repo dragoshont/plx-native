@@ -36,5 +36,6 @@ The native tree and its build recipes remain available at the immutable
 and historical release tags. This source cleanup does not relicense any code.
 `samsung/source_bundle.py` archives the exact clean committed tree for future
 Samsung distributions; `samsung/build.py` stages the GPL, licensing and
-third-party notices with the WGT. Keep the existing author certificate and
-package identity for updates.
+third-party notices with the WGT. The first Vemm release establishes its own
+package/application and author identity; preserve that Vemm author for later
+Vemm updates. Historical Plx identity remains separate.

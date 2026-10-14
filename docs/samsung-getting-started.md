@@ -111,7 +111,7 @@ From this repository, with Node/npm and Samsung's Tizen CLI already installed:
 ```sh
 npm ci --prefix tests/tizen --ignore-scripts
 tools/tizen/test.sh
-tools/tizen/build-source.sh samsung/PlexTv
+tools/tizen/build-source.sh samsung/Vemm
 ```
 
 The tests use synthetic data and a fake AVPlay adapter; no personal token or server is needed.
@@ -124,29 +124,30 @@ workflow. The installed x86_64 Tizen 10 emulator did not launch on this Apple-Si
 
 Complete sections 1–4 first, or let the toolkit's `cert add` create the certificate for you.
 
-1. Clone this repository's `main` branch and run the host gates above:
+1. Use the reviewed Vemm checkout and run the host gates above. The canonical
+   target is `dragoshont/vemm`; until it is populated, this old repository/PR is
+   review provenance only:
    ```sh
-   git clone https://github.com/dragoshont/plx-native.git
-   cd plx-native
+   git clone https://github.com/dragoshont/vemm.git
+   cd vemm
    ```
 2. Build a signed package. The version is yours to choose:
    ```sh
    python3 samsung/build.py 0.0.1
    ```
-   It writes `samsung/dist/Plx-0.0.1.wgt` and its `.sha256`, with the fixed application ID
-   `PlxNative0.Plx`, the same ID as the released packages, so your build updates or replaces an
-   installed Plx rather than appearing as a second app. Nothing private enters the checkout:
-   the author certificate lives outside it.
+   It writes `samsung/dist/Vemm-0.0.1.wgt` and its `.sha256`, with application
+   ID `VemmTvApp0.Vemm`. Vemm appears as a second app and does not read or
+   replace historical Plx state. Nothing private enters the checkout: the
+   Vemm author certificate lives outside it.
 3. Install it with the toolkit, exactly as for a release:
    ```sh
-   python3 tools/tizen.py install /path/to/plx-native/samsung/dist/Plx-0.0.1.wgt TV_IP
+   python3 tools/tizen.py install /path/to/vemm/samsung/dist/Vemm-0.0.1.wgt TV_IP
    ```
    The toolkit re-signs with your active profile, installs and checks the TV's app list.
-   A TV refuses an update signed by a different author. Preserve the original
-   author/profile and resolve that mismatch; do not uninstall a working app to
-   bypass it.
-4. Open **Vemm** (or **Plx** on published 0.2.7) from the TV's Apps screen.
-   The working display brand does not change the installed application ID.
+   A TV refuses a Vemm update signed by a different author. Preserve the Vemm
+   author/profile; do not uninstall a working app to bypass a mismatch.
+4. Open **Vemm** from the TV's Apps screen. A historical **Plx** installation,
+   if present, remains separate.
    Scan the QR or enter the displayed code at
    `plex.tv/link`, choose your profile (PIN only if protected), then your server. Sign-in is
    saved automatically in unencrypted TV storage; Settings can turn this off and sign-out
@@ -232,7 +233,7 @@ Never include a saved token in a developer package, test fixture or screenshot.
 ## 7. Signing for other people, more TVs, and "homebrew"
 
 Research checked 2026-10-11 from public sources; only the Tizen Studio route below was observed
-in this project. Community tools listed here were **not** run or tested with PlexTv.
+in this project. Community tools listed here were **not** run or tested with Vemm.
 
 **Why every person signs their own build.** A Samsung distributor certificate can only be issued
 by Samsung's servers after a Samsung-account sign-in, and it lists the DUIDs allowed to install the
@@ -268,8 +269,8 @@ Channel relies on a rooted TV; no public root route is used or proposed here. Wh
 
 | Project | What it is | Relevance |
 |---|---|---|
-| [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) (MIT; formerly Jellyfin2Samsung) | Desktop/Android installer: network scan, Samsung sign-in, per-TV certificates, installs catalog apps or your own `.wgt`/`.tpk` | Possible friendlier install path for PlexTv; untested |
-| [TizenBrew](https://github.com/reisxd/TizenBrew) + [TizenBrewInstaller](https://github.com/reisxd/TizenBrewInstaller) | An app that loads modules (modded websites/apps) after one install; Tizen 7+ asks for Samsung sign-in to sign it | A loader, not a root channel; not a target for PlexTv now |
+| [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) (MIT; formerly Jellyfin2Samsung) | Desktop/Android installer: network scan, Samsung sign-in, per-TV certificates, installs catalog apps or your own `.wgt`/`.tpk` | Possible friendlier install path for Vemm; untested |
+| [TizenBrew](https://github.com/reisxd/TizenBrew) + [TizenBrewInstaller](https://github.com/reisxd/TizenBrewInstaller) | An app that loads modules (modded websites/apps) after one install; Tizen 7+ asks for Samsung sign-in to sign it | A loader, not a root channel; not a target for Vemm now |
 
 All of them still require Developer Mode with your computer's IP and, at least on Tizen 7+, a
 Samsung account. TizenBrew notes Samsung shut down the USB demo-package service, so a USB-only
@@ -278,7 +279,7 @@ route is not available.
 **Observed: installing without a Samsung account (2017 and 2019 sets, 2026-10-11).** The test
 started in a clean directory. The only TV-side setup was Developer Mode with this computer's IP.
 The Tizen CLI ran from the public `vitalets/tizen-webos-sdk` Docker image under Colima. The test
-app was a synthetic hello `.wgt`, not PlexTv. It was signed with a self-made author certificate
+app was a synthetic hello `.wgt`, not Vemm. It was signed with a self-made author certificate
 (`tizen certificate ...`) and the SDK's stock **Tizen default distributor**
 (`tools/certificate-generator/certificates/distributor/tizen-distributor-signer.p12` with
 `tizen-distributor-ca.cer`). The TV's DUID was never used. Results:
@@ -295,7 +296,7 @@ app was a synthetic hello `.wgt`, not PlexTv. It was signed with a self-made aut
   - Tizen 6.5 or newer;
   - a TV that has never had a developer install;
   - whether Developer Mode turning off later removes or disables such apps;
-  - PlexTv itself.
+  - Vemm itself.
 
 Until those are tested, the Samsung-certificate route (section 3) remains the documented path.
 

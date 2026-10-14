@@ -27,15 +27,15 @@ appearance or behavior of every settings, episode or playback menu.
 
 ## Visual language
 
-Near-black `#101820` ground, neutral `#1B2838` brand surfaces, white
-`#F4F7FB` foreground/focus, `#A8B7C8` secondary copy, restrained `#0078D4`
-primary accents and pale-red explicit errors. Existing media surfaces may retain
+Charcoal `#1F1F1F` ground, Vemm blue `#3B82F6`, light blue `#B7D0FF`,
+soft gray `#E5E7EB`, white `#FFFFFF` and pale-red explicit errors. Existing media surfaces may retain
 their tuned near-black values where contrast/compositing already works. Use the installed system sans-serif stack;
 do not download fonts. Ordinary screen copy is 24px or larger, page headings 48px, identity
 headings 56px; cinematic Home/detail type scales with viewport height (Home title `7vh`).
 Button focus fills only the control with white and dark text, without an outer border or halo.
-The original Vemm mark appears in the app header/About/launcher; live text is
-used for the in-app wordmark and tagline.
+The original rounded folded-V mark appears in the app header/About/launcher;
+live native-system text is used for the in-app wordmark and tagline. Do not add
+Inter or another downloaded font.
 Media focus uses a small lift and brighter artwork; on Home the lift alone carries focus (a
 compositor-only transform with a static shadow; measured 60 fps idle and along a shelf and about
 56 fps between shelves on a 2017 set). Home reveals only the focused caption. It never frames the

@@ -1,7 +1,7 @@
 "use strict";
 var assert = require("assert");
-var prefs = require("../../samsung/PlexTv/js/account-preferences");
-var plex = require("../../samsung/PlexTv/js/plex-api");
+var prefs = require("../../samsung/Vemm/js/account-preferences");
+var plex = require("../../samsung/Vemm/js/plex-api");
 
 var catalog = require("./fixtures/account-languages.json");
 assert.deepStrictEqual(prefs.LANGUAGES, catalog.languages, "language catalog retains the inherited 190-entry picker");

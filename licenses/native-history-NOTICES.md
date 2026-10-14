@@ -9,7 +9,7 @@ Use the root THIRD-PARTY-NOTICES.md for the maintained Samsung product.
 
 > **Package scope:** this retained inventory is for the LG `.ipk` named below.
 > It is not a declaration that the Samsung `.wgt` bundles FFmpeg, libass or the
-> LG libraries. Samsung's shipped files come from `samsung/PlexTv/`; retain
+> LG libraries. Samsung's shipped files come from `samsung/Vemm/`; retain
 > applicable source notices and audit the actual artifact before making a
 > package-contents claim.
 

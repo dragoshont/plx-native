@@ -1,7 +1,7 @@
 "use strict";
 var assert = require("assert"), fs = require("fs"), path = require("path");
 var JSDOM = require("jsdom").JSDOM;
-var app = path.resolve(__dirname, "../../samsung/PlexTv");
+var app = path.resolve(__dirname, "../../samsung/Vemm");
 function harness() {
     var dom = new JSDOM(fs.readFileSync(path.join(app, "index.html"), "utf8"), { url: "https://synthetic.invalid", runScripts: "outside-only" });
     var w = dom.window, pending = [], calls = [];
@@ -16,7 +16,7 @@ function harness() {
         if (name === "catalogue-ui") { text = text.replace("open: openWatchlist", "open: openWatchlist"); }
         w.eval(text);
     });
-    w.PlexTelevision = { create: function () { return client; } };
+    w.VemmTelevision = { create: function () { return client; } };
     var text = fs.readFileSync(path.join(app, "main.js"), "utf8");
     text = text.slice(0, text.lastIndexOf('    addConnectForm("");')) +
         'window.journey = { openProfiles: openProfiles, openServers: openServers, openFavorites: openFavorites, loadHome: loadHome, openSection: openSection, openListing: openListing, openBrowseOptions: openBrowseOptions, openLetters: openLetters, openSearch: openSearch, openDetail: openDetail, openPerson: openPerson, openSettings: openSettings, addConnectForm: addConnectForm, choices: settingsChoices, confirm: confirmServiceWrite, renderDetail: renderDetail, back: backView, visit: visit, service: serviceView, status: setStatus, focus: focusFirst, button: button, element: element, group: group, tile: titleTile, catalogue: catalogueUi, find: findCatalogueItem, state: function() { return { currentOffset: currentOffset, currentItems: currentItems.slice(), currentSection: currentSection }; }, setup: function(c) { currentClient=c; accountClient=c; servers=[]; homeSections=[]; } }; }());';
@@ -25,11 +25,11 @@ function harness() {
     var options = { client: function () { return client; }, preferences: function () { return { language: "en" }; },
         screen: screen, view: j.service, generation: function () { return Number(screen.getAttribute("test-generation")); },
         button: j.button, element: j.element, group: j.group, tile: j.tile, visit: j.visit,
-        translate: w.PlexI18n.text, status: j.status, focus: j.focus };
+        translate: w.VemmI18n.text, status: j.status, focus: j.focus };
     var original = options.view;
     options.view = function () { var value = original.apply(null, arguments); screen.setAttribute("test-generation", value); return value; };
     return { w: w, dom: dom, j: j, client: client, pending: pending, calls: calls, screen: screen,
-        tv: w.PlexTelevisionUi.create(options),
+        tv: w.VemmTelevisionUi.create(options),
         click: function (label) { var b = Array.from(screen.querySelectorAll("button")).find(function (node) { return node.textContent === label; }); assert(b, "Missing " + label); b.click(); },
         fail: function () { pending.splice(0).forEach(function (p) { p.fail(new Error("Synthetic outage")); }); },
         empty: function (value) { pending.splice(0).forEach(function (p) { p.ok(p.name === "personCredits" ? [] : value); }); }

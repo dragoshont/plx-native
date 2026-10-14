@@ -3,13 +3,13 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var JSDOM = require("jsdom").JSDOM;
-var app = path.join(__dirname, "../../samsung/PlexTv");
+var app = path.join(__dirname, "../../samsung/Vemm");
 
 function harness() {
     var dom = new JSDOM(fs.readFileSync(path.join(app, "index.html"), "utf8"), {
         url: "https://app.synthetic.invalid", runScripts: "outside-only"
     });
-    var data = { "plx-tizen-account": JSON.stringify({ version: 1, unencryptedAccepted: true, token: "synthetic-account-token" }) };
+    var data = { "vemm-tizen-account": JSON.stringify({ version: 2, storage: "unencrypted", token: "synthetic-account-token" }) };
     Object.defineProperty(dom.window, "localStorage", { value: {
         getItem: function (key) { return data[key] || null; },
         setItem: function (key, value) { data[key] = value; },

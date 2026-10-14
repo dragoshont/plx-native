@@ -18,27 +18,29 @@ external decision.
 |---|---|
 | User-facing source display name | **Vemm** |
 | Product/protocol name sent to Plex | **Vemm** |
-| Repository | `dragoshont/plx-native`, unchanged pending migration approval |
-| Installed Samsung application/package | `PlxNative0.Plx` / `PlxNative0`, unchanged |
-| Saved settings/session keys | Existing `plx-tizen-*` keys, unchanged |
-| Signing identity | Existing author continuity, unchanged and not accessed by this transition |
+| Repository | canonical target `dragoshont/vemm`; current PR remains in the old repository for review provenance |
+| Installed Samsung application/package | `VemmTvApp0.Vemm` / `VemmTvApp0` |
+| Saved settings/session keys | `vemm-tizen-*`; no old setting/token import |
+| Signing identity | a future Vemm author, separate from the historical Plx app |
 | Historical releases/assets | Existing Plx names, tags, filenames and links remain immutable |
 
-Display branding must never be used as a shortcut for changing compatibility,
-signing or source-provenance identity.
+Vemm and the historical Plx application are separate installs. Installing Vemm
+does not update, uninstall or read data from the old app.
 
 ## Visual system
 
-The Vemm mark is an original two-surface `V`, designed for legibility at
-launcher size and from normal living-room distance. It avoids Plex, Samsung,
-Microsoft and upstream PlxNative logos and avoids literal film/media objects.
+The Vemm mark is an original rounded folded `V`, recreated from the
+user-authorized visual references for legibility at launcher size and from
+normal living-room distance. It avoids Plex, Samsung, Microsoft and upstream
+PlxNative logos and avoids literal film/media objects.
 
 Source-maintained assets:
 
 - `samsung/brand/vemm-mark.svg`
+- `samsung/brand/vemm-app-icon.svg`
 - `samsung/brand/vemm-wordmark.svg`
-- generated packaged copy: `samsung/PlexTv/brand/vemm-mark.svg`
-- deterministic launcher raster: `samsung/PlexTv/icon.png`
+- generated packaged copy: `samsung/Vemm/brand/vemm-mark.svg`
+- deterministic launcher raster: `samsung/Vemm/icon.png`
 
 `tools/tizen/build-icon.py` parses the simple vector geometry and generates the
 PNG with Python's standard library. No font download, image library or build
@@ -48,12 +50,11 @@ The restrained palette extends the existing dark television UI:
 
 | Role | Value |
 |---|---|
-| Primary background | `#101820` |
-| Secondary surface | `#1B2838` |
-| Accent | `#0078D4` |
-| Accent depth | `#58A6E7` |
-| Primary foreground | `#F4F7FB` |
-| Secondary foreground | `#A8B7C8` |
+| Primary / front fold | `#3B82F6` |
+| Light / rear fold | `#B7D0FF` |
+| Charcoal | `#1F1F1F` |
+| Soft gray | `#E5E7EB` |
+| White | `#FFFFFF` |
 
 Existing white focus fills, system typography, cinematic artwork composition
 and remote-first spacing remain. Azure blue is reserved for identity and

@@ -1,5 +1,5 @@
-name: Samsung client bug
-description: Report a reproducible problem in this unofficial Samsung Tizen Plex client.
+name: Vemm Samsung client bug
+description: Report a reproducible problem in this unofficial Plex-compatible Samsung Tizen client.
 body:
   - type: input
     id: tv-model
@@ -20,7 +20,7 @@ body:
     id: app-version
     attributes:
       label: App version or source commit
-      description: For example Samsung 0.2.7; mention whether this is a published release or local build.
+      description: Use the Vemm version/source commit, or explicitly identify historical Plx 0.2.7.
     validations:
       required: true
   - type: dropdown

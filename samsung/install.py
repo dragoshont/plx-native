@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Install or update Vemm in Samsung Developer Mode (Windows, macOS, Linux).
 
-    python install.py TV_IP [VERSION | Plx.wgt]
+    python install.py TV_IP [VERSION | Vemm.wgt]
 
-Without a file it downloads the given (or latest) Samsung release. An installed app
-can be updated with the same author certificate. This script never uninstalls it.
+Without a file it downloads the given (or latest) Vemm release. An installed Vemm app
+can be updated with the same Vemm author certificate. This script never uninstalls it
+or touches the historical Plx app.
 """
 import json
 import os
@@ -15,8 +16,8 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-REPO = "dragoshont/plx-native"
-APP_ID = "PlxNative0.Plx"
+REPO = "dragoshont/vemm"
+APP_ID = "VemmTvApp0.Vemm"
 WINDOWS = os.name == "nt"
 
 
@@ -47,17 +48,17 @@ def latest_version():
     try:
         with urllib.request.urlopen(f"https://api.github.com/repos/{REPO}/releases?per_page=30", timeout=30) as r:
             for rel in json.load(r):
-                if rel["tag_name"].startswith("samsung-v"):
-                    return rel["tag_name"][len("samsung-v"):]
+                if re.fullmatch(r"v\d+\.\d+\.\d+", rel["tag_name"]):
+                    return rel["tag_name"][1:]
     except OSError:
         pass
     fail("Could not find the latest Samsung release.")
 
 
 def download(version, folder):
-    url = f"https://github.com/{REPO}/releases/download/samsung-v{version}/Plx-{version}.wgt"
-    path = Path(folder) / f"Plx-{version}.wgt"
-    print(f"Downloading Samsung release {version}...")
+    url = f"https://github.com/{REPO}/releases/download/v{version}/Vemm-{version}.wgt"
+    path = Path(folder) / f"Vemm-{version}.wgt"
+    print(f"Downloading Vemm {version}...")
     try:
         with urllib.request.urlopen(url, timeout=120) as r:
             path.write_bytes(r.read())
@@ -72,7 +73,7 @@ def installed(out):
 
 def main():
     if len(sys.argv) < 2:
-        fail("Usage: python install.py TV_IP [VERSION | Plx.wgt]")
+        fail("Usage: python install.py TV_IP [VERSION | Vemm.wgt]")
     serial = sys.argv[1].removesuffix(":26101") + ":26101"
     arg = sys.argv[2] if len(sys.argv) > 2 else ""
     sdb, tizen = tools()
@@ -95,15 +96,15 @@ def main():
             _, out = run(tizen, "install", "-n", str(wgt), "-t", name)
             if not installed(out) and re.search(r"-11\b|signature", out, re.I):
                 print(out, file=sys.stderr)
-                fail("The TV rejected the package signature. The existing app was not removed.",
-                     "For an author mismatch, install an update signed with the original author certificate.",
-                     "Do not uninstall a working app to bypass the mismatch; uninstalling can erase saved sign-in.")
+                fail("The TV rejected the package signature. Vemm was not removed.",
+                     "Install an update signed with the original Vemm author certificate.",
+                     "Do not uninstall Vemm to bypass the mismatch; uninstalling can erase its saved sign-in.")
             if not installed(out):
                 print(out, file=sys.stderr)
                 fail("Install failed (output above).")
         finally:
             run(sdb, "disconnect", serial)
-    print("Done. Open Vemm from Apps (published 0.2.7 and older releases still appear as Plx) and sign in at plex.tv/link.")
+    print("Done. Open Vemm from Apps and sign in at plex.tv/link. The historical Plx app remains separate.")
 
 
 if __name__ == "__main__":

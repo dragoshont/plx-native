@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var playback = require("../../samsung/PlexTv/js/playback.js");
+var playback = require("../../samsung/Vemm/js/playback.js");
 var item = {
     ratingKey: "10", duration: 100000, viewOffset: 5000,
     Media: [{ container: "mp4", videoCodec: "h264", audioCodec: "aac", width: 1920, height: 1080,

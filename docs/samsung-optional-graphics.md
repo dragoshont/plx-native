@@ -12,7 +12,7 @@ switch and does not disable hardware video decoding.
 
 ## Shared ownership
 
-`PlexGraphics` is one optional backdrop backend shared by Home and Detail. The
+`VemmGraphics` is one optional backdrop backend shared by Home and Detail. The
 app still owns its models, navigation, original images, focus, scrims and text.
 The backend receives an attached, already-decoded image; it never downloads
 artwork, reads credentials, writes storage or creates per-card GL contexts.

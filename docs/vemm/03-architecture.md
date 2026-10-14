@@ -32,8 +32,8 @@ flowchart LR
 - Capability evidence split between published specifications and exact observed
   tuples.
 - Optional WebGL backend off by default with the current fallback.
-- Package/application IDs, storage keys, author continuity, release filenames,
-  GPL provenance and complete-source distribution.
+- Clean Vemm package/application IDs, storage keys, future author continuity,
+  release filenames, GPL provenance and complete-source distribution.
 
 ### CUT
 
@@ -64,8 +64,8 @@ tagline, platform and working-brand status. HTML retains correct static
 fallbacks, while `main.js` consumes the contract for the live title, header and
 About screen. Plex product headers use the same current name.
 
-This is intentionally not a configuration framework. Compatibility IDs remain
-in the existing build/install seams where they are already tested.
+This is intentionally not a configuration framework. The build/install seams
+own the separate Vemm identity; Plex service clients retain protocol naming.
 
 ### Explainable playback policy
 
@@ -89,7 +89,7 @@ and raw native errors remain excluded.
    product identity contract, About presentation and current-source branding.
 3. **Policy seam:** make playback decisions explainable without changing
    capability rules or AVPlay behavior.
-4. **Regression:** pin branding, asset freshness, compatibility IDs/settings,
+4. **Regression:** pin branding, asset freshness, Vemm IDs/settings,
    staged package contents and playback explanations.
 5. **Documentation:** reconcile root/product/build/install/release/provenance
    language and record remote migration separately.
@@ -98,7 +98,7 @@ and raw native errors remain excluded.
 7. **Integration:** commit, push and open a PR; require exact-candidate CI. Do
    not merge, sign, deploy or publish.
 
-Acceptance requires strict ES5, unchanged installed identity and settings,
+Acceptance requires strict ES5, clean Vemm installed identity and settings,
 fresh deterministic assets, existing negotiation tests plus explanation tests,
 clean staged contents, coherent local links and explicit skipped device/release
 gates.

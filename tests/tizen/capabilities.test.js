@@ -1,7 +1,7 @@
 "use strict";
 var assert = require("assert");
-var capabilities = require("../../samsung/PlexTv/js/capabilities.js");
-var playback = require("../../samsung/PlexTv/js/playback.js");
+var capabilities = require("../../samsung/Vemm/js/capabilities.js");
+var playback = require("../../samsung/Vemm/js/playback.js");
 var tizen3 = "Mozilla/5.0 (SMART-TV; LINUX; Tizen 3.0)";
 function product(model, firmware, family) { return {
     getModelCode: function () { return model; }, getFirmware: function () { return firmware; },
@@ -80,22 +80,22 @@ observed.video.push("mutated");
 assert(!capabilities.detect({userAgent:tizen3,productinfo:product("UE55MU6172","T-KTMDEUC-1410.1")}).video.includes("mutated"));
 console.log("Tizen exact model/firmware capability register and conservative PMS policy: passed");
 var fs = require("fs"), vm = require("vm");
-var register = require("../../samsung/PlexTv/js/model-register");
+var register = require("../../samsung/Vemm/js/model-register");
 assert.strictEqual(register.length, 1, "Only the observed retail set may have an observed register entry");
 assert.strictEqual(register[0].status, "observed");
 assert.strictEqual(register[0].subtitles, "unknown");
 var JSDOM = require("jsdom").JSDOM;
 function settingsJourney(info, language, expected) {
-    var dom = new JSDOM(fs.readFileSync("samsung/PlexTv/index.html", "utf8"), { url:"https://synthetic.invalid",runScripts:"outside-only" });
+    var dom = new JSDOM(fs.readFileSync("samsung/Vemm/index.html", "utf8"), { url:"https://synthetic.invalid",runScripts:"outside-only" });
     try {
         var w = dom.window;
         Object.defineProperty(w.navigator,"userAgent",{value:tizen3});
         w.webapis = { productinfo:info };
         w.fetch = function(){assert.fail("Settings must not contact a real server");};
-        ["i18n","model-register","capabilities","preferences"].forEach(function(name){w.eval(fs.readFileSync("samsung/PlexTv/js/"+name+".js","utf8"));});
-        var source=fs.readFileSync("samsung/PlexTv/main.js","utf8");
+        ["i18n","model-register","capabilities","preferences"].forEach(function(name){w.eval(fs.readFileSync("samsung/Vemm/js/"+name+".js","utf8"));});
+        var source=fs.readFileSync("samsung/Vemm/main.js","utf8");
         source=source.slice(0,source.lastIndexOf('    addConnectForm("");'))+
-            'preferences.language="'+language+'"; window.PlexI18n.setLanguage(preferences.language); openSettings(); }());';
+            'preferences.language="'+language+'"; window.VemmI18n.setLanguage(preferences.language); openSettings(); }());';
         w.eval(source);
         var text = w.document.body.textContent;
         assert(text.includes(expected),"Settings exposes localized capability uncertainty: "+language);
@@ -109,16 +109,16 @@ settingsJourney(product("UE55MU6172","T-KTMDEUC-1410.1"),"en","Confirmed on this
 console.log("Tizen browser-loaded register and Settings uncertainty journeys: passed");
 
 function qualityPolicyJourney(mode, expected) {
-    var dom = new JSDOM(fs.readFileSync("samsung/PlexTv/index.html", "utf8"), {
+    var dom = new JSDOM(fs.readFileSync("samsung/Vemm/index.html", "utf8"), {
         url: "https://synthetic.invalid", runScripts: "outside-only"
     });
     try {
         var w = dom.window;
         w.fetch = function () { assert.fail("Opening quality choices must not contact Plex"); };
         ["i18n", "preferences", "playback"].forEach(function (name) {
-            w.eval(fs.readFileSync("samsung/PlexTv/js/" + name + ".js", "utf8"));
+            w.eval(fs.readFileSync("samsung/Vemm/js/" + name + ".js", "utf8"));
         });
-        var source = fs.readFileSync("samsung/PlexTv/main.js", "utf8");
+        var source = fs.readFileSync("samsung/Vemm/main.js", "utf8");
         source = source.slice(0, source.lastIndexOf('    addConnectForm("");')) +
             'preferences.directPlay = "' + mode + '";' +
             'playerItem = {ratingKey:"1",type:"movie",Media:[{container:"mp4",videoCodec:"h264",audioCodec:"aac",' +

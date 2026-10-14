@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var tv = require("../../samsung/PlexTv/js/television");
+var tv = require("../../samsung/Vemm/js/television");
 var spec = require("../../docs/plex-openapi.json");
 async function run() {
     var calls = [];

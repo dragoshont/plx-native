@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var prefs = require("../../samsung/PlexTv/js/preferences.js");
+var prefs = require("../../samsung/Vemm/js/preferences.js");
 var value;
 var storage = {
     getItem: function () { return value || null; },

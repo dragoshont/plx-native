@@ -4,7 +4,7 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 
-var root = path.join(__dirname, "../../samsung/PlexTv");
+var root = path.join(__dirname, "../../samsung/Vemm");
 var config = fs.readFileSync(path.join(root, "config.xml"), "utf8");
 assert(config.includes("<name>Vemm</name>"), "Display branding is independent from signing identity");
 
@@ -28,9 +28,8 @@ assert(/webapis\.avplay/.test(sources), "avplay privilege has a use");
 assert(/webapis\.productinfo/.test(sources), "productinfo privilege has a use");
 assert(/tizen\.tvinputdevice/.test(sources), "tv.inputdevice privilege has a use");
 
-// The signed application ID is private to the owner's certificate and injected at staging.
-assert(!/<tizen:application[^>]*\bid=/.test(config), "No application ID is committed");
-assert(!/<tizen:application[^>]*\bpackage=/.test(config), "No package ID is committed");
+assert(/<tizen:application[^>]*\bid="VemmTvApp0\.Vemm"/.test(config));
+assert(/<tizen:application[^>]*\bpackage="VemmTvApp0"/.test(config));
 
 // PMS servers live at arbitrary user-specific LAN, plex.direct and remote origins, so network
 // access cannot be enumerated; keep it to exactly one wildcard rule.

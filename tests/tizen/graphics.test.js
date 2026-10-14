@@ -1,7 +1,7 @@
 "use strict";
 var assert = require("assert");
 var JSDOM = require("jsdom").JSDOM;
-var graphics = require("../../samsung/PlexTv/js/graphics.js");
+var graphics = require("../../samsung/Vemm/js/graphics.js");
 var checks = 0;
 
 function fixture(config) {

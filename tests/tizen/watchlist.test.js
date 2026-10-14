@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var plex = require("../../samsung/PlexTv/js/plex-api");
+var plex = require("../../samsung/Vemm/js/plex-api");
 async function run() {
     var calls = [];
     var api = plex.createAccountClient({

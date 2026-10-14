@@ -37,7 +37,8 @@ the working tagline. Keep the existing cinematic, remote-first layout as the
 product reference; use the restrained Azure-inspired accent for identity,
 primary action and selected state rather than mass-redesigning every screen.
 Do not borrow Plex, Samsung, Microsoft or upstream PlxNative branding or imply
-endorsement. Preserve installed Samsung identity separately from display brand.
+endorsement. Vemm is a separate install and must not read/migrate historical
+Plx credentials or settings.
 
 ## Evidence
 

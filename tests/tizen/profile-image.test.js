@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var api = require("../../samsung/PlexTv/js/plex-api.js");
+var api = require("../../samsung/Vemm/js/plex-api.js");
 
 var finalUrl = null;
 function finalResponse(url) {

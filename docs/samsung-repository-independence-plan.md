@@ -5,8 +5,13 @@ active tree into this repository's remote `main`. This replaces the earlier
 instruction to keep an unused LG implementation in the active tree.
 
 The later Vemm working-brand transition supersedes this plan's temporary
-`Media for Tizen` display-label decision. Its package/signing/storage,
-provenance and historical-release constraints remain in force.
+`Media for Tizen` display-label decision. Its provenance and
+historical-release preservation constraints remain in force.
+
+The subsequent separate-install decision supersedes this plan's compatibility
+identity requirement for active Vemm source. `PlxNative0`, old author/storage,
+`Plx-*` and `samsung-v*` remain historical facts only; Vemm uses
+`VemmTvApp0.Vemm`, `vemm-tizen-*`, `Vemm-*` and `v*`.
 
 ## Inventory and dependency decisions
 

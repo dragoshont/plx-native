@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var api = require("../../samsung/PlexTv/js/plex-api.js");
+var api = require("../../samsung/Vemm/js/plex-api.js");
 var calls = [];
 var responses = [
     { users: [{ uuid: "user-1", title: "Guest", protected: true }] },

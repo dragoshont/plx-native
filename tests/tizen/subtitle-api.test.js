@@ -1,7 +1,7 @@
 "use strict";
 var assert = require("assert");
-var api = require("../../samsung/PlexTv/js/plex-api");
-var subtitles = require("../../samsung/PlexTv/js/subtitles");
+var api = require("../../samsung/Vemm/js/plex-api");
+var subtitles = require("../../samsung/Vemm/js/subtitles");
 var calls = [];
 var codec = "srt";
 var client = api.createClient({

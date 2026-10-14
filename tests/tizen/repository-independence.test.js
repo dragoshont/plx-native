@@ -26,27 +26,27 @@ assert(read("licenses/PlxNative-historical-MIT.txt").indexOf("Permission is here
 assert(read("licenses/native-history-NOTICES.md").indexOf("FFmpeg") !== -1);
 
 var build = read("samsung/build.py");
-assert(build.includes('PACKAGE_ID = "PlxNative0"'));
-assert(build.includes('{PACKAGE_ID}.Plx'));
-assert(read("samsung/install.py").includes('APP_ID = "PlxNative0.Plx"'));
-assert(read("samsung/PlexTv/config.xml").includes("<name>Vemm</name>"));
-assert(read("samsung/PlexTv/index.html").includes("<title>Vemm</title>"));
-assert(read("samsung/PlexTv/js/product.js").includes('name: "Vemm"'));
-assert(read("samsung/brand/vemm-mark.svg") === read("samsung/PlexTv/brand/vemm-mark.svg"));
+assert(build.includes('PACKAGE_ID = "VemmTvApp0"'));
+assert(build.includes('APP_ID = f"{PACKAGE_ID}.Vemm"'));
+assert(read("samsung/install.py").includes('APP_ID = "VemmTvApp0.Vemm"'));
+assert(read("samsung/Vemm/config.xml").includes("<name>Vemm</name>"));
+assert(read("samsung/Vemm/index.html").includes("<title>Vemm</title>"));
+assert(read("samsung/Vemm/js/product.js").includes('name: "Vemm"'));
+assert(read("samsung/brand/vemm-mark.svg") === read("samsung/Vemm/brand/vemm-mark.svg"));
 assert(read("samsung/brand/README.md").includes("working brand"));
 [
     "docs/vemm/01-current-state-audit.md", "docs/vemm/02-brand-and-identity.md",
     "docs/vemm/03-architecture.md", "docs/vemm/04-playback-policy.md",
     "docs/vemm/05-platform-capabilities.md", "docs/vemm/06-implementation-report.md",
-    "docs/vemm/07-repository-and-release-migration.md"
+    "docs/vemm/07-repository-and-release-migration.md", "docs/vemm/08-legacy-identity-audit.md"
 ].forEach(function (name) { assert(fs.existsSync(path.join(root, name)), "Missing Vemm transition document: " + name); });
 assert(/working product identity/i.test(read("docs/vemm/02-brand-and-identity.md")));
 assert(read("docs/vemm/03-architecture.md").includes("KEEP / CUT / DEFER"));
-assert(!/Exit Plx\?|Plx could not close/.test(read("samsung/PlexTv/main.js")));
+assert(!/Exit Plx\?|Plx could not close/.test(read("samsung/Vemm/main.js")));
 assert(!read("tools/tizen/build-locales.js").includes('root, "locales"'));
 assert(read("tools/tizen/build-locales.js").includes('"samsung/locales"'));
 assert(!read("tests/tizen/account-preferences.test.js").includes("rust-modules"));
-assert(read(".github/workflows/samsung.yml").includes("if: startsWith(github.ref, 'refs/tags/samsung-v')"),
+assert(read(".github/workflows/samsung.yml").includes("if: startsWith(github.ref, 'refs/tags/v')"),
     "Normal CI must not install an SDK, sign or read certificate secrets");
 tracked.filter(function (name) {
     return /\.md$/.test(name) && name !== "licenses/native-history-NOTICES.md";
@@ -60,4 +60,4 @@ tracked.filter(function (name) {
             name + " has a stale local link: " + target);
     }
 });
-console.log("Samsung-only tracked closure, neutral identity, own routing and license/update invariants: passed");
+console.log("Samsung-only tracked closure, Vemm identity, own routing and license/source invariants: passed");

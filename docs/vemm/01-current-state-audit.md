@@ -8,22 +8,22 @@ transition decisions, not claims about already-completed behavior.
 ## Current product
 
 **Observed:** the active product is one Samsung Tizen Web application under
-`samsung/PlexTv/`. It is plain ES5 HTML/CSS/JavaScript, uses public Tizen APIs
+`samsung/Vemm/`. It is plain ES5 HTML/CSS/JavaScript, uses public Tizen APIs
 and Samsung AVPlay, and is composed by `main.js` from focused modules under
 `js/`. The LG Rust/C implementation and its build/site/release closure are not
 in the active tree; immutable history and licensing references remain.
 
-**Observed:** the source display label was `Media for Tizen`. Published Samsung
-0.2.7 still appears as **Plx**. Existing installations use application
-`PlxNative0.Plx`, package `PlxNative0`, historical `Plx-*.wgt` filenames, saved
-`plx-tizen-*` storage keys, and the existing author certificate. These are
-compatibility identities, not current brand choices.
+**Observed at baseline:** the source display label was `Media for Tizen`.
+Published Samsung 0.2.7 still appears as **Plx** and uses
+`PlxNative0.Plx`, `PlxNative0`, `Plx-*.wgt`, `plx-tizen-*` and its historical
+author. **Current decision:** Vemm is a separate install with no state migration;
+those names are history, not active compatibility requirements.
 
 ## Architecture and dependencies
 
 | Area | Current code | Dependencies and coupling |
 |---|---|---|
-| Product composition | `samsung/PlexTv/main.js` | Owns routing, presentation state, focus, lifecycle and feature orchestration; large but already delegates protocol and playback contracts |
+| Product composition | `samsung/Vemm/main.js` | Owns routing, presentation state, focus, lifecycle and feature orchestration; large but already delegates protocol and playback contracts |
 | Plex integration | `js/plex-api.js`, `js/session.js`, `js/account-preferences.js` | Transport, auth, discovery, metadata, playback requests and bounded response handling; presentation calls these APIs directly through feature flows |
 | Playback policy | `js/playback.js` | Chooses Direct Play, Direct Stream or transcode from media, preferences and capability profile; manages PMS negotiation/progress around a backend |
 | Capability evidence | `js/capabilities.js`, `js/model-register.js` | Distinguishes published Samsung specifications from one exact observed model/firmware tuple |
@@ -77,7 +77,7 @@ panel output, physical remote behavior or the current candidate.
    release reproducibility.
 6. Several documents still describe the temporary label and must distinguish
    current Vemm source, published historical Plx releases and preserved
-   compatibility IDs.
+   historical identities.
 
 ## Release, licensing and provenance constraints
 
@@ -97,7 +97,7 @@ panel output, physical remote behavior or the current candidate.
 
 | Risk | Mitigation |
 |---|---|
-| Brand rename accidentally creates a separate installed app | Pin `PlxNative0` / `PlxNative0.Plx`, storage keys and signing paths in regression tests |
+| Users mistake Vemm for an in-place Plx update | Document the separate install prominently and pin `VemmTvApp0.Vemm` plus `vemm-tizen-*` in regressions |
 | New visual language harms old TVs | Keep system fonts, existing layout/focus model and dependency-free CSS; use accent color selectively |
 | Architecture work becomes a rewrite | Strengthen existing product identity and playback/capability seams only |
 | Direct Play claims exceed evidence | Preserve documented/observed/unknown states and expose the evidence source in diagnostics |

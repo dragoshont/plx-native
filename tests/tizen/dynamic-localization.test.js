@@ -1,6 +1,6 @@
 "use strict";
 var fs = require("fs"), vm = require("vm"), assert = require("assert"), acorn = require("acorn");
-var app = "samsung/PlexTv/";
+var app = "samsung/Vemm/";
 function violations(source) {
     var errors = [];
     function walk(node, inTranslation) {
@@ -38,10 +38,10 @@ assert.strictEqual(violations('setStatus(translate("Failed: {name}", {name:name}
 });
 var context = {};vm.runInNewContext(fs.readFileSync(app+"js/i18n.js","utf8"), context);
 ["es","be"].forEach(function(lang){
-    context.PlexI18n.setLanguage(lang);
-    var error = context.PlexI18n.error({message:"PMS request failed with HTTP 503.",status:503});
+    context.VemmI18n.setLanguage(lang);
+    var error = context.VemmI18n.error({message:"PMS request failed with HTTP 503.",status:503});
     assert(error.includes("503")); assert(!error.includes("failed"));
-    assert(!context.PlexI18n.error({message:"Raw English from server"}).includes("Raw English"));
-    assert(!context.PlexI18n.text("Seek landed at {time}.",{time:"3:12"}).includes("Seek landed"));
+    assert(!context.VemmI18n.error({message:"Raw English from server"}).includes("Raw English"));
+    assert(!context.VemmI18n.text("Seek landed at {time}.",{time:"3:12"}).includes("Seek landed"));
 });
 console.log("Tizen dynamic error/composite localization and planted-regression scan: passed");

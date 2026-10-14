@@ -1,6 +1,6 @@
 "use strict";
 var assert = require("assert");
-var fileInfo = require("../../samsung/PlexTv/js/file-info");
+var fileInfo = require("../../samsung/Vemm/js/file-info");
 
 var rows = fileInfo.rows({
     Media: [

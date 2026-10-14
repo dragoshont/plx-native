@@ -3,8 +3,8 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var JSDOM = require("jsdom").JSDOM;
-var app = path.resolve(__dirname, "../../samsung/PlexTv");
-var session = require("../../samsung/PlexTv/js/session");
+var app = path.resolve(__dirname, "../../samsung/Vemm");
+var session = require("../../samsung/Vemm/js/session");
 
 function harness(saved, failure, persistence) {
     var dom = new JSDOM(fs.readFileSync(path.join(app, "index.html"), "utf8"), {
@@ -29,10 +29,10 @@ function harness(saved, failure, persistence) {
         }
     };
     if (saved) {
-        data["plx-tizen-account"] = JSON.stringify(typeof saved === "object" ? saved :
-            { version: 1, unencryptedAccepted: true, token: saved });
+        data["vemm-tizen-account"] = JSON.stringify(typeof saved === "object" ? saved :
+            { version: 2, storage: "unencrypted", token: saved });
     }
-    if (persistence) { data["plx-tizen-save-sign-in"] = persistence; }
+    if (persistence) { data["vemm-tizen-save-sign-in"] = persistence; }
     Object.defineProperty(dom.window, "localStorage", { value: storage });
     dom.window.fetch = function () { assert.fail("The synthetic session API must not use the network"); };
     dom.window.PlexApi = {
@@ -153,7 +153,7 @@ async function run() {
     await settle();
     assert.strictEqual(session.load(app.storage), "synthetic-account-token",
         "A successful link must survive an application restart by default");
-    var savedRecord = JSON.parse(app.storage.getItem("plx-tizen-account"));
+    var savedRecord = JSON.parse(app.storage.getItem("vemm-tizen-account"));
     app.dom.window.close();
     app = harness(savedRecord, "happy");
     await settle();

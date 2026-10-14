@@ -1,6 +1,6 @@
 # Building and distributing Vemm for Samsung
 
-The maintained source is `samsung/PlexTv/`, a public-API Tizen Web app with
+The maintained source is `samsung/Vemm/`, a public-API Tizen Web app with
 Samsung AVPlay. No ARM cross-toolchain, native Makefile or LG SDK is required.
 Node and Python 3.10+ run the host checks; an **already-installed** Tizen Studio
 Web CLI is needed only for the unsigned SDK build or separately authorized
@@ -11,7 +11,7 @@ signing. Do not install SDKs or access certificates as an implicit test step.
 ```sh
 npm ci --prefix tests/tizen --ignore-scripts --no-audit --no-fund
 tools/tizen/test.sh
-tools/tizen/build-source.sh samsung/PlexTv
+tools/tizen/build-source.sh samsung/Vemm
 ```
 
 `test.sh` runs synthetic DOM/API contracts, independent repository inventory,
@@ -32,18 +32,19 @@ does not prove signing, install/update, remote input, AVPlay decoding, HDR,
 panel output or performance. Those require separately authorized named-model
 acceptance, not an LG native benchmark.
 
-## Compatible distribution
+## Separate Vemm distribution
 
-Existing installations use `PlxNative0` / `PlxNative0.Plx`. Keep that identity,
-the `plx-tizen-*` saved-setting keys and existing author certificate. **Vemm**
-is the display/product identity, not a new app/package ID. Published `Plx-*.wgt`
-assets, display names and `samsung-v*` tags remain immutable.
+Vemm uses `VemmTvApp0` / `VemmTvApp0.Vemm`, `vemm-tizen-*` storage,
+`Vemm-X.Y.Z.wgt`, `Vemm-source-<sha>.zip`, `vX.Y.Z` tags and a separately
+retained Vemm author certificate. It is not an update to the historical Plx app
+and reads none of that app's tokens/preferences. Published `Plx-*.wgt`,
+`samsung-v*` tags and old source offers remain immutable history.
 
 For a separately authorized future release:
 
 ```sh
 python3 samsung/source_bundle.py --output /absolute/private/release-directory
-python3 samsung/release.py X.Y.Z --notes-file docs/release-notes/samsung-vX.Y.Z.md
+python3 samsung/release.py X.Y.Z --notes-file /path/to/vX.Y.Z-notes.md
 ```
 
 The source builder refuses a dirty or untracked source tree and existing output
@@ -60,7 +61,7 @@ not executable dependencies. Review actual archive entries and preserve matching
 complete-source availability under GPL section 6(d).
 
 `.github/workflows/samsung.yml` runs host/source checks for all PR/main changes.
-Its SDK/signing job is restricted to an explicit `samsung-v*` tag. It preserves
-the existing local-author publication handoff when a release already exists;
+Its SDK/signing job is restricted to an explicit `vX.Y.Z` tag. It preserves
+the Vemm local-author publication handoff when a release already exists;
 ordinary CI artifacts are not signed production updates. Release identity and
 post-publication checks are in [the transition contract](samsung-project-transition.md).

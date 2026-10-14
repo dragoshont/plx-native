@@ -6,7 +6,7 @@
 // The LG client sources its deck from the dedicated hub for the same reason (rust-modules/data/src/pms.rs).
 
 var assert = require("assert");
-var createClient = require("../../samsung/PlexTv/js/plex-api.js").createClient;
+var createClient = require("../../samsung/Vemm/js/plex-api.js").createClient;
 
 function response(status, payload) {
     return { status: status, ok: status >= 200 && status < 300,

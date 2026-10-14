@@ -7,8 +7,8 @@ permissions; Vemm owns the television browsing, playback policy and remote-first
 client experience.
 
 Vemm is a working brand, not a claim of completed trademark clearance. The
-repository remains `dragoshont/plx-native`, and installed compatibility identity
-remains unchanged.
+canonical repository target is `dragoshont/vemm`; this branch remains in
+`dragoshont/plx-native` only for review provenance.
 
 **I've tested the client on Tizen 4.0 and newer.** The recorded device checks below distinguish individual runtimes and features; they are not blanket certification of every model or codec.
 
@@ -19,24 +19,26 @@ composition and old-TV performance constraints.
 
 The implementation uses **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**.
 
-**[Install the published Samsung release](docs/install-samsung.md)** · **[Vemm architecture](docs/vemm/03-architecture.md)** · **[Samsung releases](https://github.com/dragoshont/plx-native/releases?q=samsung-v)** · **[Report an issue](https://github.com/dragoshont/plx-native/issues)** · **[Tizen TV Builder toolkit](https://github.com/dragoshont/tizen-tv-builder)**
+**[Historical Plx install guide](docs/install-samsung.md)** · **[Vemm architecture](docs/vemm/03-architecture.md)** · **[Identity audit](docs/vemm/08-legacy-identity-audit.md)** · **[Report an issue](https://github.com/dragoshont/vemm/issues)** · **[Tizen TV Builder toolkit](https://github.com/dragoshont/tizen-tv-builder)**
 
-## Install and update
+## Release status and installation identity
 
-Use the [step-by-step guide](docs/install-samsung.md). You need a computer on the same network, Samsung Developer Mode and a signing profile that covers your TV. **No root or Homebrew Channel is required.** Developer installation is not Samsung Store approval.
+**No Vemm package has been released.** Vemm uses the separate package/application
+identity `VemmTvApp0` / `VemmTvApp0.Vemm`, its own `vemm-tizen-*` local data and
+a future Vemm signing author. It will not update, uninstall or import
+credentials/preferences from the historical Plx app.
 
-The latest published package is
+The latest package currently published in this old repository is the historical
 [Samsung 0.2.7](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.7),
-a **prerelease** that still appears as **Plx**. The Vemm display transition is
-current source only until a separately reviewed, signed and device-accepted
-release is authorized. From the Tizen TV Builder checkout, after setup and
-certificate configuration:
+a **prerelease** that appears as **Plx**. Its install command remains available
+for historical users:
 
 ```sh
 python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.7/Plx-0.2.7.wgt TV_IP
 ```
 
-Keep your existing author certificate for updates. Do not uninstall a working app to work around a signing mismatch. The existing `PlxNative0.Plx` application ID, release filenames and repository URL are retained for update/link compatibility, not used as the independent project's branding.
+That package is not Vemm. Keep its author certificate only for historical Plx
+updates and do not uninstall it to simulate a Vemm migration.
 
 ## What Vemm does
 
@@ -101,16 +103,16 @@ The maintained Samsung surfaces are:
 
 | Path | Responsibility |
 | --- | --- |
-| `samsung/PlexTv/` | Vemm Tizen Web app |
+| `samsung/Vemm/` | Vemm Tizen Web app |
 | `tests/tizen/` | Host contracts and DOM journeys |
 | `tools/tizen/` | App-specific build checks, synthetic workloads and recorded feasibility probes |
-| `samsung/build.py`, `samsung/release.py` | Versioned WGT build and existing-author publication |
+| `samsung/build.py`, `samsung/release.py` | Future versioned Vemm WGT/source build and publication |
 | `.github/workflows/samsung.yml` | Samsung host checks, packaging and release workflow |
 
 ```sh
 npm ci --prefix tests/tizen --ignore-scripts
 tools/tizen/test.sh
-tools/tizen/build-source.sh samsung/PlexTv
+tools/tizen/build-source.sh samsung/Vemm
 ```
 
 The build example is unsigned and uses an already-installed Tizen SDK; it does
@@ -130,14 +132,14 @@ references in [the independence plan](docs/samsung-repository-independence-plan.
 The Samsung Rust/.NET/NaCl experiments remain parked, with
 [their actual results retained](docs/samsung-rust-runtime-results.md).
 
-Send Samsung-specific issues to [this repository](https://github.com/dragoshont/plx-native/issues).
+Send Vemm issues to the [canonical repository](https://github.com/dragoshont/vemm/issues)
+after it is populated.
 
-The repository URL, package ID, author/update continuity and historical release
-filenames are preserved. Published 0.2.7 still has its original display name;
-this source-only migration does not replace that package or deploy an update.
-Vemm's working-brand adoption does not rename the repository or detach the
-GitHub fork. Preservation-safe remote migration and final legal clearance remain
-separate decisions; no completed provider operation is implied.
+Historical repository URLs, package IDs, author continuity, tags and release
+filenames are preserved as history. Vemm deliberately uses a new package,
+storage, artifact, tag and signing identity. This source work does not deploy
+either app. Repository population at `dragoshont/vemm`, fork handling and final
+legal clearance remain separate operations.
 
 ## Privacy, licensing and attribution
 
