@@ -54,7 +54,8 @@ to the WGT. `--no-publish` builds without publishing, but still requires signing
 authorization. Do not execute the publisher merely to validate source cleanup.
 
 `samsung/build.py` stages the product plus `LICENSE`, `LICENSING.md`,
-`THIRD-PARTY-NOTICES.md`, `TRADEMARKS.md` and `licenses/`. These are legal payload,
+`THIRD-PARTY-NOTICES.md`, `TRADEMARKS.md` and the explicit `LICENSE_FILES`
+inventory from `licenses/` (not arbitrary local directory contents). These are legal payload,
 not executable dependencies. Review actual archive entries and preserve matching
 complete-source availability under GPL section 6(d).
 

@@ -67,6 +67,26 @@ class DistributionTests(unittest.TestCase):
                                      "LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md",
                                      "TRADEMARKS.md", "licenses"})
 
+    def test_staging_licenses_are_an_explicit_source_inventory(self):
+        expected = {
+            "Apache-2.0.txt", "FreeType.txt", "GCC-exception-3.1.txt", "HarfBuzz-Old-MIT.txt",
+            "ICU4X.txt", "LGPL-2.1.txt", "LLVM-exception.txt", "MIT.txt",
+            "PlxNative-historical-MIT.txt", "SGI-B-2.0.txt", "Unicode-3.0.txt", "Zlib.txt",
+            "libass-ISC.txt", "libm.txt", "qrcodegen.txt", "native-history-NOTICES.md",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "source"
+            (root / "licenses").mkdir(parents=True)
+            for name in ("LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md", "TRADEMARKS.md"):
+                (root / name).write_text("synthetic root notice")
+            for name in expected:
+                (root / "licenses" / name).write_text("synthetic license")
+            for name in ("synthetic-private.p12", "unreviewed-notice.txt"):
+                (root / "licenses" / name).write_text("synthetic canary, never real credentials")
+            with patch.object(build, "ROOT", root):
+                build.stage(Path(tmp) / "stage", "0.2.7")
+            self.assertEqual({p.name for p in (Path(tmp) / "stage/licenses").iterdir()}, expected)
+
     def test_exact_source_ignores_private_files_and_refuses_dirty_or_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "repo"

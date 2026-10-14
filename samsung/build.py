@@ -25,6 +25,12 @@ import zipfile
 from pathlib import Path
 
 PACKAGE_ID = "PlxNative0"
+LICENSE_FILES = (
+    "Apache-2.0.txt", "FreeType.txt", "GCC-exception-3.1.txt", "HarfBuzz-Old-MIT.txt",
+    "ICU4X.txt", "LGPL-2.1.txt", "LLVM-exception.txt", "MIT.txt",
+    "PlxNative-historical-MIT.txt", "SGI-B-2.0.txt", "Unicode-3.0.txt", "Zlib.txt",
+    "libass-ISC.txt", "libm.txt", "qrcodegen.txt", "native-history-NOTICES.md",
+)
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 WINDOWS = os.name == "nt"
@@ -124,7 +130,9 @@ def stage(app, version):
     cfg.write_text(text, encoding="utf-8")
     for name in ("LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md", "TRADEMARKS.md"):
         shutil.copyfile(ROOT / name, app / name)
-    shutil.copytree(ROOT / "licenses", app / "licenses")
+    (app / "licenses").mkdir()
+    for name in LICENSE_FILES:
+        shutil.copyfile(ROOT / "licenses" / name, app / "licenses" / name)
 
 
 def es5_check():
