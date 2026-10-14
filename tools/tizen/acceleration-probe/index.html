@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Account-free Plx acceleration probe</title>
+    <link rel="stylesheet" href="product.css"/>
+    <style>
+        body { background: #101012; color: white; }
+        #viewport { position: absolute; top: 80px; left: 80px; width: 1760px; height: 900px; overflow: hidden; }
+        .probe-row { height: 250px; padding: 20px; white-space: nowrap; }
+        .probe-card { display: inline-block; width: 180px; height: 210px; margin-right: 20px; background: linear-gradient(135deg, #456, #123); border-radius: 16px; }
+        #gpu { position: absolute; right: 20px; top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Account-free acceleration probe</h1>
+    <div id="viewport"><div id="track" class="home-track"></div></div>
+    <canvas id="gpu" width="8" height="8"></canvas>
+    <script src="$WEBAPIS/webapis/webapis.js"></script>
+    <script src="probe.js"></script>
+</body>
+</html>

@@ -1,7 +1,14 @@
-# PlxNative licensing
+# Samsung client licensing
+
+The Samsung client is now independently maintained in this repository. This
+does not remove inherited copyright, change the licence of derived code or
+grant rights to the upstream identity. Samsung contributions remain under
+GPL-3.0-or-later; authors retain their copyrights. The separately developed
+Tizen TV Builder toolkit is MIT, but that does not relicense app code or
+product-specific benchmark adapters copied from this repository.
 
 Copyright (c) 2026 Gleb Linnik and contributors.
-PlxNative's own code is licensed under the GNU General Public License, version 3 or
+This application's own code is licensed under the GNU General Public License, version 3 or
 (at your option) any later version: **GPL-3.0-or-later**. The complete license is in `LICENSE`.
 There is no warranty, to the extent permitted by applicable law.
 
@@ -12,13 +19,22 @@ available for the versions and contributions originally offered under them; thei
 is preserved in `licenses/PlxNative-historical-MIT.txt`. The GPL election does not revoke old grants.
 Trademark guidance is separate in `TRADEMARKS.md` and does not narrow the copyright license.
 
-The LG webOS runtime libraries the application calls (Starfish, ACB, libpf, Mali GLES and
-LG's SDL/Wayland/Luna forks) ship with the television's firmware and are never redistributed
-here; they are treated as System Libraries under GPL section 1. No custom linking permission
-has been granted or is needed.
+The maintained application uses Samsung's public Tizen Web APIs and AVPlay.
+The Samsung WGT does not bundle LG native libraries, FFmpeg, libass or the
+retired Rust/C implementation. Historical native-library relationships and
+notices remain in `licenses/native-history-NOTICES.md`; removal of active code
+does not alter those releases or their obligations.
 
 Before conveying a binary, publish its matching complete source bundle and build instructions
 next to that binary, at no additional charge, with clear version-specific directions. Retain the
 source access required by GPL section 6(d); do not substitute a moving main-branch link. Include
 required dependency sources, patches and configuration, and applicable installation information.
 Existing source offers for older releases are not cancelled. No binary is published by this change.
+
+The native tree and its build recipes remain available at the immutable
+[pre-migration revision](https://github.com/dragoshont/plx-native/tree/f74610c8e8fda765245f548adcc6565becdca31b)
+and historical release tags. This source cleanup does not relicense any code.
+`samsung/source_bundle.py` archives the exact clean committed tree for future
+Samsung distributions; `samsung/build.py` stages the GPL, licensing and
+third-party notices with the WGT. Keep the existing author certificate and
+package identity for updates.

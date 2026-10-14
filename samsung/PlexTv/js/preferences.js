@@ -27,6 +27,7 @@
         var subtitleBackground = value && value.subtitleBackground !== undefined ? value.subtitleBackground : "off";
         var subtitleDelayMs = value && value.subtitleDelayMs !== undefined ? value.subtitleDelayMs : 0;
         var directPlay = value && value.directPlay !== undefined ? value.directPlay : "auto";
+        var enhancedGraphics = value && value.enhancedGraphics !== undefined ? value.enhancedGraphics : false;
         // Builds before the Next episode choice saved only an on/off auto-play flag.
         var nextEpisode = value && value.nextEpisode !== undefined ? value.nextEpisode :
             (value && value.autoNext === false ? "off" : "countdown");
@@ -41,14 +42,15 @@
                 typeof subtitleDelayMs !== "number" || !isFinite(subtitleDelayMs) ||
                 Math.floor(subtitleDelayMs) !== subtitleDelayMs || subtitleDelayMs % 100 !== 0 ||
                 subtitleDelayMs < subtitleDelayMinMs || subtitleDelayMs > subtitleDelayMaxMs ||
-                directPlayModes.indexOf(directPlay) === -1) {
+                directPlayModes.indexOf(directPlay) === -1 || typeof enhancedGraphics !== "boolean") {
             throw new Error("Saved preferences are invalid. Reset app preferences in Settings.");
         }
         // Preferences saved before continueAction existed load with the safe default.
         return { quality: value.quality, language: value.language, nextEpisode: nextEpisode,
             continueAction: value.continueAction || "details", skipInterval: skipInterval,
             subtitleSize: subtitleSize, subtitlePosition: subtitlePosition, subtitleColor: subtitleColor,
-            subtitleBackground: subtitleBackground, subtitleDelayMs: subtitleDelayMs, directPlay: directPlay };
+            subtitleBackground: subtitleBackground, subtitleDelayMs: subtitleDelayMs, directPlay: directPlay,
+            enhancedGraphics: enhancedGraphics };
     }
     return {
         load: function (storage) {

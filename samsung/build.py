@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a signed Plx .wgt from this checkout (Windows, macOS, Linux).
+"""Build a signed Samsung client .wgt from this checkout (Windows, macOS, Linux).
 
     python samsung/build.py [VERSION]
 
@@ -10,7 +10,8 @@ Signing uses an author certificate plus the public Tizen distributor that ships 
 Tizen Studio, so the package installs on Developer Mode TVs without a Samsung account.
 The author certificate is PLX_AUTHOR_P12 + PLX_AUTHOR_PW if set, otherwise your own one in
 ~/.config/plxnative/samsung-author (PLX_AUTHOR_DIR), created on first use. A TV refuses
-to update an app signed with a different author certificate: delete the old Plx first.
+to update an app signed with a different author certificate. Preserve the existing
+author; do not uninstall a working app to bypass a mismatch.
 """
 import hashlib
 import os
@@ -24,6 +25,12 @@ import zipfile
 from pathlib import Path
 
 PACKAGE_ID = "PlxNative0"
+LICENSE_FILES = (
+    "Apache-2.0.txt", "FreeType.txt", "GCC-exception-3.1.txt", "HarfBuzz-Old-MIT.txt",
+    "ICU4X.txt", "LGPL-2.1.txt", "LLVM-exception.txt", "MIT.txt",
+    "PlxNative-historical-MIT.txt", "SGI-B-2.0.txt", "Unicode-3.0.txt", "Zlib.txt",
+    "libass-ISC.txt", "libm.txt", "qrcodegen.txt", "native-history-NOTICES.md",
+)
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 WINDOWS = os.name == "nt"
@@ -107,8 +114,12 @@ def author_cert(tizen, work):
 
 
 def stage(app, version):
-    skip = shutil.ignore_patterns(".buildResult", "tests", ".tproject", ".project", "*.wgt", "signature*.xml", "author-signature.xml", ".manifest.tmp")
-    shutil.copytree(HERE / "PlexTv", app, ignore=skip)
+    app.mkdir()
+    for name in ("config.xml", "index.html", "main.js", "icon.png"):
+        shutil.copyfile(HERE / "PlexTv" / name, app / name)
+    for name in ("js", "css"):
+        shutil.copytree(HERE / "PlexTv" / name, app / name,
+                        ignore=shutil.ignore_patterns(".*", "*.map", "*.wgt"))
     cfg = app / "config.xml"
     text = cfg.read_text(encoding="utf-8")
     text, n1 = re.subn(r'(<widget [^>]*version=")[^"]*"', rf'\g<1>{version}"', text, count=1)
@@ -117,6 +128,11 @@ def stage(app, version):
     if n1 != 1 or n2 != 1:
         fail("Could not stamp config.xml")
     cfg.write_text(text, encoding="utf-8")
+    for name in ("LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md", "TRADEMARKS.md"):
+        shutil.copyfile(ROOT / name, app / name)
+    (app / "licenses").mkdir()
+    for name in LICENSE_FILES:
+        shutil.copyfile(ROOT / "licenses" / name, app / "licenses" / name)
 
 
 def es5_check():

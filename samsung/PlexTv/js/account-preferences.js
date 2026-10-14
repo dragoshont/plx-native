@@ -1,6 +1,6 @@
-/* Plex account audio and subtitle preferences (clients.plex.tv /api/v2/user/profile), matching
- * the LG client's Settings > Audio & subtitles. The language catalog is Plex Web's account picker,
- * copied verbatim from rust-modules/plex/src/plex/languages.rs (tests compare the two). */
+/* Plex account audio and subtitle preferences (clients.plex.tv /api/v2/user/profile).
+ * The inherited language picker is preserved in tests/tizen/fixtures/account-languages.json,
+ * with its immutable source reference; see THIRD-PARTY-NOTICES.md. */
 (function (root) {
     "use strict";
 

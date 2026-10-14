@@ -89,8 +89,9 @@ proof that browser heuristics certify couch usability.
 
 ## Acceptance and remaining differences
 
-The implementation changes only the separate Samsung Web app and its tests/documentation.
-The LG Rust renderer, platform seams and playback pipeline remain unchanged.
+The implementation described by this dated analysis changed only the Samsung Web app
+and its tests/documentation. The LG Rust renderer was unchanged in that revision;
+it is now retired from the active tree, with its original source retained in history.
 Host DOM journeys exercise actual Samsung UI code against synthetic Plex/AVPlay responses.
 Browser captures at 1280x720 and 1920x1080 establish host composition and directional focus,
 not Samsung font rasterization, legacy-engine rendering, remote latency or hardware playback.

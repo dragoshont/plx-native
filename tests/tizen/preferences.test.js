@@ -9,11 +9,11 @@ var storage = {
 };
 assert.deepStrictEqual(prefs.load(storage), { quality: "original", language: "en", nextEpisode: "countdown",
     continueAction: "details", skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low",
-    subtitleColor: "white", subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto" });
+    subtitleColor: "white", subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto", enhancedGraphics: false });
 value = JSON.stringify({ quality: "720", language: "en", autoNext: false });
 assert.deepStrictEqual(prefs.load(storage), { quality: "720", language: "en", nextEpisode: "off",
     continueAction: "details", skipInterval: 10, subtitleSize: "medium", subtitlePosition: "low",
-    subtitleColor: "white", subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto" }, "Preferences from earlier app versions receive safe defaults; auto-play off stays off");
+    subtitleColor: "white", subtitleBackground: "off", subtitleDelayMs: 0, directPlay: "auto", enhancedGraphics: false }, "Preferences from earlier app versions receive safe defaults; auto-play off stays off");
 value = JSON.stringify({ quality: "720", language: "en", autoNext: true });
 assert.strictEqual(prefs.load(storage).nextEpisode, "countdown", "Auto-play on becomes the LG credits countdown");
 assert.strictEqual("autoNext" in prefs.load(storage), false);
@@ -61,6 +61,15 @@ assert.throws(function () { prefs.save(storage, { quality: "720", language: "en"
 assert.throws(function () { prefs.save(storage, { quality: "1080", language: "en", nextEpisode: "off", directPlay: "always" }); }, /invalid/);
 value = "{invalid";
 assert.throws(function () { prefs.load(storage); }, /invalid/);
+prefs.save(storage, { quality: "original", language: "en", nextEpisode: "off", enhancedGraphics: true });
+assert.strictEqual(prefs.load(storage).enhancedGraphics, true);
+prefs.save(storage, { quality: "original", language: "en", nextEpisode: "off", enhancedGraphics: false });
+assert.strictEqual(prefs.load(storage).enhancedGraphics, false);
+[1, "true", null, {}].forEach(function (invalid) {
+    assert.throws(function () {
+        prefs.save(storage, { quality: "original", language: "en", nextEpisode: "off", enhancedGraphics: invalid });
+    }, /invalid/);
+});
 prefs.reset(storage);
 assert.strictEqual(value, null);
 console.log("Tizen preference persistence/allowlist/reset tests: passed");

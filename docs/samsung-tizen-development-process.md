@@ -115,7 +115,7 @@ or command family:
    platforms/templates/virtual machines, host architecture and missing prerequisites. Never print
    certificates, passwords, DUIDs, tokens or private endpoints.
 2. **Create app:** generate a new product directory from the versioned template, with a unique
-   app id and placeholder metadata; do not mutate the LG app.
+   app id and placeholder metadata; do not copy historical native/LG build assumptions.
 3. **Validate source:** lint and unit/contract test; verify bundle syntax against each declared
    engine tier, privileges and manifest; scan source and package metadata for credentials and
    machine-specific values.
@@ -155,7 +155,8 @@ unique temporary output directory and removes only its own output on exit.
 `test.sh` runs synthetic account/PMS/native-adapter contracts, the host DOM product journey,
 generated-locale freshness and strict Acorn ES5 parsing. Dependencies are declared and locked under
 `tests/tizen/`; they are host tools, not production assets. Use
-`node tools/tizen/build-locales.js --write` after editing Samsung strings or upstream locale sources.
+`node tools/tizen/build-locales.js --write` after editing `samsung/strings.json` or
+the inherited catalogs now maintained in `samsung/locales/`.
 None of these commands launch a Samsung runtime.
 
 Generic, app-independent tooling — environment doctor, project generator, manifest/privilege audit,

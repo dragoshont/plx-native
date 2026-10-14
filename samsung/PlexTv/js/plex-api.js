@@ -247,7 +247,7 @@
                         "Content-Type": "application/x-www-form-urlencoded",
                         "X-Plex-Token": token,
                         "X-Plex-Client-Identifier": identifier,
-                        "X-Plex-Product": "Plx"
+                        "X-Plex-Product": "Media for Tizen"
                     },
                     body: body
                 }, method === "POST" ? null : scope);
@@ -293,7 +293,7 @@
             return timedFetch(fetchRequest, target, {
                 method: method || "GET", credentials: "omit", redirect: "error",
                 headers: { Accept: "application/json", "X-Plex-Token": token,
-                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Plx",
+                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Media for Tizen",
                     "X-Plex-Language": options.language || "en" }
             }, method && method !== "GET" ? null : scope).then(function (response) {
                 if (!response.ok) {
@@ -319,7 +319,7 @@
             return timedFetch(fetchRequest, target, {
                 method: method, credentials: "omit", redirect: "error",
                 headers: { Accept: "application/json", "X-Plex-Token": token,
-                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Plx" }
+                    "X-Plex-Client-Identifier": identifier, "X-Plex-Product": "Media for Tizen" }
             }, method === "GET" ? scope : null).then(function (response) {
                 if (!response.ok) {
                     var error = new Error(response.status === 401 || response.status === 403 ?
@@ -538,7 +538,7 @@
                     headers: {
                         Accept: "application/json",
                         "X-Plex-Client-Identifier": clientIdentifier,
-                        "X-Plex-Product": "Plex TV Client",
+                        "X-Plex-Product": "Media for Tizen",
                         "X-Plex-Version": "0.2.2",
                         "X-Plex-Platform": "Tizen"
                     }
@@ -640,7 +640,7 @@
                 headers["X-Plex-Token"] = token;
             }
             headers["X-Plex-Client-Identifier"] = options.clientIdentifier || clientId();
-            headers["X-Plex-Product"] = "Plx";
+            headers["X-Plex-Product"] = "Media for Tizen";
             headers["X-Plex-Version"] = "0.2.2";
             headers["X-Plex-Platform"] = "Tizen";
             headers["X-Plex-Device"] = "TV";
@@ -882,7 +882,7 @@
                 var params = {};
                 Object.keys(query || {}).forEach(function (name) { params[name] = query[name]; });
                 params["X-Plex-Client-Identifier"] = options.clientIdentifier || clientId();
-                params["X-Plex-Product"] = "Plx";
+                params["X-Plex-Product"] = "Media for Tizen";
                 return baseUrl + path + "?" + Object.keys(params).map(function (name) {
                     return encodeURIComponent(name) + "=" + encodeURIComponent(params[name]);
                 }).concat(token ? ["X-Plex-Token=" + encodeURIComponent(token)] : []).join("&");

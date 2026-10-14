@@ -4,9 +4,9 @@ var path = require("path");
 var root = path.resolve(__dirname, "../..");
 var catalogs = { es: {}, be: {} };
 ["core", "settings", "widgets", "browse"].forEach(function (name) {
-    var english = JSON.parse(fs.readFileSync(path.join(root, "locales/en", name + ".json"), "utf8"));
+    var english = JSON.parse(fs.readFileSync(path.join(root, "samsung/locales/en", name + ".json"), "utf8"));
     Object.keys(catalogs).forEach(function (language) {
-        var translated = JSON.parse(fs.readFileSync(path.join(root, "locales", language, name + ".json"), "utf8"));
+        var translated = JSON.parse(fs.readFileSync(path.join(root, "samsung/locales", language, name + ".json"), "utf8"));
         Object.keys(english).forEach(function (key) {
             var source = english[key].value;
             if (typeof source === "string" && typeof translated[key] === "string" && source.indexOf("{") === -1) {

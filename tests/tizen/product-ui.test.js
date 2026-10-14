@@ -178,7 +178,7 @@ async function run() {
         var exitPrompt = window.document.getElementById("player-menu");
         assert(exitPrompt && /exit-prompt/.test(exitPrompt.className), "Back on Home asks before leaving the app");
         assert.strictEqual(exitPrompt.getAttribute("role"), "alertdialog");
-        assert.strictEqual(exitPrompt.querySelector("h2").textContent, "Exit Plx?");
+        assert.strictEqual(exitPrompt.querySelector("h2").textContent, "Exit app?");
         assert.strictEqual(window.document.activeElement.textContent, "Stay",
             "Stay is focused, so a second accidental OK does not quit");
         assert.strictEqual(window.document.querySelector(".home-track") !== null, true, "Home stays underneath");
