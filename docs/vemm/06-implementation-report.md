@@ -12,6 +12,12 @@ Substantive commits:
   diagnostics plus truthful M47 CI wording.
 - `5b698444` — CodeRabbit follow-up corrections for non-video playback
   explanation and the Spanish Fallback translation.
+- `0d90ff42b161d5f3fa3f6c1be15897291b481717` — rounded folded-V assets,
+  separate Vemm technical identity, source-path/runtime namespace migration and
+  classified legacy identity audit.
+- `0b7a7a707a0ec3792d2d413fcb0c4ba4d186af91` — delta-review fixes that
+  restrict runtime localization to current Vemm copy and remove the final
+  active Plx temporary prefix.
 
 The branch remains unmerged. Published releases, remote identity, public
 repository settings, signing material and devices were not mutated.
@@ -109,6 +115,14 @@ repository settings, signing material and devices were not mutated.
 | `tools/tizen/test.sh` on clean `5b698444` | Passed after both CodeRabbit fixes |
 | `tools/tizen/build-source.sh samsung/Vemm` on `5b698444` | Unsigned SDK source build passed |
 | Complete-source archive from `5b698444` | 263 entries; review fixes/report present; no `.p12`, `.pw`, `.wgt` or `node_modules` |
+| Separate-install migration regression before implementation | Failed as intended because `samsung/Vemm` did not exist |
+| `tools/tizen/test.sh` on clean `0d90ff42` | Passed with app path/runtime/storage/build identity migration |
+| Delta-specific adversarial review of `0d90ff42` | `REVISE`; obsolete inherited runtime copy and one test temporary prefix found |
+| `tools/tizen/test.sh` on clean `0b7a7a70` | Passed after both delta-review fixes |
+| Toolkit validate + unsigned build on `0b7a7a70` | Passed directly as `VemmTvApp0.Vemm`, required Tizen `3.0`, device not contacted |
+| `tools/tizen/build-source.sh samsung/Vemm` on `0b7a7a70` | Unsigned SDK source build passed |
+| Complete-source archive from `0b7a7a70` | 266 entries; no old active app path, obsolete runtime copy, private artifacts or dependencies |
+| Folded-V asset detector | No findings; deterministic raster freshness passed |
 | Signed package, install, launch, device playback, Store review | Skipped — not authorized |
 
 Resolved intermediate failures:
