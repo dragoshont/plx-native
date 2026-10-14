@@ -15,10 +15,17 @@ assert.deepStrictEqual(tracked.filter(function (name) { return name.indexOf(".gi
 
 function read(name) { return fs.readFileSync(path.join(root, name), "utf8"); }
 ["README.md", "AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "PRIVACY.md", "SECURITY.md",
-    ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/config.yml"].forEach(function (name) {
+    ".github/ISSUE_TEMPLATE/config.yml"].forEach(function (name) {
     assert(!/plxnative\.com|support@|GLinnik21\/plx-native\/(?:issues|discussions)/i.test(read(name)),
         name + " must not route support, funding or development to upstream");
 });
+assert(!fs.existsSync(path.join(root, ".github/ISSUE_TEMPLATE/bug_report.yml")),
+    "The historical archive must not offer a new-work issue form");
+assert(read("README.md").includes("https://github.com/dragoshont/vemm"));
+assert(read("README.md").includes("https://github.com/dragoshont/plx-native/releases"));
+assert(read("SECURITY.md").includes("https://github.com/dragoshont/vemm/security"));
+assert(read(".github/ISSUE_TEMPLATE/config.yml").includes("blank_issues_enabled: false"));
+assert(read(".github/ISSUE_TEMPLATE/config.yml").includes("https://github.com/dragoshont/vemm/issues"));
 assert(read("LICENSE").indexOf("GNU GENERAL PUBLIC LICENSE") !== -1);
 assert(read("LICENSING.md").indexOf("GPL-3.0-or-later") !== -1);
 assert(read("LICENSING.md").indexOf("Gleb Linnik") !== -1);

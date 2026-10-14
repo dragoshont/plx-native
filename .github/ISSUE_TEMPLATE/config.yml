@@ -1,8 +1,11 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
-  - name: Samsung installation and update guide
-    url: https://github.com/dragoshont/plx-native/blob/main/docs/install-samsung.md
-    about: Developer Mode, update identity and current model-specific limits.
-  - name: Security reporting
-    url: https://github.com/dragoshont/plx-native/blob/main/SECURITY.md
-    about: Request a private channel without posting vulnerabilities or credentials publicly.
+  - name: Active Vemm project
+    url: https://github.com/dragoshont/vemm/issues
+    about: Report current bugs, request features, or ask for support in the active repository.
+  - name: Vemm security reporting
+    url: https://github.com/dragoshont/vemm/security
+    about: Use the active project's private reporting options; never post credentials or exploit details publicly.
+  - name: Historical Plx releases
+    url: https://github.com/dragoshont/plx-native/releases
+    about: Existing Plx release assets, checksums, tags, and matching source links remain here.
