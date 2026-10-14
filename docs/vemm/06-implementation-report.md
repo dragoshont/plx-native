@@ -42,6 +42,11 @@ repository settings, signing material and devices were not mutated.
   identified that live clock updates replaced the Reason row. The row ownership
   and missing regression were fixed in `41c94775`; the review's minor CI-floor
   wording concern was also corrected.
+- CodeRabbit's exact-`39cc9adb` review rated merge risk low and reported two
+  bounded issues: music conversion inherited the video-only `supported` reason,
+  and the Spanish `Fallback` label contained Belarusian text. Both were verified
+  and corrected through the normal playback/localization workflows; the generic
+  docstring warning is not a repository ES5/JavaScript gate.
 
 ## Partially completed
 
@@ -84,6 +89,7 @@ repository settings, signing material and devices were not mutated.
 | Complete-source archive from `e8b002fd` | 262 entries; required Vemm source/tests/notices present; no `.p12`, `.pw`, `.wgt` or `node_modules` |
 | Offline package staging audit | 50 files; display name Vemm; compatibility ID `PlxNative0.Plx`; no private/signing artifacts |
 | Impeccable mechanical UI detector | No findings |
+| CodeRabbit review of exact `39cc9adb` | Low risk; two bounded findings verified and fixed, generic docstring warning intentionally not adopted |
 | Signed package, install, launch, device playback, Store review | Skipped — not authorized |
 
 Resolved intermediate failures:

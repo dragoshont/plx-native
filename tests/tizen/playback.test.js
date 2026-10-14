@@ -90,7 +90,17 @@ async function run() {
     assert.throws(function () { playback.plan(unanalysedTrack, {}); }, /can't be played/i,
         "Music without audio codec or Stream facts must not negotiate an unplayable file");
     unanalysedTrack.Media[0].Part[0].Stream = [{ streamType: 2, codec: "flac" }];
-    assert.doesNotThrow(function () { playback.plan(unanalysedTrack, {}); });
+    var musicPlan = playback.plan(unanalysedTrack, {});
+    assert.deepStrictEqual(musicPlan.explanation, {
+        selected: "transcode",
+        reason: "",
+        fallback: "none",
+        capability: {
+            status: "unknown",
+            measured: false,
+            source: "No device capability evidence"
+        }
+    }, "Music conversion must not be mislabeled as capability-supported direct playback");
     assert.strictEqual(plan.query.offset, 0, "AVPlay resumes in the source timeline, not an offset-relative HLS clock");
     assert.strictEqual(playback.plan(item, { profile: {
         evidence: "synthetic-measured-profile", containers: ["mp4"], video: ["h264"], audio: ["aac"],

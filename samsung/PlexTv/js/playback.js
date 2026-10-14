@@ -65,7 +65,7 @@
         var selected = direct ? "direct" : kind === "video" && COPYABLE[reason] ? "directstream" : "transcode";
         return {
             selected: selected,
-            reason: reason || "supported",
+            reason: reason || (kind === "video" ? "supported" : ""),
             fallback: force ? "stop-if-refused" : direct ? "server-transcode-if-refused" : "none",
             capability: {
                 status: profile && profile.status || "unknown",

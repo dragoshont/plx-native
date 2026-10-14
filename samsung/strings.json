@@ -534,7 +534,7 @@
   "Direct Play": { "es": "Reproducción directa", "be": "Прамое прайграванне" },
   "Direct Stream": { "es": "Transmisión directa", "be": "Прамая трансляцыя" },
   "Reason": { "es": "Motivo", "be": "Прычына" },
-  "Fallback": { "es": "Рэзервовы шлях", "be": "Рэзервовы шлях" },
+  "Fallback": { "es": "Alternativa", "be": "Рэзервовы шлях" },
   "Capability evidence": { "es": "Evidencia de capacidad", "be": "Сведчанне магчымасцяў" },
   "media matches this TV capability profile": { "es": "el contenido coincide con el perfil de capacidad de este televisor", "be": "медыя адпавядае профілю магчымасцяў гэтага тэлевізара" },
   "Server transcode if Plex or AVPlay refuses the original": { "es": "Transcodificación del servidor si Plex o AVPlay rechazan el original", "be": "Сервернае перакадаванне, калі Plex або AVPlay адхіліць арыгінал" },
