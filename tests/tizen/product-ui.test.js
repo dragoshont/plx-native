@@ -306,6 +306,13 @@ async function run() {
         click("Account");
         click("Settings");
         assert(window.document.querySelector(".settings-menu"), "Settings uses a grouped menu surface");
+        click("About Vemm");
+        assert(window.document.querySelector(".screen-about"), "About Vemm is a first-class settings destination");
+        assert(window.document.querySelector(".about-brand-mark"), "About Vemm uses the original packaged mark");
+        assert(window.document.body.textContent.includes("Your media. At its best."));
+        assert(window.document.body.textContent.includes("working brand"));
+        click("Back");
+        assert(window.document.querySelector(".settings-menu"), "Back from About Vemm returns to Settings");
         assert.strictEqual(Array.from(window.document.querySelectorAll(".settings-menu button")).filter(function (node) {
             return node.textContent.indexOf("Quality:") === 0;
         }).length, 1, "Settings must show one quality value, not every alternative");

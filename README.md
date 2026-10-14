@@ -1,22 +1,36 @@
-# Plex client for Samsung Tizen
+# Vemm for Samsung Tizen
 
-An independently maintained, unofficial Plex client for Samsung TVs. **No root required.** It uses Samsung's platform-native acceleration through the supported Tizen Web stack: GPU-composited UI layers for movement and fades, WebGL for optional graphics, and AVPlay for platform video playback rather than a JavaScript video decoder.
+**Vemm** (`/vem/`, one syllable) is an independently maintained, unofficial
+Plex-compatible media player for Samsung TVs. **No root required.** Plex Media
+Server remains responsible for libraries, metadata, authentication and
+permissions; Vemm owns the television browsing, playback policy and remote-first
+client experience.
+
+Vemm is a working brand, not a claim of completed trademark clearance. The
+repository remains `dragoshont/plx-native`, and installed compatibility identity
+remains unchanged.
 
 **I've tested the client on Tizen 4.0 and newer.** The recorded device checks below distinguish individual runtimes and features; they are not blanket certification of every model or codec.
 
 The UI is inspired by [Gleb Linnik's LG client](https://github.com/GLinnik21/plx-native).
-Current source uses the neutral display label **Media for Tizen** and original
-screen artwork; a permanent product/repository name has not been chosen.
+Current source uses original Vemm vector artwork and a restrained dark,
+Azure-accented identity while preserving the existing cinematic screen
+composition and old-TV performance constraints.
 
 The implementation uses **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**.
 
-**[Install on Samsung](docs/install-samsung.md)** · **[Samsung releases](https://github.com/dragoshont/plx-native/releases?q=samsung-v)** · **[Report a Samsung issue](https://github.com/dragoshont/plx-native/issues)** · **[Tizen TV Builder toolkit](https://github.com/dragoshont/tizen-tv-builder)**
+**[Install the published Samsung release](docs/install-samsung.md)** · **[Vemm architecture](docs/vemm/03-architecture.md)** · **[Samsung releases](https://github.com/dragoshont/plx-native/releases?q=samsung-v)** · **[Report an issue](https://github.com/dragoshont/plx-native/issues)** · **[Tizen TV Builder toolkit](https://github.com/dragoshont/tizen-tv-builder)**
 
 ## Install and update
 
 Use the [step-by-step guide](docs/install-samsung.md). You need a computer on the same network, Samsung Developer Mode and a signing profile that covers your TV. **No root or Homebrew Channel is required.** Developer installation is not Samsung Store approval.
 
-The current release is [Samsung 0.2.7](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.7), a **prerelease**. From the Tizen TV Builder checkout, after setup and certificate configuration:
+The latest published package is
+[Samsung 0.2.7](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.7),
+a **prerelease** that still appears as **Plx**. The Vemm display transition is
+current source only until a separately reviewed, signed and device-accepted
+release is authorized. From the Tizen TV Builder checkout, after setup and
+certificate configuration:
 
 ```sh
 python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.7/Plx-0.2.7.wgt TV_IP
@@ -24,14 +38,18 @@ python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases
 
 Keep your existing author certificate for updates. Do not uninstall a working app to work around a signing mismatch. The existing `PlxNative0.Plx` application ID, release filenames and repository URL are retained for update/link compatibility, not used as the independent project's branding.
 
-## What the Samsung client does
+## What Vemm does
 
 - Plex linking, profile and server selection, including a manual server connection.
 - Home banners and shelves, libraries, search and detail pages.
 - Playback through Samsung AVPlay, with Direct Play/Direct Stream or server-transcode negotiation, resume, seek, tracks, subtitles, chapters and episode controls.
 - Local playback, language, library and graphics preferences.
 
-These are implemented features, not a promise that every codec or workflow works on every TV. See [feature/readiness detail](docs/samsung-upstream-readiness.md) and [known release and deployment limits](docs/samsung-0.2.7-rollout.md). The Account icon's D-pad access is a reported unresolved issue in 0.2.7; the performance fixture accessed Settings programmatically, so it did not validate that remote-navigation path.
+These are implemented features, not a promise that every codec or workflow
+works on every TV. See [feature/readiness detail](docs/samsung-upstream-readiness.md)
+and [known release and deployment limits](docs/samsung-0.2.7-rollout.md).
+Published 0.2.7 has a reported Account D-pad access issue; current main contains
+the source fix, but no Vemm release or new named-device acceptance is implied.
 
 ## Hardware acceleration: what works, and what did not help
 
@@ -83,7 +101,7 @@ The maintained Samsung surfaces are:
 
 | Path | Responsibility |
 | --- | --- |
-| `samsung/PlexTv/` | Shipped Tizen Web app |
+| `samsung/PlexTv/` | Vemm Tizen Web app |
 | `tests/tizen/` | Host contracts and DOM journeys |
 | `tools/tizen/` | App-specific build checks, synthetic workloads and recorded feasibility probes |
 | `samsung/build.py`, `samsung/release.py` | Versioned WGT build and existing-author publication |
@@ -117,12 +135,16 @@ Send Samsung-specific issues to [this repository](https://github.com/dragoshont/
 The repository URL, package ID, author/update continuity and historical release
 filenames are preserved. Published 0.2.7 still has its original display name;
 this source-only migration does not replace that package or deploy an update.
-A permanent name and preservation-safe GitHub fork detachment remain separate
-decisions; no completed provider detachment is implied.
+Vemm's working-brand adoption does not rename the repository or detach the
+GitHub fork. Preservation-safe remote migration and final legal clearance remain
+separate decisions; no completed provider operation is implied.
 
 ## Privacy, licensing and attribution
 
-The Samsung app talks to Plex services and the selected media servers; sample playback can still update resume/watched state. Saved sign-in credentials use **unencrypted local Web storage**. No analytics or crash-upload feature is enabled in the Samsung client. See [data handling](PRIVACY.md).
+Vemm talks to Plex services and the selected media servers; playback can update
+resume/watched state. Saved sign-in credentials use **unencrypted local Web
+storage**. No analytics or crash-upload feature is enabled. See
+[data handling](PRIVACY.md).
 
 Source remains **[GPL-3.0-or-later](LICENSE)** with inherited copyright and third-party notices intact. The Samsung implementation and toolkit are maintained separately in this repository and [Tizen TV Builder](https://github.com/dragoshont/tizen-tv-builder).
 

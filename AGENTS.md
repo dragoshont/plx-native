@@ -2,11 +2,12 @@
 
 ## Product and architecture
 
-This repository maintains an independent, unofficial **Samsung Tizen Web Plex
-client**. The temporary display label is **Media for Tizen**; the permanent
-brand/repository name is undecided. The UI was inspired by Gleb Linnik's
-PlxNative. Inherited code/catalogs remain GPL-3.0-or-later, not clean-room or
-MIT-relicensed code. Read `LICENSING.md` and `THIRD-PARTY-NOTICES.md`.
+This repository maintains **Vemm**, an independent, unofficial Samsung Tizen
+Web Plex client. Vemm is a working brand, pronounced `/vem/`; trademark
+clearance and repository migration remain separate decisions. The UI was
+inspired by Gleb Linnik's PlxNative. Inherited code/catalogs remain
+GPL-3.0-or-later, not clean-room or MIT-relicensed code. Read `LICENSING.md`,
+`THIRD-PARTY-NOTICES.md` and `docs/vemm/`.
 
 - `samsung/PlexTv/`: shipped ES5 HTML/CSS/JavaScript app, public Tizen APIs and
   Samsung AVPlay. `main.js` composes the screens; `js/` owns reusable contracts.
@@ -16,7 +17,7 @@ MIT-relicensed code. Read `LICENSING.md` and `THIRD-PARTY-NOTICES.md`.
 - `tests/tizen/`: synthetic host contracts, DOM journeys and packaging tests.
 - `tools/tizen/`: app-specific checks, benchmarks and isolated feasibility
   probes. Probes are not the product's renderer.
-- `docs/samsung-tizen-client-spec.md`, `samsung/DESIGN.md` and `samsung/PRODUCT.md`:
+- `docs/samsung-tizen-client-spec.md`, `docs/vemm/`, `samsung/DESIGN.md` and `samsung/PRODUCT.md`:
   product/UX contract. Read the relevant portions before behavior changes.
 - `docs/plex-openapi.json` and `docs/pms-api.md`: PMS protocol evidence; do not
   infer endpoint behavior from native historical implementation comments.
@@ -32,7 +33,8 @@ Make precise, finished changes. Preserve unrelated user work and generated
 artifacts. Do not reset or clean a dirty worktree. Fix a reported bug by first
 observing a failing regression/reproduction, then observing it pass.
 
-Preserve `PlxNative0` / `PlxNative0.Plx`, existing saved-setting keys and author
+Preserve `PlxNative0` / `PlxNative0.Plx`, existing `plx-tizen-*` saved-setting
+keys and author
 certificate continuity. Those are installed-app identifiers, not branding.
 Keep experimental graphics off by default. Do not broaden playback capability
 claims beyond source-backed model/firmware/runtime evidence.
@@ -92,5 +94,6 @@ is a separate acceptance step.
 
 Use this repository's Issues and `SECURITY.md`, never the upstream author's
 support/funding channels. Preserve history, releases and source offers.
-GitHub fork-network detachment and final naming are separate external decisions;
+GitHub fork-network detachment, repository naming and final trademark clearance
+are separate external decisions;
 do not delete/recreate the repository or discard metadata to simulate them.

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 117 117" role="img" aria-labelledby="title">
+  <title id="title">Vemm mark</title>
+  <rect width="117" height="117" fill="#101820"/>
+  <circle cx="58.5" cy="58.5" r="51" fill="#1B2838"/>
+  <polygon points="24,27 42,27 59,66 51,92" fill="#0078D4"/>
+  <polygon points="75,27 93,27 66,92 59,66" fill="#58A6E7"/>
+</svg>

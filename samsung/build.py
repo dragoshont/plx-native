@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a signed Samsung client .wgt from this checkout (Windows, macOS, Linux).
+"""Build a signed Vemm Samsung client .wgt from this checkout (Windows, macOS, Linux).
 
     python samsung/build.py [VERSION]
 
@@ -101,7 +101,7 @@ def author_cert(tizen, work):
     key_dir = Path(os.environ.get("PLX_AUTHOR_DIR") or Path.home() / ".config/plxnative/samsung-author")
     cert, pw_file = key_dir / "author.p12", key_dir / "author.pw"
     if not cert.is_file():
-        print(f"Creating your author certificate in {key_dir} (keep it for future updates)")
+        print(f"Creating your Vemm update author certificate in {key_dir} (keep it for future updates)")
         key_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(key_dir, 0o700)
         pw_file.write_text(secrets.token_urlsafe(18).replace("-", "a").replace("_", "b"))
@@ -120,6 +120,7 @@ def stage(app, version):
     for name in ("js", "css"):
         shutil.copytree(HERE / "PlexTv" / name, app / name,
                         ignore=shutil.ignore_patterns(".*", "*.map", "*.wgt"))
+    shutil.copytree(HERE / "PlexTv" / "brand", app / "brand")
     cfg = app / "config.xml"
     text = cfg.read_text(encoding="utf-8")
     text, n1 = re.subn(r'(<widget [^>]*version=")[^"]*"', rf'\g<1>{version}"', text, count=1)

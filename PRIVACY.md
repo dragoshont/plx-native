@@ -1,6 +1,6 @@
 # Privacy and data handling
 
-This project's active product is the Samsung Tizen Web client. The complete
+This project's active product is Vemm for Samsung Tizen. The complete
 current statement is [Samsung data handling](samsung/PRIVACY.md).
 
 The client communicates with Plex and user-selected media servers. Normal

@@ -145,8 +145,8 @@ Complete sections 1–4 first, or let the toolkit's `cert add` create the certif
    A TV refuses an update signed by a different author. Preserve the original
    author/profile and resolve that mismatch; do not uninstall a working app to
    bypass it.
-4. Open **Media for Tizen** (or **Plx** on published 0.2.7) from the TV's Apps screen.
-   The descriptive new display name does not change the installed application ID.
+4. Open **Vemm** (or **Plx** on published 0.2.7) from the TV's Apps screen.
+   The working display brand does not change the installed application ID.
    Scan the QR or enter the displayed code at
    `plex.tv/link`, choose your profile (PIN only if protected), then your server. Sign-in is
    saved automatically in unencrypted TV storage; Settings can turn this off and sign-out

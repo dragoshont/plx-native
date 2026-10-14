@@ -1,8 +1,8 @@
-# Samsung client data handling
+# Vemm Samsung client data handling
 
-Applies to the Samsung Web client described by release 0.2.7 and the current
-Samsung source. Historical LG policy is linked from the root privacy document,
-not an active policy for this package.
+Applies to published Samsung release 0.2.7 and current Vemm source. Historical
+LG policy is linked from the root privacy document, not an active policy for
+this package.
 
 ## Services
 
@@ -38,7 +38,7 @@ data to the project maintainer.
 
 ## Diagnostics and sharing
 
-The Samsung client has no analytics or crash-upload feature enabled. This does
+Vemm has no analytics or crash-upload feature enabled. This does
 not describe the inherited LG application, which has separate optional
 reporting features. Do not interpret LG Sentry/PostHog documentation or
 sponsorship as a Samsung service.

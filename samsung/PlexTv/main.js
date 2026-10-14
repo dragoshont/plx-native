@@ -74,6 +74,15 @@
     var preferenceError = "";
     var graphics = null;
     var graphicsFailure = false;
+    var product = window.VemmProduct || {
+        name: "Vemm", pronunciation: "/vem/", tagline: "Your media. At its best.",
+        platform: "Samsung Tizen", status: "working brand"
+    };
+    document.title = product.name;
+    var brandName = document.querySelector(".app-header h1");
+    var brandTagline = document.querySelector(".app-header p");
+    if (brandName) { brandName.textContent = product.name; }
+    if (brandTagline) { brandTagline.textContent = product.tagline; }
 
     function graphicsFallback() {
         graphicsFailure = true;
@@ -139,9 +148,6 @@
         status.className = "status status-error";
         return;
     }
-    var buildLabel = document.querySelector(".app-header p");
-    if (buildLabel) { buildLabel.textContent = translate("Samsung TV client development build"); }
-
     function translate(text, values) {
         if (window.PlexI18n) { return window.PlexI18n.text(text, values); }
         return String(text).replace(/\{([A-Za-z0-9]+)\}/g, function (match, key) {
@@ -2332,8 +2338,12 @@
         stats.appendChild(element("h2", "", translate("Stats for nerds")));
         var snapshot = player.snapshot();
         var quality = player.quality();
+        var decision = quality.explanation || {};
         [
             translate("Playback") + ": " + modeName(quality.mode),
+            translate("Reason") + ": " + reasonName(decision.reason),
+            translate("Fallback") + ": " + fallbackName(decision.fallback),
+            translate("Capability evidence") + ": " + capabilityName(decision.capability),
             translate("Position") + ": " + timeLabel(snapshot.position) + " / " + timeLabel(snapshot.duration),
             translate("Video") + ": " + qualityLabel(quality.mode === "direct" ? quality.source : quality.stream),
             translate("Quality") + ": " + qualityName(quality.limit),
@@ -2808,6 +2818,7 @@
     }
     function reasonName(reason) {
         return translate({
+            supported: "media matches this TV capability profile",
             profile: "this TV's formats are not known", "video-codec": "video format not supported by this TV",
             container: "file type not supported for this format", "audio-codec": "audio format not supported by this TV",
             "audio-container": "audio format not supported in this file type", resolution: "resolution too high for this TV",
@@ -2817,6 +2828,21 @@
             subtitle: "subtitles are burned in", multipart: "the file is split into parts", settings: "Direct play is off in Settings", "server": "the server declined the original file",
             "decoder": "this TV could not decode the original"
         }[reason] || "converted by the server");
+    }
+    function fallbackName(fallback) {
+        return translate({
+            "server-transcode-if-refused": "Server transcode if Plex or AVPlay refuses the original",
+            "stop-if-refused": "Stop with an error if the original is refused",
+            none: "No additional fallback planned"
+        }[fallback] || "No additional fallback planned");
+    }
+    function capabilityName(capability) {
+        if (!capability || capability.status === "unknown") {
+            return translate("No device capability evidence");
+        }
+        return capability.measured ?
+            translate("Observed on this exact registered TV") :
+            translate("Published Samsung specifications, not measured on this TV");
     }
     function modeName(mode) {
         return translate(mode === "direct" ? "Direct Play" : mode === "directstream" ? "Direct Stream" : "Transcode");
@@ -3715,6 +3741,33 @@
         section.appendChild(element("p", "help-text", translate("Saved to this Plex profile and shared with your other Plex apps. Changes may take time to affect playback; selections already made for an item still take priority.")));
     }
 
+    function openAbout() {
+        retryView = null;
+        viewGeneration += 1;
+        clear(screen);
+        page(translate("About Vemm"), "about");
+        var identity = element("section", "about-brand");
+        var mark = element("img", "about-brand-mark");
+        mark.src = "brand/vemm-mark.svg";
+        mark.alt = "";
+        identity.appendChild(mark);
+        identity.appendChild(element("h2", "", product.name));
+        identity.appendChild(element("p", "about-pronunciation",
+            translate("Pronounced {pronunciation}, one syllable.", { pronunciation: product.pronunciation })));
+        identity.appendChild(element("p", "about-tagline", translate(product.tagline)));
+        screen.appendChild(identity);
+        screen.appendChild(element("p", "help-text",
+            translate("Vemm is an independent, unofficial Plex-compatible media player for Samsung Tizen.")));
+        screen.appendChild(element("p", "help-text working-brand-status",
+            translate("Vemm is a working brand. Trademark clearance and repository migration are not complete.")));
+        screen.appendChild(element("p", "help-text",
+            translate("Updates keep the existing Samsung application identity, saved settings and signing continuity.")));
+        button(screen, "Back", backView);
+        restoreView = openAbout;
+        setStatus("");
+        focusFirst();
+    }
+
     function openSettings() {
         retryView = null;
         var focusedSetting = restoreView === openSettings ?
@@ -3848,6 +3901,7 @@
                 focusFirst();
             });
         });
+        button(privacy, "About Vemm", function () { visit(openAbout); });
         button(privacy, "Sign out", signOut);
         button(privacy, "Back", backView);
         restoreView = openSettings;

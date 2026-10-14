@@ -1,6 +1,6 @@
 name: Samsung Tizen
 
-# WHAT A GREEN RUN HERE MEANS: the Samsung web app under samsung/PlexTv parses as strict ES5 (the
+# WHAT A GREEN RUN HERE MEANS: the Vemm Samsung web app under samsung/PlexTv parses as strict ES5 (the
 # 2018 Chromium 56 floor), its generated locale bundles match their sources, and its host contract
 # tests (Plex API, playback negotiation, UI state, source distribution) pass
 # against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
@@ -135,5 +135,5 @@ jobs:
           gh release create "samsung-v$VERSION" samsung/dist/Plx-$VERSION.wgt samsung/dist/Plx-$VERSION.wgt.sha256 \
             samsung/dist/Samsung-source-*.zip samsung/dist/Samsung-source-*.zip.sha256 \
             --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
-            --title "Samsung client $VERSION" \
+            --title "Vemm for Samsung $VERSION" \
             --notes "Install with the tizen-tv-builder toolkit: https://github.com/dragoshont/plx-native/blob/main/docs/install-samsung.md"

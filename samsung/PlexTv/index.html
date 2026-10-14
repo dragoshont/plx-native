@@ -10,18 +10,23 @@ FORM: Remote-first, neutral display identity; visual inspiration credited in THI
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Media for Tizen</title>
+    <title>Vemm</title>
     <link rel="stylesheet" type="text/css" href="css/style.css"/>
 </head>
 <body>
     <object id="av-player" class="video-plane" type="application/avplayer"></object>
     <div class="app-shell">
         <header class="app-header">
-            <h1>Media for Tizen</h1>
+            <div class="brand-lockup">
+                <img class="brand-mark" src="brand/vemm-mark.svg" alt=""/>
+                <h1>Vemm</h1>
+            </div>
+            <p>Your media. At its best.</p>
         </header>
         <main id="screen" class="screen"></main>
         <footer id="status" class="status" role="status" aria-live="polite"></footer>
     </div>
+    <script src="js/product.js"></script>
     <script src="js/plex-api.js"></script>
     <script src="$WEBAPIS/webapis/webapis.js"></script>
     <script src="js/avplay.js"></script>

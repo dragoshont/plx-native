@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-labelledby="title">
+  <title id="title">Vemm</title>
+  <rect width="96" height="96" rx="22" fill="#101820"/>
+  <circle cx="48" cy="48" r="40" fill="#1B2838"/>
+  <polygon points="20,23 34,23 48,55 41,76" fill="#0078D4"/>
+  <polygon points="62,23 76,23 55,76 48,55" fill="#58A6E7"/>
+  <text x="116" y="68" fill="#F4F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="650" letter-spacing="-2">vemm</text>
+</svg>

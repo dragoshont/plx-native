@@ -6,6 +6,7 @@ var path = require("path");
 
 var root = path.join(__dirname, "../../samsung/PlexTv");
 var config = fs.readFileSync(path.join(root, "config.xml"), "utf8");
+assert(config.includes("<name>Vemm</name>"), "Display branding is independent from signing identity");
 
 // Every declared privilege must be justified by a use; an unused one widens what the
 // certificate grants and is flagged by the workbench audit.

@@ -31,11 +31,13 @@ class DistributionTests(unittest.TestCase):
             config = (app / "config.xml").read_text()
             self.assertIn('id="PlxNative0.Plx" package="PlxNative0"', config)
             self.assertIn('version="0.2.7"', config)
-            self.assertIn("<name>Media for Tizen</name>", config)
+            self.assertIn("<name>Vemm</name>", config)
             for name in ("LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md", "TRADEMARKS.md",
                          "licenses/PlxNative-historical-MIT.txt", "licenses/native-history-NOTICES.md"):
                 self.assertEqual((app / name).read_bytes(), (ROOT / name).read_bytes())
             self.assertEqual((app / "icon.png").read_bytes(), (ROOT / "samsung/PlexTv/icon.png").read_bytes())
+            self.assertEqual((app / "brand/vemm-mark.svg").read_bytes(),
+                             (ROOT / "samsung/brand/vemm-mark.svg").read_bytes())
             self.assertFalse(list(app.rglob("*.wgt")))
             self.assertFalse((app / "node_modules").exists())
             self.assertFalse((app / "author-signature.xml").exists())
@@ -54,8 +56,9 @@ class DistributionTests(unittest.TestCase):
             product.mkdir(parents=True)
             for name in ("config.xml", "index.html", "main.js", "icon.png"):
                 (product / name).write_bytes((ROOT / "samsung/PlexTv" / name).read_bytes())
-            for name in ("js", "css"):
+            for name in ("js", "css", "brand"):
                 (product / name).mkdir()
+            (product / "brand/vemm-mark.svg").write_text("<svg/>")
             (product / "private.txt").write_text("synthetic-private-value")
             (product / ".settings").mkdir()
             (product / ".settings/account.txt").write_text("synthetic-account")
@@ -63,7 +66,7 @@ class DistributionTests(unittest.TestCase):
             with patch.object(build, "HERE", here):
                 build.stage(Path(tmp) / "stage", "0.2.7")
             files = {p.name for p in (Path(tmp) / "stage").iterdir()}
-            self.assertEqual(files, {"config.xml", "index.html", "main.js", "icon.png", "js", "css",
+            self.assertEqual(files, {"config.xml", "index.html", "main.js", "icon.png", "js", "css", "brand",
                                      "LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md",
                                      "TRADEMARKS.md", "licenses"})
 

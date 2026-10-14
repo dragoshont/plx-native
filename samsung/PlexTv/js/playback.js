@@ -61,6 +61,19 @@
         "480": { height: 480, width: 854, bitrate: 720 }
     };
     var COPYABLE = { container: true, "audio-codec": true, "audio-container": true };
+    function explanation(kind, direct, reason, force, profile) {
+        var selected = direct ? "direct" : kind === "video" && COPYABLE[reason] ? "directstream" : "transcode";
+        return {
+            selected: selected,
+            reason: reason || "supported",
+            fallback: force ? "stop-if-refused" : direct ? "server-transcode-if-refused" : "none",
+            capability: {
+                status: profile && profile.status || "unknown",
+                measured: !!(profile && profile.measured),
+                source: profile && profile.evidence || "No device capability evidence"
+            }
+        };
+    }
     function rungFor(quality) {
         var rung = LADDER[quality] || LADDER["1080"];
         return { cap: rung.height, width: rung.width, height: rung.heightAsk || rung.height, bitrate: rung.bitrate };
@@ -194,7 +207,8 @@
                 "add-transcode-target(type=musicProfile&context=streaming&protocol=http&container=mp3&audioCodec=mp3)";
         }
         return { direct: !!direct, part: part, query: query, session: session, kind: kind, tracks: tracks,
-            force: force && kind === "video", reason: verdict };
+            force: force && kind === "video", reason: verdict,
+            explanation: explanation(kind, !!direct, verdict, force && kind === "video", profile) };
     }
 
     function create(options) {
@@ -294,6 +308,8 @@
                     // PMS declined the original; register the capped HLS transcode with its own decision.
                     selection.direct = false;
                     selection.reason = "server";
+                    selection.explanation = explanation(selection.kind, false, selection.reason, selection.force,
+                        settings.profile);
                     selection.query.directPlay = 0;
                     selection.query.directStream = 0;
                     return negotiate();
@@ -308,6 +324,8 @@
                     emit({ type: "direct-fallback", message: error && error.message });
                     selection.direct = false;
                     selection.reason = "decoder";
+                    selection.explanation = explanation(selection.kind, false, selection.reason, selection.force,
+                        settings.profile);
                     selection.query.directPlay = 0;
                     selection.query.directStream = 0;
                     return negotiate();
@@ -359,8 +377,12 @@
             },
             mode: function () { return streamMode(selection.direct, streamMedia); },
             quality: function () {
+                var currentMode = streamMode(selection.direct, streamMedia);
+                var currentExplanation = explanation(selection.kind, selection.direct, selection.reason,
+                    selection.force, settings.profile);
+                currentExplanation.selected = currentMode;
                 return { source: sourceMedia, stream: selection.direct ? sourceMedia : streamMedia,
-                    mode: streamMode(selection.direct, streamMedia), reason: selection.reason,
+                    mode: currentMode, reason: selection.reason, explanation: currentExplanation,
                     limit: LADDER[settings.quality] ? settings.quality : "1080" };
             },
             tracks: function () { return adapter.tracks(); },
@@ -369,5 +391,6 @@
             position: function () { return lastPosition; }
         };
     }
-    return { plan: plan, create: create, fits: fits, rungFor: rungFor, streamMode: streamMode, qualities: Object.keys(LADDER) };
+    return { plan: plan, create: create, fits: fits, rungFor: rungFor, streamMode: streamMode,
+        qualities: Object.keys(LADDER) };
 }));

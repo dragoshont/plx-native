@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install or update this Samsung client in Developer Mode (Windows, macOS, Linux).
+"""Install or update Vemm in Samsung Developer Mode (Windows, macOS, Linux).
 
     python install.py TV_IP [VERSION | Plx.wgt]
 
@@ -57,7 +57,7 @@ def latest_version():
 def download(version, folder):
     url = f"https://github.com/{REPO}/releases/download/samsung-v{version}/Plx-{version}.wgt"
     path = Path(folder) / f"Plx-{version}.wgt"
-    print(f"Downloading Samsung client {version}...")
+    print(f"Downloading Samsung release {version}...")
     try:
         with urllib.request.urlopen(url, timeout=120) as r:
             path.write_bytes(r.read())
@@ -103,7 +103,7 @@ def main():
                 fail("Install failed (output above).")
         finally:
             run(sdb, "disconnect", serial)
-    print("Done. Open the client from Apps (Plx on older releases, Media for Tizen on current source) and sign in at plex.tv/link.")
+    print("Done. Open Vemm from Apps (published 0.2.7 and older releases still appear as Plx) and sign in at plex.tv/link.")
 
 
 if __name__ == "__main__":

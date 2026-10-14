@@ -1,13 +1,16 @@
 # Contributing
 
-This repository maintains the **Samsung Tizen client** independently. Open
+This repository maintains **Vemm for Samsung Tizen** independently. Vemm is a
+working brand; changing display identity does not authorize changing installed
+Samsung IDs, saved settings, signing identity or historical release names. Open
 Samsung issues and pull requests in
 [dragoshont/plx-native](https://github.com/dragoshont/plx-native), not against
 the LG author's project. The native LG tree is retired from the active source;
 its history, copyright and source obligations remain. Samsung changes belong
 in `samsung/`, `tests/tizen/` and the Samsung-specific tools/docs.
 
-Run `npm ci --prefix tests/tizen --ignore-scripts` and `tools/tizen/test.sh`
+Read `docs/vemm/03-architecture.md`, then run
+`npm ci --prefix tests/tizen --ignore-scripts` and `tools/tizen/test.sh`
 for Samsung changes. Keep ES5/runtime compatibility, existing app/signing
 identity, default-off experimental features and original fallback behavior.
 Record exact model/current runtime for device claims; GPU/API access is not a

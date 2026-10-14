@@ -4,6 +4,10 @@ Approved scope, 2026-10-14: plan, implement and squash-merge the Samsung-only
 active tree into this repository's remote `main`. This replaces the earlier
 instruction to keep an unused LG implementation in the active tree.
 
+The later Vemm working-brand transition supersedes this plan's temporary
+`Media for Tizen` display-label decision. Its package/signing/storage,
+provenance and historical-release constraints remain in force.
+
 ## Inventory and dependency decisions
 
 The implementation base is `f74610c8e8fda765245f548adcc6565becdca31b`.
@@ -118,6 +122,6 @@ historical policies remain recoverable at the immutable base and release tags.
 Existing GPL source offers and release assets are not cancelled by removing
 active native code.
 
-External holds: final product/repository name, preservation-safe GitHub network
-detachment, and any later signed/device rollout. None authorizes deleting
+External holds: final trademark clearance/repository name, preservation-safe
+GitHub network detachment, and any later signed/device rollout. None authorizes deleting
 metadata, installing SDKs, accessing secrets or using real Plex accounts here.

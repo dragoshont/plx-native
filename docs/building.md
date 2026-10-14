@@ -1,4 +1,4 @@
-# Building and distributing the Samsung client
+# Building and distributing Vemm for Samsung
 
 The maintained source is `samsung/PlexTv/`, a public-API Tizen Web app with
 Samsung AVPlay. No ARM cross-toolchain, native Makefile or LG SDK is required.
@@ -35,9 +35,9 @@ acceptance, not an LG native benchmark.
 ## Compatible distribution
 
 Existing installations use `PlxNative0` / `PlxNative0.Plx`. Keep that identity,
-saved-setting keys and existing author certificate. The neutral display label
-**Media for Tizen** is not a new app/package ID. Published `Plx-*.wgt` assets and
-`samsung-v*` tags remain immutable.
+the `plx-tizen-*` saved-setting keys and existing author certificate. **Vemm**
+is the display/product identity, not a new app/package ID. Published `Plx-*.wgt`
+assets, display names and `samsung-v*` tags remain immutable.
 
 For a separately authorized future release:
 

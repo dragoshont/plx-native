@@ -29,8 +29,18 @@ var build = read("samsung/build.py");
 assert(build.includes('PACKAGE_ID = "PlxNative0"'));
 assert(build.includes('{PACKAGE_ID}.Plx'));
 assert(read("samsung/install.py").includes('APP_ID = "PlxNative0.Plx"'));
-assert(read("samsung/PlexTv/config.xml").includes("<name>Media for Tizen</name>"));
-assert(read("samsung/PlexTv/index.html").includes("<title>Media for Tizen</title>"));
+assert(read("samsung/PlexTv/config.xml").includes("<name>Vemm</name>"));
+assert(read("samsung/PlexTv/index.html").includes("<title>Vemm</title>"));
+assert(read("samsung/PlexTv/js/product.js").includes('name: "Vemm"'));
+assert(read("samsung/brand/vemm-mark.svg") === read("samsung/PlexTv/brand/vemm-mark.svg"));
+assert(read("samsung/brand/README.md").includes("working brand"));
+[
+    "docs/vemm/01-current-state-audit.md", "docs/vemm/02-brand-and-identity.md",
+    "docs/vemm/03-architecture.md", "docs/vemm/04-playback-policy.md",
+    "docs/vemm/05-platform-capabilities.md", "docs/vemm/07-repository-and-release-migration.md"
+].forEach(function (name) { assert(fs.existsSync(path.join(root, name)), "Missing Vemm transition document: " + name); });
+assert(/working product identity/i.test(read("docs/vemm/02-brand-and-identity.md")));
+assert(read("docs/vemm/03-architecture.md").includes("KEEP / CUT / DEFER"));
 assert(!/Exit Plx\?|Plx could not close/.test(read("samsung/PlexTv/main.js")));
 assert(!read("tools/tizen/build-locales.js").includes('root, "locales"'));
 assert(read("tools/tizen/build-locales.js").includes('"samsung/locales"'));

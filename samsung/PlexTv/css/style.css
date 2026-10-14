@@ -2394,6 +2394,82 @@ select:focus {
     line-height: 1.4;
 }
 
+/* Vemm working-brand treatment: restrained color, live text and no new runtime dependency. */
+html,
+body,
+.screen-home.shelves-focused .browse-header {
+    background: #101820;
+}
+
+.brand-lockup {
+    display: flex;
+    align-items: center;
+}
+
+.brand-mark {
+    width: 48px;
+    height: 48px;
+    margin-right: 16px;
+}
+
+.app-header h1 {
+    color: #f4f7fb;
+    font-weight: 650;
+    text-transform: none;
+}
+
+.app-header p {
+    color: #a8b7c8;
+}
+
+.home-feature-primary,
+.detail-primary {
+    background: #0078d4;
+    color: #f4f7fb;
+}
+
+.home-feature-primary:focus,
+.detail-primary:focus {
+    background: #f4f7fb;
+    color: #101820;
+}
+
+.about-brand {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0 0 32px;
+}
+
+.about-brand-mark {
+    width: 132px;
+    height: 132px;
+    margin-right: 32px;
+}
+
+.about-brand h2 {
+    width: calc(100% - 164px);
+    margin: 0;
+    color: #f4f7fb;
+    font-size: 64px;
+    font-weight: 650;
+}
+
+.about-pronunciation,
+.about-tagline {
+    margin: 8px 0 0 164px;
+    color: #a8b7c8;
+    font-size: 26px;
+}
+
+.about-tagline {
+    color: #f4f7fb;
+}
+
+.working-brand-status {
+    color: #a8b7c8;
+}
+
 .home-feature-actions {
     display: flex;
     align-items: center;

@@ -291,6 +291,16 @@ async function run() {
         settings: { profile: profile, offset: 5000 }, onEvent: function (event) { events.push(event); } });
     await session.start();
     assert.strictEqual(session.mode(), "transcode", "A file the TV refuses must fall back to a server transcode");
+    assert.deepStrictEqual(session.quality().explanation, {
+        selected: "transcode",
+        reason: "decoder",
+        fallback: "none",
+        capability: {
+            status: "unknown",
+            measured: false,
+            source: "synthetic-measured-profile"
+        }
+    }, "The fallback remains explainable after AVPlay rejects the original");
     var decisions = test.calls.filter(function (call) { return call[0] === "decision"; });
     assert.strictEqual(decisions.length, 2);
     assert.strictEqual(decisions[0][1].directPlay, 1);

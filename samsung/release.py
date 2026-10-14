@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build, sign and publish a Samsung client release from a local machine.
+"""Build, sign and publish a Vemm Samsung client release from a local machine.
 
     python samsung/release.py VERSION [--no-publish]
 
@@ -43,5 +43,5 @@ if not args.no_publish:
     subprocess.run(["gh", "release", "create", f"samsung-v{version}", str(out), f"{out}.sha256",
                     str(source), f"{source}.sha256",
                     "--repo", "dragoshont/plx-native", "--target", head, "--prerelease",
-                    "--title", f"Samsung client {version}"] + notes,
+                    "--title", f"Vemm for Samsung {version}"] + notes,
                    check=True)

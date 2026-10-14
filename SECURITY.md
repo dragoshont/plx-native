@@ -1,6 +1,6 @@
 # Security policy
 
-Samsung client reports belong to **dragoshont/plx-native**, not the upstream
+Vemm Samsung client reports belong to **dragoshont/plx-native**, not the upstream
 LG maintainer. Use this repository's
 [Security page](https://github.com/dragoshont/plx-native/security) for available
 private reporting options. If none is offered, open a minimal
