@@ -573,6 +573,23 @@ async function run() {
         assert(!window.document.getElementById("player-menu"), "Back closes playback options");
         assert.strictEqual(window.document.activeElement, playerControls[5],
             "Back from playback options restores focus to More");
+        click("More");
+        click("Stats for nerds");
+        var stats = window.document.getElementById("playback-stats");
+        var reasonBeforeClock = Array.from(stats.querySelectorAll("p")).filter(function (node) {
+            return node.textContent.indexOf("Reason:") === 0;
+        })[0];
+        assert(reasonBeforeClock, "Stats must expose the playback decision reason");
+        assert.strictEqual(stats.querySelectorAll(".playback-stats-position").length, 1,
+            "Stats must have exactly one live position row");
+        listener.oncurrentplaytime(12000);
+        assert(stats.contains(reasonBeforeClock), "A clock update must not replace the decision reason");
+        assert.strictEqual(Array.from(stats.querySelectorAll("p")).filter(function (node) {
+            return node.textContent.indexOf("Reason:") === 0;
+        }).length, 1, "Stats retain one decision reason after a clock update");
+        assert(stats.querySelector(".playback-stats-position").textContent.indexOf("0:12") !== -1,
+            "The live position row updates without overwriting explanation rows");
+        click("Close");
         var pauseControl = Array.from(window.document.querySelectorAll("button")).find(function (node) {
             return node.textContent === "Pause / Play";
         });

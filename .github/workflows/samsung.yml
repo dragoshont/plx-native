@@ -1,7 +1,7 @@
 name: Samsung Tizen
 
 # WHAT A GREEN RUN HERE MEANS: the Vemm Samsung web app under samsung/PlexTv parses as strict ES5 (the
-# 2018 Chromium 56 floor), its generated locale bundles match their sources, and its host contract
+# 2017 Tizen 3.0 / Chromium M47 floor), its generated locale bundles match their sources, and its host contract
 # tests (Plex API, playback negotiation, UI state, source distribution) pass
 # against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
 # AVPlay plays anything, or that any Samsung model is supported. Those claims need observed TV

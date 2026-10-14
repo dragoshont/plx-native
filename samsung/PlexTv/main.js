@@ -2349,7 +2349,7 @@
             translate("Quality") + ": " + qualityName(quality.limit),
             translate("State") + ": " + translate(snapshot.state)
         ].forEach(function (line, index) {
-            stats.appendChild(element("p", index === 1 ? "playback-stats-position" : "", line));
+            stats.appendChild(element("p", index === 4 ? "playback-stats-position" : "", line));
         });
         button(stats, "Close", function () {
             if (stats.parentNode) { stats.parentNode.removeChild(stats); }
