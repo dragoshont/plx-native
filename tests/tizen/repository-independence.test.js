@@ -37,7 +37,8 @@ assert(read("samsung/brand/README.md").includes("working brand"));
 [
     "docs/vemm/01-current-state-audit.md", "docs/vemm/02-brand-and-identity.md",
     "docs/vemm/03-architecture.md", "docs/vemm/04-playback-policy.md",
-    "docs/vemm/05-platform-capabilities.md", "docs/vemm/07-repository-and-release-migration.md"
+    "docs/vemm/05-platform-capabilities.md", "docs/vemm/06-implementation-report.md",
+    "docs/vemm/07-repository-and-release-migration.md"
 ].forEach(function (name) { assert(fs.existsSync(path.join(root, name)), "Missing Vemm transition document: " + name); });
 assert(/working product identity/i.test(read("docs/vemm/02-brand-and-identity.md")));
 assert(read("docs/vemm/03-architecture.md").includes("KEEP / CUT / DEFER"));
