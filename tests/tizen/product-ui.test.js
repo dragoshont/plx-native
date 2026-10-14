@@ -201,9 +201,21 @@ async function run() {
         click("Stay");
         var selectedHome = window.document.querySelector('.home-navigation button[aria-current="page"]');
         selectedHome.focus();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 37, bubbles: true }));
+        assert(window.document.activeElement.classList.contains("account-control"),
+            "Left from the first Home destination must reach Account");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 13, bubbles: true }));
+        assert.strictEqual(window.document.activeElement.textContent, "Settings",
+            "OK on Account must open its utilities with Settings focused");
+        back();
+        assert(window.document.activeElement.classList.contains("account-control"),
+            "Back from Account utilities must return focus to Account");
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 38, bubbles: true }));
-        assert.strictEqual(window.document.activeElement, selectedHome,
+        assert(window.document.activeElement.classList.contains("account-control"),
             "Up at the fixed Home navigation must not jump into a shelf below it");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 39, bubbles: true }));
+        assert.strictEqual(window.document.activeElement, selectedHome,
+            "Right from Account must return to the selected Home destination");
         window.document.querySelector("#screen").scrollTop = 700;
         window.document.querySelector("#screen").classList.add("shelves-focused");
         window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 40, bubbles: true }));
@@ -337,6 +349,14 @@ async function run() {
         assert(window.document.activeElement.classList.contains("media-card"),
             "Opening a library must land on its first title, not the Account control");
         assert.strictEqual(window.document.activeElement, window.document.querySelector(".item-list .media-card"));
+        var libraryHome = window.document.querySelector(".home-navigation button");
+        libraryHome.focus();
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 37, bubbles: true }));
+        assert(window.document.activeElement.classList.contains("account-control"),
+            "Library headers must retain the same Left path from Home to Account");
+        window.document.dispatchEvent(new window.KeyboardEvent("keydown", { keyCode: 39, bubbles: true }));
+        assert.strictEqual(window.document.activeElement, libraryHome,
+            "Right from Account must return to the library header");
         click("Account");
         assert(!window.document.querySelector(".home-utilities").hidden,
             "Account must open the same utility panel in a library, not jump to Settings");

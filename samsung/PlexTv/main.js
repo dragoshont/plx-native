@@ -3913,12 +3913,21 @@
             if (chaptersTab) { chaptersTab.focus(); return; }
         }
         var localRow = active && active.parentNode;
+        if (key === 39 && active && /(?:^| )account-control(?: |$)/.test(active.className || "")) {
+            var accountNavigation = screen.querySelector(".home-navigation");
+            if (accountNavigation) { accountNavigation.querySelector("button").focus(); }
+            return;
+        }
         if ((key === 37 || key === 39) && localRow &&
                 /(?:home-navigation|home-feature-actions|playback-controls|player-tabs|chapter-strip|detail-actions)/.test(localRow.className || "")) {
             var rowControls = Array.prototype.slice.call(localRow.querySelectorAll("button"));
             var rowIndex = rowControls.indexOf(active);
             var adjacent = rowControls[rowIndex + direction];
             if (adjacent && !adjacent.disabled) { adjacent.focus(); }
+            else if (key === 37 && /home-navigation/.test(localRow.className || "")) {
+                var accountControl = screen.querySelector(".account-control");
+                if (accountControl && !accountControl.disabled) { accountControl.focus(); }
+            }
             return;
         }
         if ((key === 38 || key === 40) && active && active.parentNode &&
