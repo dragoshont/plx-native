@@ -58,6 +58,11 @@ repository settings, signing material and devices were not mutated.
   `MIGRATE_APP_OWNED` classifications. Active source moved to `samsung/Vemm/`;
   Vemm-owned runtime globals/DOM/CSS identifiers were migrated while Plex
   protocol/service names and Plx history remain.
+- A delta-specific independent review returned `REVISE` because the generated
+  runtime locale still included unused LG/native/telemetry/root-repair copy and
+  one active test used a `plx-package-test-*` temporary prefix. Locale
+  generation now emits only current static Vemm copy plus reviewed additions,
+  the temporary prefix is Vemm-owned, and narrow regressions cover both.
 
 ## Partially completed
 

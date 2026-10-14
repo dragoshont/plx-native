@@ -5,7 +5,7 @@ var os = require("os");
 var path = require("path");
 var childProcess = require("child_process");
 var root = path.resolve(__dirname, "../..");
-var temporary = fs.mkdtempSync(path.join(os.tmpdir(), "plx-package-test-"));
+var temporary = fs.mkdtempSync(path.join(os.tmpdir(), "vemm-package-test-"));
 try {
     var app = path.join(temporary, "SyntheticApp");
     fs.mkdirSync(app);

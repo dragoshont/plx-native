@@ -45,8 +45,10 @@ Keep terms required to tell the truth about inherited source and prior releases:
   application registration or old source revision.
 - Historical support, rollout and repository-independence records.
 - Inherited source catalogs under `samsung/locales/`, including old product
-  copy required for provenance. The generated Vemm runtime bundle filters
-  PlxNative/support-domain entries rather than rewriting those source records.
+  copy required for provenance. The generated Vemm runtime bundle includes only
+  strings statically required by current Vemm UI sources plus the reviewed
+  `samsung/strings.json` additions; it does not rewrite or package unused
+  LG/native/telemetry/root-repair copy.
 
 These references describe old facts. They do not define Vemm's active technical
 identity.

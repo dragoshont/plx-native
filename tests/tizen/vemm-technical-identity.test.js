@@ -52,6 +52,18 @@ assert.deepStrictEqual(Array.from(new Set(appOwnedGlobals)).filter(function (nam
 }).sort(), [], "Only Plex service/protocol globals may retain Plex naming");
 assert(appSources.includes("X-Plex-Product"), "Plex protocol headers must remain");
 assert(appSources.includes("plex.tv"), "Plex service endpoints must remain");
+var runtimeI18n = read("samsung/Vemm/js/i18n.js");
+[
+    "A native media client built for LG webOS", "Sentry", "PostHog",
+    "Homebrew Channel", "/dev/rtkmem"
+].forEach(function (obsolete) {
+    assert(!runtimeI18n.includes(obsolete), "Obsolete inherited copy reached the Vemm runtime: " + obsolete);
+});
+assert(runtimeI18n.includes("Plex Media Server"), "Current Plex service copy must remain translated");
+
+var packagingTest = read("tests/tizen/build-packaging.test.js");
+assert(packagingTest.includes("vemm-package-test-"));
+assert(!packagingTest.includes("plx-package-test-"));
 
 ["vemm-tizen-device-id", "vemm-tizen-preferences", "vemm-tizen-account",
     "vemm-tizen-save-sign-in", "vemm-tizen-favorite-libraries",
