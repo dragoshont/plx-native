@@ -1,5 +1,12 @@
 # PlxNative licensing
 
+The Samsung client is now independently maintained in this repository. This
+does not remove inherited copyright, change the licence of derived code or
+grant rights to the upstream identity. Samsung contributions remain under
+GPL-3.0-or-later; authors retain their copyrights. The separately developed
+Tizen TV Builder toolkit is MIT, but that does not relicense app code or
+product-specific benchmark adapters copied from this repository.
+
 Copyright (c) 2026 Gleb Linnik and contributors.
 PlxNative's own code is licensed under the GNU General Public License, version 3 or
 (at your option) any later version: **GPL-3.0-or-later**. The complete license is in `LICENSE`.

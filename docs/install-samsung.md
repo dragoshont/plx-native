@@ -77,16 +77,16 @@ nothing is changed. TVs already covered keep working, and if every TV is
 already covered no sign-in is needed. Run it again later to add another TV.
 
 The current Samsung release is
-[Plx 0.2.6](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.6).
+[Plx 0.2.7](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.7).
 Install it directly from its GitHub asset:
 
 ```sh
-python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.6/Plx-0.2.6.wgt TV_IP
+python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.7/Plx-0.2.7.wgt TV_IP
 ```
 
 The tool downloads the `.wgt` to a temporary folder, validates it, signs and
 installs it, then verifies that its app ID is listed on the TV. Failures are
-printed in the terminal. This URL selects **0.2.6**, not a future release.
+printed in the terminal. This URL selects **0.2.7**, not a future release.
 For another version, copy its `.wgt` asset link from
 [GitHub Releases](https://github.com/dragoshont/plx-native/releases).
 GitHub's generic `releases/latest` link is not suitable: Samsung releases are
@@ -101,6 +101,12 @@ author mismatch requires resolving the error before updating.
 
 On the TV, open **Plx** from **Apps**, then visit **plex.tv/link** on your phone
 and enter the code shown on the TV.
+
+**0.2.7 graphics option:** leave **New graphics enhancements** off for performance.
+This optional WebGL artwork path was slower in the measured OFF/ON workloads;
+existing Home acceleration and AVPlay remain active with it off. See
+[the measured results](samsung-027-graphics-performance.md). The Account icon's
+D-pad access is a reported unresolved issue; no remote-access fix is claimed here.
 
 ## Additional commands (optional)
 

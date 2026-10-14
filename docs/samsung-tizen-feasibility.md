@@ -1,5 +1,16 @@
 # Samsung Tizen (2017+) feasibility study
 
+> **Native execution update 2026-10-13:** on a QE65Q80CATXXH reporting current
+> Tizen 9.0 / ARMv7, a thin vendor .NET lifecycle host loaded an ordinary Rust
+> cdylib and received its exact nonce packet. A separate browser-hosted Rust
+> Wasm probe also executed. These prove isolated Rust execution, not an unchanged
+> LG binary, shared renderer, decoder backend or finished client. The newer
+> evidence supersedes Samsung-wide interpretations of the historical verdict
+> below; the 2017 target still lacks a proven Rust route. See the
+> [native probe and device register](../tools/tizen/dotnet-probe/README.md) and
+> [the bounded runtime experiments report](samsung-rust-runtime-results.md)
+> for attempts, verified results, unsupported runtimes and unresolved routes.
+
 > **Scope update 2026-10-09:** the floor is now **2017 (Tizen 3.0, Chromium M47)**, set by the oldest
 > sets the owner has (a 2017 MU series). 2017 is the hardest tier: M47 predates much of ES2015+, so the
 > JavaScript client must be transpiled and polyfilled, and 2017 video limits (`17TV_PREMIUM` etc.) are
@@ -34,7 +45,7 @@ Evidence labels used throughout:
 - **[inference]** reasoning from the above, not stated by any source.
 - **[untested]** needs hardware.
 
-## 1. Verdict
+## 1. Historical verdict (2026-10-09)
 
 1. **Porting the existing native binary to Samsung is not available on the evidence.** It is an
    ARM GCC/glibc program that draws with GLES2/EGL/SDL and decodes through LG's Starfish/ACB

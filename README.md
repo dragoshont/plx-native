@@ -1,223 +1,114 @@
-# PlxNative
+# Plex client for Samsung Tizen
 
-A fast, unofficial [Plex](https://www.plex.tv/) client for LG webOS televisions. Native, not a web
-page — the interface is drawn straight on the GPU at 60 fps, and video plays on the TV's own decoder.
+An independently maintained, unofficial Plex client for Samsung TVs. **No root required.** It uses Samsung's platform-native acceleration through the supported Tizen Web stack: GPU-composited UI layers for movement and fades, WebGL for optional graphics, and AVPlay for platform video playback rather than a JavaScript video decoder.
 
-**Website: [plxnative.com](https://plxnative.com/)** · [Install guide](https://plxnative.com/install/) ·
-[Troubleshooting](https://plxnative.com/troubleshooting/)
+**I've tested the client on Tizen 4.0 and newer.** The recorded device checks below distinguish individual runtimes and features; they are not blanket certification of every model or codec.
 
-<a href="https://trendshift.io/repositories/244171?utm_source=repository-badge&utm_medium=badge&utm_campaign=badge-repository-244171" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/244171" alt="GLinnik21/plx-native | Trendshift" width="250" height="55"/></a>
+The UI is inspired by [Gleb Linnik's LG client](https://github.com/GLinnik21/plx-native).
 
-*In daily use on a 2019 LG set. PlxNative is an independent project and is not affiliated with Plex, Inc.
-or LG. The same install steps are in the repo: [installation guide](docs/install-and-verify.md).*
+The implementation uses **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**.
 
-## Why this exists
+**[Install on Samsung](docs/install-samsung.md)** · **[Samsung releases](https://github.com/dragoshont/plx-native/releases?q=samsung-v)** · **[Report a Samsung issue](https://github.com/dragoshont/plx-native/issues)** · **[Tizen TV Builder toolkit](https://github.com/dragoshont/tizen-tv-builder)**
 
-The official Plex app on my old LG is slow. Scrolling a shelf stutters, opening a poster takes a
-beat too long. It behaves like a web page because it is one: a web app running in the television's
-Chromium. Patching it doesn't help — the ceiling isn't the code, it's the browser.
+## Install and update
 
-So I threw the browser away.
+Use the [step-by-step guide](docs/install-samsung.md). You need a computer on the same network, Samsung Developer Mode and a signing profile that covers your TV. **No root or Homebrew Channel is required.** Developer installation is not Samsung Store approval.
 
-PlxNative draws straight on the GPU and hands video to the same silicon the built-in apps use. No
-Chromium, no JavaScript, no web view. It just draws. Almost all of it is Rust, and I use it every
-day to watch things off my server in the next room.
+The current release is [Samsung 0.2.7](https://github.com/dragoshont/plx-native/releases/tag/samsung-v0.2.7), a **prerelease**. From the Tizen TV Builder checkout, after setup and certificate configuration:
 
-## What it looks like
+```sh
+python3 tools/tizen.py install https://github.com/dragoshont/plx-native/releases/download/samsung-v0.2.7/Plx-0.2.7.wgt TV_IP
+```
 
-Real captures of the app, not mockups: the same code that runs on the television, on the desktop
-simulator, browsing a demo library of openly licensed films
-([credits](docs/screenshots/CREDITS.md)). `make screenshots` regenerates them.
+Keep your existing author certificate for updates. Do not uninstall a working app to work around a signing mismatch. The existing `PlxNative0.Plx` application ID, release filenames and repository URL are retained for update/link compatibility, not used as the independent project's branding.
 
-![Home](docs/screenshots/home.jpg)
+## What the Samsung client does
 
-**Home** — a rotating hero from what you're partway through and what's just landed, shelves under it.
+- Plex linking, profile and server selection, including a manual server connection.
+- Home banners and shelves, libraries, search and detail pages.
+- Playback through Samsung AVPlay, with Direct Play/Direct Stream or server-transcode negotiation, resume, seek, tracks, subtitles, chapters and episode controls.
+- Local playback, language, library and graphics preferences.
 
-![Library](docs/screenshots/library.jpg)
+These are implemented features, not a promise that every codec or workflow works on every TV. See [feature/readiness detail](docs/samsung-upstream-readiness.md) and [known release and deployment limits](docs/samsung-0.2.7-rollout.md). The Account icon's D-pad access is a reported unresolved issue in 0.2.7; the performance fixture accessed Settings programmatically, so it did not validate that remote-navigation path.
 
-**Library** — a library opens on its own shelves: what you're partway through, with the time
-left under the focused card, and what just landed. Further down is the full grid, with sort,
-filter (including unwatched-only) and an A–Z rail down the side
-([pictured here](docs/screenshots/ux-library-grid.jpg)).
+## Hardware acceleration: what works, and what did not help
 
-![Search](docs/screenshots/search.jpg)
+**The existing interface already uses accelerated browser compositing.** Home movement uses `translate3d`; our device probes observed compositor promotion and accelerated scrolling on the Q80C. GPU compositing moves and combines UI layers; it does not mean all JavaScript, layout, image decoding or painting runs on the GPU.
 
-**Search** — one query across every server you can reach, results grouped by kind.
+Samsung's Web runtime also provides **WebGL**, the browser's OpenGL ES-based drawing API. We verified real shader/texture draws and pixel readback on the Q80C, QN70F, MU6172 and one RU7092, with driver-reported Mali backends. This is browser graphics access, not unrestricted native EGL/GLES access; GPU counters and execution time were not measured.
 
-![Player](docs/screenshots/player.jpg)
+0.2.7 adds **Settings → Graphics → New graphics enhancements**, **OFF by default**. It selects an optional WebGL renderer for Home/Detail background artwork, with a shared backend, resource limits and automatic fallback. It does not turn the whole TV's GPU on or off; existing Home compositing and AVPlay remain unchanged.
 
-**Player** — the transport with chapters and track menus, drawn over video the television decodes
-itself. (In this capture the frame under it was decoded by the simulator.)
+**The new artwork path was slower in our matched OFF/ON tests. Keep it OFF for performance.**
 
-## What it does
+| Measured median artwork-ready time | New option OFF | New option ON |
+| --- | ---: | ---: |
+| Living-room Q80C: Home banner | 332 ms | 359 ms |
+| Living-room Q80C: Detail background | 398 ms | 442 ms |
+| 2017 MU6172: Home banner | 23 ms | 344 ms |
+| 2017 MU6172: Detail background | 55 ms | 203 ms |
 
-- **An interface that keeps up with the remote.** 60 fps on the 2019 set I develop on, with
-  frame-rate regression scenes that measure it on the television rather than trusting it.
-- **Sign in on the TV** with an on-screen QR code and pick a Plex Home profile.
-- **Browse and search your libraries** — on your own servers and on ones shared with you. Your
-  servers' libraries, that is, not Plex's catalogue or Watchlist.
-- **Direct play** H.264 and HEVC — 4K, 10-bit, Dolby Vision profiles 5 and 8, E-AC-3 Atmos, and AV1 or VP9 (10-bit VP9 only on webOS 4 sets)
-  on televisions whose codec table lists that decoder — decided against your television's own
-  codec table where it publishes one. Anything else the server transcodes, and you can switch a
-  playback to Auto to follow a link whose speed changes.
-- **Everything you expect while watching**: resume, seek and scrub, chapters, audio and subtitle
-  tracks (including image subtitles), Skip Intro, Skip Credits, Up Next with auto-advance, and
-  progress reported back to your server.
+These are within-TV comparisons using the exact published app with synthetic artwork, not a ranking of TVs or a 0.2.6-versus-0.2.7 comparison. The new path creates a context and uploads a texture for each replacement; that extra synchronous work was measured. There was no consistent navigation gain. Ready-state/callback timings are **not panel FPS or GPU execution time**.
 
-## Will it work on my television?
+AVPlay is the existing platform playback path. These graphics experiments did not measure codec/VPU counters, HDR, audio, video-plane composition or server-side hardware transcoding. Those require separate evidence.
 
-**It needs webOS 4.0 or newer**, with one tested exception: a 2016 set on **webOS 3.4.3** signs
-in, browses, searches and plays (direct play, transcodes, subtitles and seeking) through Developer
-Mode. Other 3.x releases are untested, and anything older than 3.4 is unknown. Past that, it most
-likely will. I develop and test on a 2019 set, and opt-in usage reports show
-video playing on sets from 2018 through the newest, on webOS 11 — both direct play and server
-transcodes, Developer Mode installs included.
+Read the [full OFF/ON results](docs/samsung-027-graphics-performance.md), [acceleration assessment](docs/samsung-acceleration-assessment.md) and [optional backend contract](docs/samsung-optional-graphics.md).
 
-### Known issues
+## TVs and compatibility
 
-| Where | What happens |
-|---|---|
-| **Some 2019 sets on LG's k5lp or k3lp chip**, installed through Developer Mode | Video won't play. On these sets LG's Developer Mode sandbox can withhold a device the video path needs — Kodi and Moonlight hit the same wall. The app checks for it and says so instead of crashing; other sets on the same chip play normally. On a rooted TV with Homebrew Channel, the failure screen offers **Repair**, which applies the Homebrew Channel fix to the sandbox (one owner fixed it this way from a root shell; the button itself hasn't been run on an affected set yet). Without root there is no fix. |
-| **2018 sets on firmware that reports platform release 3.9.3** | Sign-in and browsing work, but video has never been seen to start on one, and no error is reported either: [#249](https://github.com/GLinnik21/plx-native/issues/249). |
-| **webOS 3.x** | Seeking restarts the stream at the new position instead of jumping in place, so each seek takes a moment longer. In-place seek depends on the internal layout of LG's 4.x media player, and on 3.4 that layout differs. |
-| **Sets on LG's k6hp chip** | A crash seen in opt-in crash reports and not reproduced here, because I have no such set: [#174](https://github.com/GLinnik21/plx-native/issues/174). |
+The maintainer reports testing on **Tizen 4.0 and newer**. The retained automated/device evidence below covers Tizen 5.0 and 9.0, plus additional legacy checks on **2017 / Tizen 3.0**. The Tizen 4.0 statement is owner-reported rather than a newly collected benchmark result. Shipped JavaScript remains conservative ES5-compatible. Model year is not a capability test; newer sets can receive OS upgrades.
 
-### Rooted or not
+| Observed model | Current runtime in the recorded run | Scope of evidence |
+| --- | --- | --- |
+| UE55MU6172, 2017 | Tizen 3.0 | Optional graphics/lifecycle checks and OFF/ON benchmark; 0.2.7 installed version verified |
+| UE43RU7092UXXH, 2019 | Tizen 5.0 | One set passed graphics/lifecycle checks, but its stopped test-app registration could not be removed through the SDK; another set's update was acknowledged without installed-version proof |
+| QE65Q80CATXXH, Q80C | Tizen 9.0 | Graphics/lifecycle checks, OFF/ON benchmark and installed 0.2.7 version verified |
+| QE55QN70FAUXXH, QN70F | Tizen 9.0 | Graphics/lifecycle checks and installed 0.2.7 version verified |
 
-**No root is needed.** A regular TV in Developer Mode runs everything except the k5lp/k3lp Repair
-above. What Developer Mode costs you is renewal: if the session lapses, LG removes the apps
-installed through it ([how to keep them](docs/install-and-verify.md#important-developer-mode-expires)).
-A rooted TV with Homebrew Channel has no expiry.
+Two distinct RU7092 devices were observed: four model generations, **five device identities**, with different acceptance states. This is not blanket support for every TV from 2017 onward. [The named-device register](docs/samsung-graphics-device-matrix.md) records firmware, actual checks, failed attempts and cleanup exceptions.
 
-If something goes wrong, check [Troubleshooting](docs/troubleshooting.md) first, then
-[tell me what happened](https://github.com/GLinnik21/plx-native/issues/new/choose) — and if you own one of the
-sets above, it working is as useful a report as it failing.
+## Built and measured with our Tizen toolkit
 
-## Samsung TVs
+[Tizen TV Builder](https://github.com/dragoshont/tizen-tv-builder) is the separate toolkit we built for discovery, developer connection/setup, signing, installation, inspection and safe serial device sessions. Its Python CLI and local portal were used to develop and deploy this client. AI assistance is optional; the CLI does not require an AI subscription.
 
-A separate, experimental client for Samsung Tizen televisions lives in [`samsung/`](samsung/). It is a
-Tizen web application that plays video through Samsung's AVPlay player, not this native renderer, and it
-shares no code with the LG app. It installs in Developer Mode: see the
-[Samsung installation guide](docs/install-samsung.md). What it matches of the LG client, and what it does
-not yet, is tracked in [Samsung readiness](docs/samsung-upstream-readiness.md).
+Our [reproducible app benchmark](tools/tizen/graphics-benchmark/README.md) uses the exact released app code with inert Plex adapters, synthetic images and in-memory settings. It repeats Home, Detail and navigation work in **OFF / ON / ON / OFF** order, retains warmups and original samples, and separates main-thread/API timing from graphics correctness.
 
-## Installing
+**The reusable benchmark is now implemented in the toolkit:** [`benchmark run`, `validate` and `summarize`](https://github.com/dragoshont/tizen-tv-builder/blob/e09c9f345170c7ada8309fc9be95ae8ae38e85e8/docs/benchmark.md). It is available at that pinned commit on `dragoshont-reusable-tv-benchmark-toolkit`, not yet in the toolkit's default branch or a newly released plugin. The GPL-licensed application workload stays here and connects through a tested adapter. This keeps the MIT toolkit useful for other TV apps without copying this app's screens, credentials or business logic into it. See [the transition record](docs/samsung-project-transition.md) for delivery and licensing boundaries.
 
-**First time installing an app outside the LG Content Store?** Follow the
-[**step-by-step installation guide**](docs/install-and-verify.md). It starts with a regular LG
-webOS TV, a computer on the same network, and a Plex account with access to your own or a shared
-server. **No root is required.**
+## Development and deployment
 
-Set up LG Developer Mode and connect with webOS Dev Manager, then choose:
+The maintained Samsung surfaces are:
 
-- **Install PlxNative directly:** add only PlxNative to the TV; install future `.ipk` updates from
-  your computer.
-- **Install Homebrew Channel first:** get an app catalogue on the TV, then install PlxNative and
-  its updates with the remote.
+| Path | Responsibility |
+| --- | --- |
+| `samsung/PlexTv/` | Shipped Tizen Web app |
+| `tests/tizen/` | Host contracts and DOM journeys |
+| `tools/tizen/` | App-specific build checks, synthetic workloads and recorded feasibility probes |
+| `samsung/build.py`, `samsung/release.py` | Versioned WGT build and existing-author publication |
+| `.github/workflows/samsung.yml` | Samsung host checks, packaging and release workflow |
 
-**Already have Homebrew Channel?** Find [PlxNative in its catalogue](https://repo.webosbrew.org/apps/com.beb.plxnative/)
-and select **Install**. Skip the computer setup.
+```sh
+npm ci --prefix tests/tizen --ignore-scripts
+tools/tizen/test.sh
+python3 samsung/build.py 0.2.7
+```
 
-**Developer Mode needs periodic renewal.** If it expires and LG disables Developer Mode, apps
-installed through it are removed. Installing Homebrew Channel through Developer Mode does not
-remove that requirement. The guide explains [how to renew the session](docs/install-and-verify.md#important-developer-mode-expires).
+The build example makes a local package; it does not publish or establish device acceptance. Use [the Samsung development process](docs/samsung-tizen-development-process.md) and [release/transition contract](docs/samsung-project-transition.md) for signing, immutable versions and verification. Do not use the retained LG `.ipk` release instructions to publish a Samsung `.wgt`.
 
-For manual `.ipk` downloads, [verify the release checksum](docs/install-and-verify.md#verifying-the-package)
-before installing. Homebrew Channel verifies catalogue downloads for you.
+## Independent direction, retained history
 
-## Nightly builds
+This repository is still technically a GitHub fork. Independent maintenance does not require rewriting its history. LG Rust/C sources, documentation and licence notices remain as inherited/reference material; **this project's product direction and deployment target are Samsung**. The experimental Rust/.NET/NaCl work is parked, with [its actual results retained](docs/samsung-rust-runtime-results.md).
 
-Every day `main` moves, CI cuts a nightly `.ipk` from wherever it stands. It installs beside the
-regular app as **"PlxNative Nightly"** — its own tile, its own sign-in — so trying it never touches
-the release you already trust.
+Send Samsung-specific issues to [this repository](https://github.com/dragoshont/plx-native/issues). Retained LG material is reference/history, not the product maintained here.
 
-**With Homebrew Channel:** under Settings choose **Add repository**, enter
-`https://plxnative.com/nightly/repo.json`, then install PlxNative Nightly. Every later nightly
-appears there as an update. The [nightly builds guide](docs/nightly-builds.md) has the steps, how
-the versions work and what to do if something goes wrong.
+The URL and installed display/package names are preserved during transition. A distinct long-term name/artwork and any GitHub fork detachment are separate migration steps; no new branding rights or completed detachment are implied.
 
-**Without it:** each build is a
-[prerelease](https://github.com/GLinnik21/plx-native/releases?q=nightly), and the newest is always
-linked from [plxnative.com/nightly/latest.json](https://plxnative.com/nightly/latest.json). Install
-it with Dev Manager; a package installed that way does not update itself.
+## Privacy, licensing and attribution
 
-**It is not tested on a television.** It passes the same automated build and packaging checks a
-release does, but nobody has watched it play. Each nightly is deleted 30 days after it is
-published, so link to a specific `.ipk` at your own risk.
+The Samsung app talks to Plex services and the selected media servers; sample playback can still update resume/watched state. Saved sign-in credentials use **unencrypted local Web storage**. No analytics or crash-upload feature is enabled in the Samsung client. See [Samsung data handling](samsung/PRIVACY.md); the retained root privacy document describes the LG implementation, not this package.
 
-## Release candidates
+Source remains **[GPL-3.0-or-later](LICENSE)** with inherited copyright and third-party notices intact. The Samsung implementation and toolkit are maintained separately in this repository and [Tizen TV Builder](https://github.com/dragoshont/tizen-tv-builder).
 
-Before a release, CI may publish a release candidate as a
-[prerelease](https://github.com/GLinnik21/plx-native/releases?q=rc) named like `PlxNative 0.8.0-rc.1`.
-It is the release build itself, so it **installs as the regular PlxNative app**, replacing the one
-you have the way an update would. It is not in the Homebrew Channel, and the Channel will not offer
-the final release over it either: reinstall the final by hand once it is out.
+The toolkit's MIT licence does not relicense this app or its adapters. Inherited identity and artwork restrictions remain separate from the source licence: read [TRADEMARKS.md](TRADEMARKS.md), [LICENSING.md](LICENSING.md) and [third-party notices](THIRD-PARTY-NOTICES.md).
 
-## Privacy
-
-**Your library data never reaches me.** The app talks to your Plex server, to `plex.tv` to sign in,
-and to `discover.provider.plex.tv` for cast biographies.
-
-**Crash reports and usage analytics are off until you turn them on** — two separate first-run
-questions, each answerable with Don't Share, both reversible later under Account → Settings →
-Privacy & data. No title, search term, subtitle line, server name or address can appear in any
-report. [`PRIVACY.md`](PRIVACY.md) is the whole statement, including the schemas.
-
-ASS/SSA subtitles render natively during direct play, including styles, positioning, overlapping
-signs and dialogue, karaoke, and embedded fonts. External ASS files retain their original scripts.
-A re-encode still burns the selected subtitle on the server; over a remux the app draws a sidecar, and an embedded track when the link is local and the Part is 1..=30000 kbps, and otherwise the server burns it.
-
-## The honest scope
-
-I built this for how *I* watch, so it's narrower than Plex's:
-
-- **Movies and TV shows.** No music, no photos, no live TV or DVR.
-- **No typing in server addresses.** Servers come from your Plex account; set them up on a phone or
-  PC and choose from what's there. Servers reached through Plex's relay, or that require an
-  encrypted connection, are supported but haven't been watched end to end.
-- **One person's spare time.** There will be bugs I haven't hit, because I don't watch the way you do.
-
-If that fits, it's genuinely nice to use. If it doesn't, the official app will serve you better.
-
-## Contributing
-
-Issues and pull requests are welcome, especially from anyone whose television or library differs
-from mine — [**docs/building.md**](docs/building.md) is the build and the test loop, and says what
-hardware I most need help with. Feature ideas go to [Discussions >
-Ideas](https://github.com/GLinnik21/plx-native/discussions/categories/ideas). Security issues go
-through [`SECURITY.md`](SECURITY.md) rather than a public issue.
-
-## Acknowledgements
-
-Error monitoring for PlxNative is sponsored by [Sentry](https://sentry.io/for/good/).
-
-<a href="https://sentry.io/for/good/">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/sentry-wordmark-light.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/sentry-wordmark-dark.svg">
-    <img alt="Sentry" src="docs/assets/sentry-wordmark-dark.svg" width="160">
-  </picture>
-</a>
-
-## Licence
-
-[GPL-3.0-or-later](LICENSE), © 2026 Gleb Linnik. The PlxNative name and its brand artwork are excluded — see
-[`TRADEMARKS.md`](TRADEMARKS.md), which also carries the Plex and LG non-affiliation statements.
-Third-party components and their licences are in
-[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) and `licenses/` — notably the app ships its own
-LGPL build of FFmpeg. Those notices and licence texts ship inside the `.ipk` too, so they travel
-with the binary and not only with this repository.
-
-This is an unofficial client, not affiliated with, endorsed by, or sponsored by Plex GmbH or LG
-Electronics. "Plex", "Rotten Tomatoes", "IMDb", "TMDB", "LG" and "webOS" are trademarks of their
-respective owners; where they appear in the app, they identify whose service or score is being shown.
-
-## Star history
-
-<a href="https://www.star-history.com/?repos=glinnik21%2Fplx-native&type=date&legend=bottom-right">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=glinnik21/plx-native&type=date&theme=dark&legend=bottom-right">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=glinnik21/plx-native&type=date&legend=bottom-right">
-    <img alt="Star history chart" src="https://api.star-history.com/chart?repos=glinnik21/plx-native&type=date&legend=bottom-right">
-  </picture>
-</a>
+This unofficial project is not affiliated with, endorsed by or sponsored by Plex, Samsung, LG or the original UI project's maintainer. Product and service names identify their respective owners.

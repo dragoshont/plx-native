@@ -1,5 +1,11 @@
 # Third-party notices
 
+> **Package scope:** this retained inventory is for the LG `.ipk` named below.
+> It is not a declaration that the Samsung `.wgt` bundles FFmpeg, libass or the
+> LG libraries. Samsung's shipped files come from `samsung/PlexTv/`; retain
+> applicable source notices and audit the actual artifact before making a
+> package-contents claim.
+
 This file accompanies the **PlxNative** application package (`com.beb.plxnative`), an unofficial
 native Plex client for LG webOS 4.x televisions. PlxNative itself is Copyright (c) 2026 Gleb
 Linnik and is distributed under GPL-3.0-or-later (see `LICENSE`; the brand reservation and the

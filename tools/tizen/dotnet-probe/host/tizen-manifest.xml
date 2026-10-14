@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns="http://tizen.org/ns/packages" package="PlxRNet041" version="1.0.0" api-version="5">
+  <profile name="tv" />
+  <ui-application appid="PlxRNet041.Probe" exec="PlxRustNetProbe.dll" type="dotnet"
+                  multiple="false" taskmanage="true" nodisplay="false" launch_mode="single">
+    <label>PLX Rust .NET Probe</label>
+    <metadata key="http://samsung.com/tv/metadata/devel.api.version" value="2.4" />
+  </ui-application>
+  <privileges>
+    <privilege>http://tizen.org/privilege/internet</privilege>
+  </privileges>
+</manifest>

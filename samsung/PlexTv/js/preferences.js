@@ -17,7 +17,8 @@
     var subtitleColors = ["white", "grey_85", "grey_70", "grey_55", "grey_40", "grey_28", "yellow"];
     // Off is the LG look (outlined text); On adds a dark box behind the line.
     var subtitleBackgrounds = ["off", "on"];
-    var subtitleDelays = [-2000, -1000, -500, 0, 500, 1000, 2000];
+    var subtitleDelayMinMs = -60000;
+    var subtitleDelayMaxMs = 60000;
     function validate(value) {
         var skipInterval = value && value.skipInterval !== undefined ? value.skipInterval : 10;
         var subtitleSize = value && value.subtitleSize !== undefined ? value.subtitleSize : "medium";
@@ -26,6 +27,7 @@
         var subtitleBackground = value && value.subtitleBackground !== undefined ? value.subtitleBackground : "off";
         var subtitleDelayMs = value && value.subtitleDelayMs !== undefined ? value.subtitleDelayMs : 0;
         var directPlay = value && value.directPlay !== undefined ? value.directPlay : "auto";
+        var enhancedGraphics = value && value.enhancedGraphics !== undefined ? value.enhancedGraphics : false;
         // Builds before the Next episode choice saved only an on/off auto-play flag.
         var nextEpisode = value && value.nextEpisode !== undefined ? value.nextEpisode :
             (value && value.autoNext === false ? "off" : "countdown");
@@ -37,14 +39,18 @@
                 skipIntervals.indexOf(skipInterval) === -1 || subtitleSizes.indexOf(subtitleSize) === -1 ||
                 subtitlePositions.indexOf(subtitlePosition) === -1 || subtitleColors.indexOf(subtitleColor) === -1 ||
                 subtitleBackgrounds.indexOf(subtitleBackground) === -1 ||
-                subtitleDelays.indexOf(subtitleDelayMs) === -1 || directPlayModes.indexOf(directPlay) === -1) {
+                typeof subtitleDelayMs !== "number" || !isFinite(subtitleDelayMs) ||
+                Math.floor(subtitleDelayMs) !== subtitleDelayMs || subtitleDelayMs % 100 !== 0 ||
+                subtitleDelayMs < subtitleDelayMinMs || subtitleDelayMs > subtitleDelayMaxMs ||
+                directPlayModes.indexOf(directPlay) === -1 || typeof enhancedGraphics !== "boolean") {
             throw new Error("Saved preferences are invalid. Reset app preferences in Settings.");
         }
         // Preferences saved before continueAction existed load with the safe default.
         return { quality: value.quality, language: value.language, nextEpisode: nextEpisode,
             continueAction: value.continueAction || "details", skipInterval: skipInterval,
             subtitleSize: subtitleSize, subtitlePosition: subtitlePosition, subtitleColor: subtitleColor,
-            subtitleBackground: subtitleBackground, subtitleDelayMs: subtitleDelayMs, directPlay: directPlay };
+            subtitleBackground: subtitleBackground, subtitleDelayMs: subtitleDelayMs, directPlay: directPlay,
+            enhancedGraphics: enhancedGraphics };
     }
     return {
         load: function (storage) {

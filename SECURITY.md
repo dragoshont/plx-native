@@ -1,5 +1,27 @@
 # Security policy
 
+## Independent Samsung client
+
+Samsung-specific reports belong to **dragoshont/plx-native**, not the upstream
+LG maintainer. This repository's public/private reporting options are shown on
+[its Security page](https://github.com/dragoshont/plx-native/security).
+Private vulnerability reporting was not enabled at the time of this transition;
+do not assume the upstream private-report link below reaches this maintainer.
+If no private channel is offered, open a minimal issue requesting one **without
+exploit details, credentials, personal data or raw logs**.
+
+The active Samsung scope is the Web app, its authentication/network/storage
+handling, `.wgt` packaging and app-specific host tools. The separate
+[Tizen toolkit](https://github.com/dragoshont/tizen-tv-builder) owns its own
+reporting process. There is no inherited promise of a bounty or response SLA.
+See [Samsung data handling](samsung/PRIVACY.md).
+
+## Retained upstream LG policy
+
+The remainder describes the LG code and upstream reporting channels retained
+in this source tree. Its native-runtime details, telemetry endpoints, support
+mailbox and service-level promises are **not** this Samsung project's policy.
+
 ## Reporting a vulnerability
 
 Report privately, **not** as a public issue:
