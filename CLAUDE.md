@@ -1,7 +1,6 @@
 @AGENTS.md
 
-# Claude Code configuration
-
-Project-specific Claude subagents are available under `.claude/agents/`. Shared skills are exposed
-through `.claude/skills`, which is a relative symlink to the canonical `.agents/skills/` tree.
-Claude-only hooks and the Rust analyzer plugin are configured in `.claude/settings.json`.
+`AGENTS.md` is the shared policy for this Samsung Tizen repository. No native
+Rust/webOS plugin, hook or TV workflow is configured here. Load the installed
+Tizen TV Builder skill explicitly when relevant; that does not grant device,
+signing, account or release access.

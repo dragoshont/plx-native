@@ -64,7 +64,7 @@ revealed using rectangle-based nearest-edge scrolling, without depending on mode
 
 Displaying, focusing or cycling a Home feature never initiates playback. Its explicit Play/Continue
 button does; info opens details. Back on the app's first page (Home, or sign-in/profile/server
-selection before Home) shows Samsung's required "Exit Plx?" confirmation with Stay focused; Back or
+selection before Home) shows an "Exit app?" confirmation with Stay focused; Back or
 Stay dismisses it and only Exit terminates the app. Biography and availability lookups never play. Resume uses the
 PMS-selected on-deck **episode**, not its show ID. A missing on-deck episode leaves season browsing
 available. All watched-state, Watchlist and DVR changes retain explicit confirmation.

@@ -24,12 +24,12 @@
     "es": "No se puede reproducir este archivo. Puede estar dañado o sin analizar en el servidor Plex.",
     "be": "Гэты файл нельга прайграць. Магчыма, ён пашкоджаны або не прааналізаваны на серверы Plex."
   },
-  "Exit Plx?": { "es": "¿Salir de Plx?", "be": "Выйсці з Plx?" },
+  "Exit app?": { "es": "¿Salir de la aplicación?", "be": "Выйсці з праграмы?" },
   "Stay": { "es": "Quedarse", "be": "Застацца" },
   "Exit": { "es": "Salir", "be": "Выйсці" },
-  "Plx could not close itself. Hold Back on the remote to exit.": {
-    "es": "Plx no pudo cerrarse. Mantén pulsado Atrás en el mando para salir.",
-    "be": "Plx не ўдалося закрыцца. Утрымлівайце «Назад» на пульце, каб выйсці."
+  "The app could not close itself. Hold Back on the remote to exit.": {
+    "es": "La aplicación no pudo cerrarse. Mantén pulsado Atrás en el mando para salir.",
+    "be": "Праграму не ўдалося закрыць. Утрымлівайце «Назад» на пульце, каб выйсці."
   },
   "Direct Play is set to Force, but this selection requires server conversion. Change subtitle settings or turn off Force.": {
     "es": "La reproducción directa está forzada, pero esta selección requiere conversión en el servidor. Cambia los ajustes de subtítulos o desactiva Forzar.",

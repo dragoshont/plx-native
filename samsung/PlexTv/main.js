@@ -2770,7 +2770,7 @@
         dialog.id = "player-menu";
         dialog.setAttribute("role", "alertdialog");
         dialog.setAttribute("aria-modal", "true");
-        var title = element("h2", "", translate("Exit Plx?"));
+        var title = element("h2", "", translate("Exit app?"));
         title.id = "exit-prompt-title";
         dialog.setAttribute("aria-labelledby", title.id);
         dialog.appendChild(title);
@@ -2783,7 +2783,7 @@
         var stay = button(dialog, "Stay", dismiss, false, "none");
         button(dialog, "Exit", function () {
             try { window.tizen.application.getCurrentApplication().exit(); }
-            catch (error) { setStatus("Plx could not close itself. Hold Back on the remote to exit.", true); }
+            catch (error) { setStatus("The app could not close itself. Hold Back on the remote to exit.", true); }
         }, false, "none");
         screen.appendChild(dialog);
         stay.focus();

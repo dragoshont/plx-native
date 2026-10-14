@@ -5,6 +5,8 @@ An independently maintained, unofficial Plex client for Samsung TVs. **No root r
 **I've tested the client on Tizen 4.0 and newer.** The recorded device checks below distinguish individual runtimes and features; they are not blanket certification of every model or codec.
 
 The UI is inspired by [Gleb Linnik's LG client](https://github.com/GLinnik21/plx-native).
+Current source uses the neutral display label **Media for Tizen** and original
+screen artwork; a permanent product/repository name has not been chosen.
 
 The implementation uses **Tizen Web APIs, HTML/CSS/JavaScript and Samsung AVPlay**.
 
@@ -90,22 +92,37 @@ The maintained Samsung surfaces are:
 ```sh
 npm ci --prefix tests/tizen --ignore-scripts
 tools/tizen/test.sh
-python3 samsung/build.py 0.2.7
+tools/tizen/build-source.sh samsung/PlexTv
 ```
 
-The build example makes a local package; it does not publish or establish device acceptance. Use [the Samsung development process](docs/samsung-tizen-development-process.md) and [release/transition contract](docs/samsung-project-transition.md) for signing, immutable versions and verification. Do not use the retained LG `.ipk` release instructions to publish a Samsung `.wgt`.
+The build example is unsigned and uses an already-installed Tizen SDK; it does
+not sign, publish or establish device acceptance. Use
+[building and distribution](docs/building.md),
+[the Samsung development process](docs/samsung-tizen-development-process.md)
+and [release/transition contract](docs/samsung-project-transition.md) for
+signing, matching source archives and immutable versions.
 
 ## Independent direction, retained history
 
-This repository is still technically a GitHub fork. Independent maintenance does not require rewriting its history. LG Rust/C sources, documentation and licence notices remain as inherited/reference material; **this project's product direction and deployment target are Samsung**. The experimental Rust/.NET/NaCl work is parked, with [its actual results retained](docs/samsung-rust-runtime-results.md).
+This repository is still technically a GitHub fork. The active tree now contains
+the Samsung product, tests, app-specific tools and evidence, not the unused LG
+Rust/C implementation, native builds or upstream website. **History, release
+assets and licensing obligations are preserved**, with immutable native source
+references in [the independence plan](docs/samsung-repository-independence-plan.md).
+The Samsung Rust/.NET/NaCl experiments remain parked, with
+[their actual results retained](docs/samsung-rust-runtime-results.md).
 
-Send Samsung-specific issues to [this repository](https://github.com/dragoshont/plx-native/issues). Retained LG material is reference/history, not the product maintained here.
+Send Samsung-specific issues to [this repository](https://github.com/dragoshont/plx-native/issues).
 
-The URL and installed display/package names are preserved during transition. A distinct long-term name/artwork and any GitHub fork detachment are separate migration steps; no new branding rights or completed detachment are implied.
+The repository URL, package ID, author/update continuity and historical release
+filenames are preserved. Published 0.2.7 still has its original display name;
+this source-only migration does not replace that package or deploy an update.
+A permanent name and preservation-safe GitHub fork detachment remain separate
+decisions; no completed provider detachment is implied.
 
 ## Privacy, licensing and attribution
 
-The Samsung app talks to Plex services and the selected media servers; sample playback can still update resume/watched state. Saved sign-in credentials use **unencrypted local Web storage**. No analytics or crash-upload feature is enabled in the Samsung client. See [Samsung data handling](samsung/PRIVACY.md); the retained root privacy document describes the LG implementation, not this package.
+The Samsung app talks to Plex services and the selected media servers; sample playback can still update resume/watched state. Saved sign-in credentials use **unencrypted local Web storage**. No analytics or crash-upload feature is enabled in the Samsung client. See [data handling](PRIVACY.md).
 
 Source remains **[GPL-3.0-or-later](LICENSE)** with inherited copyright and third-party notices intact. The Samsung implementation and toolkit are maintained separately in this repository and [Tizen TV Builder](https://github.com/dragoshont/tizen-tv-builder).
 

@@ -2,12 +2,12 @@ name: Samsung Tizen
 
 # WHAT A GREEN RUN HERE MEANS: the Samsung web app under samsung/PlexTv parses as strict ES5 (the
 # 2018 Chromium 56 floor), its generated locale bundles match their sources, and its host contract
-# tests (Plex API, playback negotiation, timeline parity with the LG client, UI state) pass
+# tests (Plex API, playback negotiation, UI state, source distribution) pass
 # against fakes. WHAT IT DOES NOT MEAN: that the app installs, that
 # AVPlay plays anything, or that any Samsung model is supported. Those claims need observed TV
 # evidence (docs/samsung-upstream-readiness.md). No Rust, no ARM build, no LG artifact is touched.
-# The wgt job builds and signs Plx-VERSION.wgt with the Tizen CLI (samsung/build.py) and uploads it
-# as an artifact; on a samsung-v* tag it signs with the release author certificate (secrets
+# Only an explicit samsung-v* tag invokes the wgt job, SDK installation and signing.
+# It signs Plx-VERSION.wgt with the release author certificate (secrets
 # SAMSUNG_AUTHOR_P12_B64, SAMSUNG_AUTHOR_PW) and publishes the release.
 
 on:
@@ -15,17 +15,7 @@ on:
     branches: [main, 'release/v*']
     # A samsung-vX.Y.Z tag publishes Plx-X.Y.Z.wgt as a prerelease (path filters do not apply to tags).
     tags: ['samsung-v*']
-    paths:
-      - 'samsung/**'
-      - 'tests/tizen/**'
-      - 'tools/tizen/**'
-      - '.github/workflows/samsung.yml'
   pull_request:
-    paths:
-      - 'samsung/**'
-      - 'tests/tizen/**'
-      - 'tools/tizen/**'
-      - '.github/workflows/samsung.yml'
   workflow_dispatch:
 
 permissions:
@@ -42,13 +32,16 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install pinned test dependencies (jsdom, acorn)
-        run: npm ci --prefix tests/tizen --no-audit --no-fund
+        run: npm ci --prefix tests/tizen --ignore-scripts --no-audit --no-fund
       - name: Contract tests, ES5 parse and locale build
         run: tools/tizen/test.sh
       - name: Generated locale bundles are committed
         run: git diff --exit-code -- samsung/
+      - name: Complete source distribution
+        run: python3 samsung/source_bundle.py --output "$RUNNER_TEMP/samsung-source"
 
   wgt:
+    if: startsWith(github.ref, 'refs/tags/samsung-v')
     needs: host
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -115,6 +108,9 @@ jobs:
       - name: Build and sign
         if: steps.plan.outputs.skip != '1'
         run: python3 samsung/build.py "${{ steps.plan.outputs.version }}"
+      - name: Archive matching complete source
+        if: steps.plan.outputs.skip != '1'
+        run: python3 samsung/source_bundle.py --output samsung/dist
       - name: Remove signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/author.p12"
@@ -122,7 +118,9 @@ jobs:
         if: steps.plan.outputs.skip != '1'
         with:
           name: Plx-${{ steps.plan.outputs.version }}
-          path: samsung/dist/Plx-${{ steps.plan.outputs.version }}.wgt*
+          path: |
+            samsung/dist/Plx-${{ steps.plan.outputs.version }}.wgt*
+            samsung/dist/Samsung-source-*.zip*
           if-no-files-found: error
       - name: Publish release
         if: steps.plan.outputs.publish == '1' && steps.plan.outputs.skip != '1'
@@ -135,6 +133,7 @@ jobs:
             exit 0
           fi
           gh release create "samsung-v$VERSION" samsung/dist/Plx-$VERSION.wgt samsung/dist/Plx-$VERSION.wgt.sha256 \
+            samsung/dist/Samsung-source-*.zip samsung/dist/Samsung-source-*.zip.sha256 \
             --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
-            --title "Plx for Samsung $VERSION" \
+            --title "Samsung client $VERSION" \
             --notes "Install with the tizen-tv-builder toolkit: https://github.com/dragoshont/plx-native/blob/main/docs/install-samsung.md"

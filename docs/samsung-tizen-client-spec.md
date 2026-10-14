@@ -10,7 +10,9 @@ PlxNative feature set, not a proof-of-concept app. Implementation may land in ve
 completed product is not reduced to the first slice.
 **Platform direction:** a separate Samsung Tizen TV Web application (`.wgt`), JavaScript delivered
 as an ES5-compatible bundle for the oldest intended engine, and AVPlay for the hardware playback
-path. Keep the existing LG webOS application and build unchanged.
+path. The LG application/build are retired from the active tree under the
+[approved independence plan](samsung-repository-independence-plan.md); their
+history and licensing remain.
 
 This document is the product and acceptance contract for implementation. Samsung evidence and
 model-specific results live in the [feasibility study](samsung-tizen-feasibility.md) and
@@ -287,7 +289,10 @@ and redirect behavior still require named-device acceptance.
 ### 6.1 Product separation
 
 - Put the Samsung client in a new, independently buildable Tizen Web application directory. Keep
-  existing LG Rust/C sources, package identities, build recipes and release behavior unchanged.
+  existing Samsung package identity, author continuity and historical releases unchanged.
+  Native Rust/C references below describe the immutable
+  [pre-migration source](https://github.com/dragoshont/plx-native/tree/f74610c8e8fda765245f548adcc6565becdca31b),
+  not current local modules or build dependencies.
 - Do not attempt to ship PlxNative's webOS-native executable, GLES/SDL renderer, `libcurl` seam,
   FFmpeg ABI bindings, Starfish/ACB interfaces or LG storage services on Tizen.
 - Initially reuse PlxNative as the behavioral/API/test oracle: API notes, fixtures, mock PMS,
@@ -444,8 +449,8 @@ is marked unsupported or unknown for that row, never implied by a neighboring mo
 
 ## 8. Sequenced implementation plan
 
-Phases are implementation slices of this complete product, not a reduced product scope. Keep the
-LG app buildable at every phase.
+Phases are implementation slices of this complete product, not a reduced product scope.
+Keep the Samsung source/build/distribution loop coherent at every phase.
 
 0. **Reusable Tizen process foundation:** environment inventory, clean app template, validated
    packaging, emulator harness, diagnostics, key/lifecycle conformance, mock fixtures and CI
@@ -471,9 +476,10 @@ LG app buildable at every phase.
    install/update/uninstall and recovery docs, then write developer and user-facing onboarding
    instructions. No broad support claim before this gate.
 
-At each slice, run its smallest host/mock tests, build and launch the app in Samsung's emulator, and
-preserve the LG `make check`/simulator path. Use a retail set only when its evidence is required;
-the TV lock governs every physical-device operation. Keep certificate credentials and tokens
+At each slice, run its smallest host/mock tests and the Samsung host/source gates.
+Launch an emulator only when available and authorized, without claiming hardware acceptance.
+Use a retail set only when its evidence is required;
+the Samsung device lease governs every physical-device operation. Keep certificate credentials and tokens
 outside the repo. Ask for explicit consent before any test that writes to the household's Plex
 viewing history.
 
@@ -496,7 +502,7 @@ depends on them.
 
 Source audit of this fork at `b6aa83a8`, not a claim about every upstream release or the official
 Plex client. Samsung results below are host/synthetic implementation evidence only. The historical
-[LG parity audit](parity-gaps.md) scopes itself to movies/shows and contains older paths and
+[LG parity audit](https://github.com/dragoshont/plx-native/blob/f74610c8e8fda765245f548adcc6565becdca31b/docs/parity-gaps.md) scopes itself to movies/shows and contains older paths and
 superseded assertions; current source takes precedence.
 
 | Feature | Actual LG source boundary | Samsung baseline and remaining work |
@@ -673,7 +679,7 @@ evidence; it is not replaced by another media server.
 - [x] Decide the legacy-engine HTTP transport without weakening token/redirect/TLS policy. Streaming fetch is observed on the oldest owned engine (2017 Tizen 3 / M47); engines without it fail closed. An XHR fallback is rejected because it cannot refuse redirects carrying the token (§ runtime notes above).
 - [ ] Verify fetch/Promise/URL/UTF-8/blob and CSS API support on the oldest supported engine. Host: the existing ES5 gate now rejects post-M47 runtime APIs, NodeList.forEach and CSS gap/custom properties, including planted regressions; shipped sources already avoid them, so no unsafe transport polyfill is added. Optional AbortController remains feature-detected; its absence cannot prove physical socket cancellation. Samsung [Web Engine Specifications](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html), Table 1, maps 2017 / Tizen 3.0 to Chromium M47 (checked 2026-10-11). Source scans do not establish native API behavior.
 - [x] Add automatic manifest/package privilege/identifier and credential-leak checks. `tests/tizen/manifest.test.js` pins the justified privilege set, keeps the signed app/package ID out of the tree and allows exactly one wildcard `<access>` rule (PMS origins are per-user). The wildcard rationale and token scope/redirect policy are now documented near AUTH and pinned by the host manifest test; package-time PMS origins cannot be enumerated. The unused `application.launch` privilege was removed. The workbench `tizen.py audit` (dragoshont/tizen-tv-builder) adds privilege-use, ES5 and credential-leak scans and blocks packaging on failure; on this app it passes with no errors, and its remaining warnings are the required wildcard, a heuristic miss for `internet` (XHR) and the example IP in a validation message.
-- [x] Wire Samsung host/mock/ES5/source gates into CI, keeping LG recipes unchanged. `.github/workflows/samsung.yml` (path-filtered) runs `tools/tizen/test.sh`, and checks generated locales are committed. Generic workbench/inspector tests run in the separate toolkit's CI.
+- [x] Wire Samsung host/mock/ES5/source gates into CI. `.github/workflows/samsung.yml` runs `tools/tizen/test.sh` for all PR/main changes and checks generated locales/icon and complete source. The unused LG recipes are retired. Generic workbench/inspector tests run in the separate toolkit's CI.
 - [ ] Automate emulator install/launch/readiness/keys/logs/capture/teardown on a supported host. *Implemented in the workbench (`tizen.py emulator`) and tested against fakes; a real run is unobserved because the x86_64 TV emulator needs HAXM/WHPX/KVM and cannot run on Apple Silicon.*
 - [ ] Automate authorized lock-aware retail install/test/capture/teardown with explicit target identity. *Implemented in the workbench (`tizen.py identify`/`retail`: lane lock, DUID-hash fingerprint match before install, signed package required, owned-forward cleanup); a real retail run on the next TV is unobserved.*
 - [x] Prove the reusable workflow on a generated second app, not just Plex. The workbench CI scaffolds a non-Plex app and runs its tests, audit, deterministic double pack, package check, an unsigned-refusal check, a planted-credential failure and the budget harness on Ubuntu and Windows; a real SDK build and signing of a generated app passed `check-package --require-signed` locally.

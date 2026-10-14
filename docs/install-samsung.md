@@ -1,4 +1,9 @@
-# Install Plx on a Samsung TV
+# Install the Samsung client
+
+Published Samsung 0.2.7 appears as **Plx** on the TV. Current development source
+uses **Media for Tizen** with original artwork; the package/app IDs and existing
+author continuity are unchanged. This source migration does not replace any
+published asset or install an update.
 
 Use **one command-line tool: `python3 tools/tizen.py`**.
 It downloads Plx, connects to your TV, signs the package with your signing
@@ -90,7 +95,8 @@ printed in the terminal. This URL selects **0.2.7**, not a future release.
 For another version, copy its `.wgt` asset link from
 [GitHub Releases](https://github.com/dragoshont/plx-native/releases).
 GitHub's generic `releases/latest` link is not suitable: Samsung releases are
-currently prereleases, and this repository also carries webOS releases.
+currently prereleases; historical release links remain preserved independently
+of the Samsung-only active source.
 
 Repeat the command with another TV's address to install on several TVs.
 If installation reports that no signing profile allows this TV, run
@@ -150,7 +156,9 @@ python3 tools/tizen.py portal --port 47900
 
 ## Optional: start over
 
-To remove Plx and begin again with fresh signing profiles:
+Only if you deliberately intend to remove the app and its local data, use the
+commands below. **Do not do this to bypass an update's author mismatch.**
+Keep the original author certificate for compatible updates.
 
 ```sh
 python3 tools/tizen.py remove TV_IP PlxNative0.Plx

@@ -14,7 +14,8 @@ toolkit command installs a released `.wgt`. This page is for building and develo
 
 A Samsung TV app is a small website packaged as a `.wgt` file. You sign it with a certificate that
 names your TV, install it over your home network, and run it. No rooting or jailbreaking is involved,
-and none is proposed. This is different from the existing LG app, which stays untouched.
+and none is proposed. The historical LG implementation is no longer in the
+active tree; this product uses Samsung's public Web APIs and AVPlay.
 
 There is no Samsung Store release or universal download you can install on any TV. The current
 route needs a computer and a Samsung developer certificate containing **your** TV's DUID.
@@ -79,14 +80,11 @@ Gotchas observed on a 2017 set from a Mac (2026-10-09):
 - **macOS Local Network privacy blocks `sdb`.** If `nc -vz <tv-ip> 26101` succeeds but `sdb connect`
   says "failed to connect to remote target", the app that launched `sdb` has no Local Network
   permission. Apple's own `nc` is exempt, which is why it looks like a TV problem when it isn't.
-  Run `sdb kill-server` and then `sdb connect` from macOS **Terminal.app** and allow the prompt, or
-  enable the launching app under System Settings > Privacy & Security > Local Network. Terminals
+  Enable the launching app under System Settings > Privacy & Security > Local Network. Terminals
   embedded in other apps inherit that app's permission. Once Terminal.app has started the sdb server,
   other local `sdb` clients reuse it over localhost.
-- **If no app can be granted Local Network access**, relay through Apple's `nc`, which is exempt:
-  `mkfifo /tmp/f; while true; do nc -l 127.0.0.1 26111 < /tmp/f | nc <tv-ip> 26101 > /tmp/f; done`,
-  then `sdb connect 127.0.0.1:26111` and pass `-s 127.0.0.1:26111` to `tizen`. The TV still sees the
-  Mac's own address, so the Developer Mode host IP check passes.
+- Do not kill a shared SDB server or bypass host privacy permissions with a
+  relay. Resolve the launching app's permission with the computer owner first.
 - On that set, `sdb shell 0 getduid` returned the DUID, so you need not copy it off the screen. Other
   `sdb shell` commands return "closed": a retail TV gives no general shell.
 
@@ -144,9 +142,12 @@ Complete sections 1–4 first, or let the toolkit's `cert add` create the certif
    python3 tools/tizen.py install /path/to/plx-native/samsung/dist/Plx-0.0.1.wgt TV_IP
    ```
    The toolkit re-signs with your active profile, installs and checks the TV's app list.
-   A TV refuses an update signed by a different author: remove Plx first
-   (`python3 tools/tizen.py remove TV_IP PlxNative0.Plx`).
-4. Open **Plx** from the TV's Apps screen. Scan the QR or enter the displayed code at
+   A TV refuses an update signed by a different author. Preserve the original
+   author/profile and resolve that mismatch; do not uninstall a working app to
+   bypass it.
+4. Open **Media for Tizen** (or **Plx** on published 0.2.7) from the TV's Apps screen.
+   The descriptive new display name does not change the installed application ID.
+   Scan the QR or enter the displayed code at
    `plex.tv/link`, choose your profile (PIN only if protected), then your server. Sign-in is
    saved automatically in unencrypted TV storage; Settings can turn this off and sign-out
    deletes it.

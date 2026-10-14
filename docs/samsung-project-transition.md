@@ -12,13 +12,18 @@ The current repository remains `dragoshont/plx-native` and GitHub still reports
 it as a fork of `GLinnik21/plx-native`. This change establishes independent
 documentation/support/release ownership **in place**. It does not rename the
 remote, detach the fork, delete history or grant use of upstream trademarks.
-The upstream author's latest message has not been reproduced or interpreted
-as legal permission in this record.
 
 The GitHub repository description now identifies an independently maintained
 Samsung Web/AVPlay client and credits the design inspiration. A fresh API
 read still reports `fork: true`, parent `GLinnik21/plx-native`, default branch
 `main`; no external rename, detachment or branch rewrite was performed.
+
+On 2026-10-14, own Issues were enabled, Discussions remained off, topics were
+set to Samsung/Tizen/Plex/AVPlay/JavaScript, and the homepage field was cleared.
+The retired active Cache cleanup, native CI, native Release and Simulator CI
+workflows were disabled before their files were removed; Nightly/Pages were
+already disabled. The Pages API returned 404 (no configured site). No release,
+upstream setting or GitHub fork-network membership was changed.
 
 ## Compatibility during transition
 
@@ -33,30 +38,31 @@ Keep these stable until an explicit migration is designed and accepted:
   artwork mode remains off by default and is not promoted as a speedup.
 - Copyright, GPL and third-party notices, historical grants and source offers.
 
-The current **Plx** display name is an existing compatibility fact, not a
-clearance of independent branding. Upstream reserves PlxNative and associated
-brand artwork. Select an independently cleared name/artwork before declaring a
-branding migration complete; do not borrow the upstream domain, sponsorship,
-badges, support promises or screenshots as Samsung product claims.
+Published 0.2.7 retains its historical **Plx** display name. Current source uses
+the neutral descriptive **Media for Tizen** label and original screen artwork;
+the permanent name remains undecided. Upstream reserves PlxNative and associated
+brand artwork. Do not borrow the upstream domain, sponsorship, badges, support
+promises or screenshots as Samsung product claims.
 
 ## Repository ownership
 
 Samsung app, tests, packaging and the Samsung workflow are the active product
-surfaces. The LG source tree and records stay intact for provenance and source
-obligations; no broad deletion or module restructure is part of this transition.
+surfaces. The [approved independence plan](samsung-repository-independence-plan.md)
+supersedes the initial retain-native-tree policy: unused LG implementation,
+build/release/site tooling and active instructions are removed. History, release
+tags/assets, inherited notices and complete-source obligations remain intact.
 
 Root README and Samsung installation links lead to this project's releases and
-issues. The root LG privacy/third-party/trademark documents retain explicit
-scope. Samsung-specific data handling is documented separately. Do not send
+issues. Root privacy/security/build/licensing documents describe Samsung.
+The old native dependency inventory is preserved in
+`licenses/native-history-NOTICES.md` with immutable source references. Do not send
 Samsung support traffic to the upstream author's mailbox.
 
-Inherited LG publishing automation must not be enabled to manufacture releases
-under the upstream identity. At the time of this transition, GitHub reported
-Nightly and Pages disabled manually; that observation is not a permanent guard.
-A repository detachment/rename needs a separate review of scheduled workflows,
-Pages custom domain, release identities, issue links and configured services
-before enabling any automation. Samsung publication uses `samsung.yml`, not
-`release.yml` or `rc.yml`.
+Inherited LG workflows, website/CNAME and sponsorship routing are retired,
+not left as inactive publishing templates. Samsung publication uses
+`samsung.yml`; its SDK/signing job runs only on an explicit `samsung-v*` tag.
+All PR/main changes run host/source CI without signing secrets. GitHub network
+detachment/rename remains a separate preservation review, not a source edit.
 
 ## Repeatable Samsung release contract
 
@@ -71,7 +77,9 @@ before enabling any automation. Samsung publication uses `samsung.yml`, not
    build as an update to an existing installation.
 5. Supply reviewed notes, for example
    `python3 samsung/release.py X.Y.Z --notes-file docs/release-notes/samsung-vX.Y.Z.md`.
-   `--no-publish` builds without publishing.
+   `--no-publish` builds without publishing. The publisher also attaches a
+   matching complete-source archive/checksum created from the clean committed
+   tree by `samsung/source_bundle.py`; notices/license texts travel in the WGT.
 6. Independently download the public asset; verify checksum, manifest version,
    exact product payload, signature-reference digests and author continuity.
    Record source/tag and whether CI or the local canonical publisher signed it.
@@ -127,12 +135,13 @@ new TV acceptance. No GPL app implementation was relicensed as MIT.
 
 ## Remaining external migration decisions
 
-- Choose the long-term project name and independent visual identity.
+- Choose the long-term project/repository name. A neutral display label and
+  original non-PLX artwork are already in the active source.
 - Decide whether to rename or detach the GitHub fork. Neither is performed by
   source edits; preserve redirects, tags, issues and Actions configuration.
-- Integrate the reviewed transition and benchmark delivery into their respective
-  default branches using the normal review/squash process. A feature-branch
-  push is not a default-branch migration.
+- Verify default-branch integration by the actual squash PR/source SHA and CI.
+  A feature-branch push alone is not migration evidence; the independence plan
+  names the application integration gate.
 
 These decisions do not block truthful Samsung-first documentation or compatible
 updates at the existing URL. They are recorded as pending, not silently guessed.

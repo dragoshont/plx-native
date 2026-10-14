@@ -1,5 +1,9 @@
 # Samsung Tizen (2017+) feasibility study
 
+**Historical source map:** native paths in this dated study refer to the
+immutable [pre-migration tree](https://github.com/dragoshont/plx-native/tree/f74610c8e8fda765245f548adcc6565becdca31b),
+not local dependencies of the current Samsung-only product.
+
 > **Native execution update 2026-10-13:** on a QE65Q80CATXXH reporting current
 > Tizen 9.0 / ARMv7, a thin vendor .NET lifecycle host loaded an ordinary Rust
 > cdylib and received its exact nonce packet. A separate browser-hosted Rust

@@ -1,7 +1,8 @@
 # Samsung client data handling
 
 Applies to the Samsung Web client described by release 0.2.7 and the current
-Samsung source. This is separate from the retained LG PlxNative privacy policy.
+Samsung source. Historical LG policy is linked from the root privacy document,
+not an active policy for this package.
 
 ## Services
 

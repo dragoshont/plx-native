@@ -3,7 +3,10 @@
 **Decision: not ready to announce completed Samsung support or native LG parity.**
 The separate Samsung client has a broad source/host baseline; developer installation is observed.
 Neither implies that its playback, account lifecycle and runtime constraints match the LG app.
-LG remains unchanged. Plex Media Server remains the library/watch-state authority.
+The LG comparison refers to historical source, not a second maintained product:
+its unused implementation/build are retired from the active tree under
+[the independence plan](samsung-repository-independence-plan.md).
+Plex Media Server remains the library/watch-state authority.
 
 ## LG production-parity recheck (2026-10-12)
 

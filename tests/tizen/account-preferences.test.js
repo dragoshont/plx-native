@@ -1,14 +1,11 @@
 "use strict";
 var assert = require("assert");
-var fs = require("fs");
-var path = require("path");
 var prefs = require("../../samsung/PlexTv/js/account-preferences");
 var plex = require("../../samsung/PlexTv/js/plex-api");
 
-var rust = fs.readFileSync(path.join(__dirname, "../../rust-modules/plex/src/plex/languages.rs"), "utf8");
-var lg = [];
-rust.replace(/Language \{ code: "([^"]+)", name: "([^"]+)" \}/g, function (_, code, name) { lg.push([code, name]); });
-assert.deepStrictEqual(prefs.LANGUAGES, lg, "language catalog matches the LG client");
+var catalog = require("./fixtures/account-languages.json");
+assert.deepStrictEqual(prefs.LANGUAGES, catalog.languages, "language catalog retains the inherited 190-entry picker");
+assert.strictEqual(catalog.languages.length, 190);
 assert(!prefs.picker().some(function (language) { return language.code === "pb"; }));
 assert.strictEqual(prefs.label("pb"), prefs.label("pt-BR"));
 assert.strictEqual(prefs.label("xx-YY"), "xx-YY");

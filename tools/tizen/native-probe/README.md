@@ -1,5 +1,11 @@
 # Linux ARMv7 Rust Host-Only Native Probe & Architecture Seam Map
 
+**Parked historical probe, not a Samsung product build dependency.** The native
+module paths below refer to the immutable
+[pre-migration source](https://github.com/dragoshont/plx-native/tree/f74610c8e8fda765245f548adcc6565becdca31b),
+not local files after repository independence. Its binary-dependent regression
+script is not part of the ordinary Samsung Web host gate.
+
 ## Executive Summary & Scope Boundary
 This artifact documents a **HOST-ONLY** investigation into cross-compiling an isolated Rust ARMv7 ELF binary matching the compilation profile of PlxNative's ARM architecture, and maps the exact upstream modules and dependencies required to port the GLES2 UI renderer to Samsung Smart TVs.
 

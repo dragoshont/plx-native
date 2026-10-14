@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a signed Plx .wgt from this checkout (Windows, macOS, Linux).
+"""Build a signed Samsung client .wgt from this checkout (Windows, macOS, Linux).
 
     python samsung/build.py [VERSION]
 
@@ -10,7 +10,8 @@ Signing uses an author certificate plus the public Tizen distributor that ships 
 Tizen Studio, so the package installs on Developer Mode TVs without a Samsung account.
 The author certificate is PLX_AUTHOR_P12 + PLX_AUTHOR_PW if set, otherwise your own one in
 ~/.config/plxnative/samsung-author (PLX_AUTHOR_DIR), created on first use. A TV refuses
-to update an app signed with a different author certificate: delete the old Plx first.
+to update an app signed with a different author certificate. Preserve the existing
+author; do not uninstall a working app to bypass a mismatch.
 """
 import hashlib
 import os
@@ -107,8 +108,12 @@ def author_cert(tizen, work):
 
 
 def stage(app, version):
-    skip = shutil.ignore_patterns(".buildResult", "tests", ".tproject", ".project", "*.wgt", "signature*.xml", "author-signature.xml", ".manifest.tmp")
-    shutil.copytree(HERE / "PlexTv", app, ignore=skip)
+    app.mkdir()
+    for name in ("config.xml", "index.html", "main.js", "icon.png"):
+        shutil.copyfile(HERE / "PlexTv" / name, app / name)
+    for name in ("js", "css"):
+        shutil.copytree(HERE / "PlexTv" / name, app / name,
+                        ignore=shutil.ignore_patterns(".*", "*.map", "*.wgt"))
     cfg = app / "config.xml"
     text = cfg.read_text(encoding="utf-8")
     text, n1 = re.subn(r'(<widget [^>]*version=")[^"]*"', rf'\g<1>{version}"', text, count=1)
@@ -117,6 +122,9 @@ def stage(app, version):
     if n1 != 1 or n2 != 1:
         fail("Could not stamp config.xml")
     cfg.write_text(text, encoding="utf-8")
+    for name in ("LICENSE", "LICENSING.md", "THIRD-PARTY-NOTICES.md", "TRADEMARKS.md"):
+        shutil.copyfile(ROOT / name, app / name)
+    shutil.copytree(ROOT / "licenses", app / "licenses")
 
 
 def es5_check():

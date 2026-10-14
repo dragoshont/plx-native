@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Install or update Plx on a Samsung TV that has Developer Mode on (Windows, macOS, Linux).
+"""Install or update this Samsung client in Developer Mode (Windows, macOS, Linux).
 
     python install.py TV_IP [VERSION | Plx.wgt]
 
-Without a file it downloads the given (or latest) Plx release. An installed Plx
+Without a file it downloads the given (or latest) Samsung release. An installed app
 can be updated with the same author certificate. This script never uninstalls it.
 """
 import json
@@ -51,13 +51,13 @@ def latest_version():
                     return rel["tag_name"][len("samsung-v"):]
     except OSError:
         pass
-    fail("Could not find the latest Plx release.")
+    fail("Could not find the latest Samsung release.")
 
 
 def download(version, folder):
     url = f"https://github.com/{REPO}/releases/download/samsung-v{version}/Plx-{version}.wgt"
     path = Path(folder) / f"Plx-{version}.wgt"
-    print(f"Downloading Plx {version}...")
+    print(f"Downloading Samsung client {version}...")
     try:
         with urllib.request.urlopen(url, timeout=120) as r:
             path.write_bytes(r.read())
@@ -97,13 +97,13 @@ def main():
                 print(out, file=sys.stderr)
                 fail("The TV rejected the package signature. The existing app was not removed.",
                      "For an author mismatch, install an update signed with the original author certificate.",
-                     "If you choose to replace it, uninstall Plx yourself first; that can erase its saved sign-in.")
+                     "Do not uninstall a working app to bypass the mismatch; uninstalling can erase saved sign-in.")
             if not installed(out):
                 print(out, file=sys.stderr)
                 fail("Install failed (output above).")
         finally:
             run(sdb, "disconnect", serial)
-    print("Done. Open Plx from Apps on the TV and sign in at plex.tv/link.")
+    print("Done. Open the client from Apps (Plx on older releases, Media for Tizen on current source) and sign in at plex.tv/link.")
 
 
 if __name__ == "__main__":

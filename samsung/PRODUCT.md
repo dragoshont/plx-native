@@ -16,7 +16,8 @@ state and progress. This is a full client in development, not a replacement medi
 
 The owner's TVs are a 2017 UE55MU6172, two 2019 UE43RU7092, a QE65Q80C and a 2025 QE55QN70F. The wider investigation includes
 2018+ televisions and The Frame; those models are not certified by this device's results.
-The app is an ES5 Tizen Web application with AVPlay, separate from the existing LG Rust app.
+The app is an ES5 Tizen Web application with AVPlay. The former LG native tree
+is available in history, not maintained as a second app here.
 Host DOM tests use synthetic accounts, servers and AVPlay. Browser renders prove layout, not
 Samsung decoding, HDR, performance or panel output.
 
@@ -33,12 +34,13 @@ Licensed catalogue streaming and verified live tuning remain acceptance gaps.
 
 The owner prefers Apple-like UI, with the upstream LG PlxNative implementation as the closest
 reference, while retaining Samsung-compatible behavior. Revamp every Samsung screen as one
-coherent experience. Keep the LG application and its design guidance unchanged.
+coherent experience. Do not borrow upstream branding or imply endorsement.
 
 ## Evidence
 
-The LG reference images are under `docs/screenshots/ux-*.jpg`; its component and theme sources
-are `rust-modules/ui/src/widgets.rs` and `theme.rs`. Samsung implementation and acceptance truth
+The historical LG images/components remain at the immutable
+[pre-migration source](https://github.com/dragoshont/plx-native/tree/f74610c8e8fda765245f548adcc6565becdca31b).
+They are not current Samsung assets or build dependencies. Samsung implementation and acceptance truth
 live in `docs/samsung-tizen-client-spec.md` and the Samsung feasibility/test register.
 
 ## Accessibility

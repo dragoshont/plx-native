@@ -1,5 +1,12 @@
 # PMS API Reference (verified against live server)
 
+This inherited protocol evidence is retained for Samsung subtitle/API contracts.
+Dates below describe the original investigation, not new live tests. Native
+Rust paths/symbols are historical examples at
+[f74610c8](https://github.com/dragoshont/plx-native/tree/f74610c8e8fda765245f548adcc6565becdca31b);
+they are not current Samsung modules. Account tokens, server addresses and
+household records must not be used to reproduce examples without authorization.
+
 > **Authoritative source: [`plex-openapi.json`](plex-openapi.json)** — the official Plex Media
 > Server OpenAPI 3.1 spec (205 operations). Check it FIRST for any endpoint (method, path,
 > params, response); this file is a hand-curated, live-verified subset for the paths we use.

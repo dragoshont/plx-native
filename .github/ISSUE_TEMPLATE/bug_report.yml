@@ -1,70 +1,55 @@
-name: Bug report
-description: Something in PlxNative does not work, for example playback fails, the app closes or sign-in breaks.
-labels: ["bug", "user-report"]
+name: Samsung client bug
+description: Report a reproducible problem in this unofficial Samsung Tizen Plex client.
 body:
   - type: input
     id: tv-model
     attributes:
-      label: TV model
-      description: From the sticker on the back, or Settings > About This TV. For example `43LM6300PVB`.
+      label: Samsung TV model
+      description: Model and region suffix from Settings > Support > About This TV; do not include the serial number or DUID.
+      placeholder: UE55MU6172
     validations:
       required: true
   - type: input
-    id: webos-version
+    id: runtime
     attributes:
-      label: webOS version
-      description: For example `webOS 4.10.2`.
+      label: Tizen version and firmware
+      description: Report the actual current runtime, not just the model year; write unknown if unavailable.
     validations:
       required: true
   - type: input
-    id: plxnative-version
+    id: app-version
     attributes:
-      label: PlxNative version
-      description: For example `0.7.0`, or the nightly's version.
+      label: App version or source commit
+      description: For example Samsung 0.2.7; mention whether this is a published release or local build.
     validations:
       required: true
   - type: dropdown
     id: install-method
     attributes:
-      label: How you installed PlxNative
+      label: Installation method
       options:
-        - Dev Manager (Developer Mode)
-        - Homebrew Channel
-        - Nightly build
-        - Other or not sure
+        - Tizen TV Builder
+        - Tizen Studio CLI or Device Manager
+        - Not installed (host/source issue)
+        - Other or unknown
     validations:
       required: true
   - type: textarea
-    id: what-happened
+    id: reproduction
     attributes:
-      label: What happened
-      description: What you did, what you expected, and what happened instead. For a playback failure, paste the bottom line of the failure screen (it starts with `PlxNative`) or attach a photo.
+      label: Reproduction and result
+      description: Steps, expected behavior and actual result. For playback, include container/codecs, direct/transcode mode and the displayed error, without titles, URLs or tokens.
     validations:
       required: true
-  - type: dropdown
-    id: playback-mode
-    attributes:
-      label: Playback details (only if this is about playback)
-      description: Was the item playing with Direct Play, or at a quality you chose?
-      options:
-        - Not about playback
-        - Direct Play
-        - A quality I chose
-        - Automatic quality
-        - Not sure
   - type: textarea
-    id: logs
+    id: evidence
     attributes:
-      label: Logs
-      description: |
-        How to get them: https://plxnative.com/troubleshooting/#collecting-logs
-        Fetch before you reopen the app: the event log is emptied on every launch.
-        Logs contain ratingKeys (item numbers on your server), so think before posting publicly.
-      placeholder: Attach the log files here.
+      label: Redacted evidence
+      description: Optional screenshot or minimal error excerpt. Crop account/library data; never attach raw inspector logs, certificates, private addresses or credentials.
   - type: checkboxes
     id: privacy
     attributes:
-      label: Before you submit
+      label: Before submitting
       options:
-        - label: I have not pasted a Plex token or a passphrase into this issue.
+        - label: I removed tokens, passwords, server addresses, DUIDs and personal media/account data.
           required: true
