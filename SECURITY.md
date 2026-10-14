@@ -1,34 +1,12 @@
 # Security policy
 
-Samsung client reports belong to **dragoshont/plx-native**, not the upstream
-LG maintainer. Use this repository's
-[Security page](https://github.com/dragoshont/plx-native/security) for available
-private reporting options. If none is offered, open a minimal
-[issue](https://github.com/dragoshont/plx-native/issues/new) requesting a private
-channel **without exploit details, credentials, personal data or raw logs**.
-There is no inherited bounty or response-time promise.
+This repository is a historical archive and does not accept new security
+reports. Report vulnerabilities affecting the actively maintained Samsung
+client through [Vemm's security page](https://github.com/dragoshont/vemm/security).
+If private reporting is unavailable, follow
+[Vemm's security policy](https://github.com/dragoshont/vemm/blob/main/SECURITY.md)
+and do not post exploit details, credentials, personal data, or raw logs
+publicly.
 
-## Scope
-
-The maintained scope is `samsung/PlexTv/`, authentication/network/storage,
-AVPlay integration, WGT/source packaging and the app-specific host tools.
-Report a concrete failure and affected source/release, model, firmware and
-runtime when known. Include a synthetic reproduction where possible.
-
-Tokens in unencrypted Web storage are a documented limitation, not a claim of
-encrypted credential storage. Token/redirect isolation, bounded requests,
-explicit viewing-state writes, lifecycle cleanup, package contents and
-signature/source continuity are important boundaries. See
-[data handling](PRIVACY.md).
-
-This app has no maintainer-operated backend, analytics or crash-upload service.
-Do not use the former native client's Sentry/PostHog policies or mailboxes for
-this Samsung implementation. Historical LG code and its policies remain in Git
-history, not in the active product. The separate
-[Tizen toolkit](https://github.com/dragoshont/tizen-tv-builder) has its own
-reporting process. Samsung firmware and Plex services are owned by their
-respective providers; their operation is not guaranteed by this project.
-
-Never attach signing certificates, passwords, DUIDs, account tokens, private
-server locations, household library data or unredacted inspector records to a
-public issue.
+The historical Plx releases and their matching source remain available in this
+repository. There is no inherited bounty or response-time promise.
