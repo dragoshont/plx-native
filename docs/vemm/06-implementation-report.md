@@ -10,6 +10,8 @@ Substantive commits:
   assets, architecture/playback seams, tests and documentation.
 - `41c94775` — independent-review correction for live playback explanation
   diagnostics plus truthful M47 CI wording.
+- `5b698444` — CodeRabbit follow-up corrections for non-video playback
+  explanation and the Spanish Fallback translation.
 
 The branch remains unmerged. Published releases, remote identity, public
 repository settings, signing material and devices were not mutated.
@@ -90,6 +92,9 @@ repository settings, signing material and devices were not mutated.
 | Offline package staging audit | 50 files; display name Vemm; compatibility ID `PlxNative0.Plx`; no private/signing artifacts |
 | Impeccable mechanical UI detector | No findings |
 | CodeRabbit review of exact `39cc9adb` | Low risk; two bounded findings verified and fixed, generic docstring warning intentionally not adopted |
+| `tools/tizen/test.sh` on clean `5b698444` | Passed after both CodeRabbit fixes |
+| `tools/tizen/build-source.sh samsung/PlexTv` on `5b698444` | Unsigned SDK source build passed |
+| Complete-source archive from `5b698444` | 263 entries; review fixes/report present; no `.p12`, `.pw`, `.wgt` or `node_modules` |
 | Signed package, install, launch, device playback, Store review | Skipped — not authorized |
 
 Resolved intermediate failures:
